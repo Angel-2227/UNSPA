@@ -1,0 +1,3441 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Planificación Académica</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        :root { 
+            --unal-green: #2e7d32;
+            --unal-dark-green: #1b5e20;
+            --unal-light-green: #66bb6a;
+            --unal-yellow: #ffa000;
+            --unal-red: #d32f2f;
+            --unal-blue: #1976d2;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-sidebar: #fafafa;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+            --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-sidebar: #242424;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --border-color: #404040;
+            --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.3);
+            --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 320px;
+            background: var(--bg-sidebar);
+            border-right: 2px solid var(--unal-green);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar-header {
+            background: linear-gradient(135deg, var(--unal-green), var(--unal-dark-green));
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .sidebar-header h1 {
+            font-size: 1.3rem;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-header p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-left: 4px solid transparent;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: var(--bg-secondary);
+            border-left-color: var(--unal-light-green);
+        }
+
+        .nav-item.active {
+            background: var(--bg-secondary);
+            border-left-color: var(--unal-green);
+            color: var(--unal-green);
+        }
+
+        .sidebar-section {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+        }
+
+        .section-title {
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--unal-green);
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: 320px;
+            flex: 1;
+            padding: 24px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .header-bar {
+            background: var(--bg-primary);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            margin-bottom: 24px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .stats-summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-primary);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .stat-number.completed {
+            color: var(--unal-green);
+        }
+
+        .stat-number.current {
+            color: var(--unal-yellow);
+        }
+
+        .stat-number.pending {
+            color: var(--unal-red);
+        }
+
+        .stat-number.total {
+            color: var(--unal-blue);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Semester Cards */
+        .semesters-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 24px;
+        }
+
+        .semester-card {
+            background: var(--bg-primary);
+            border-radius: 12px;
+            box-shadow: var(--shadow-light);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .semester-card.completed {
+            border-left: 4px solid var(--unal-green);
+        }
+
+        .semester-card.current {
+            border-left: 4px solid var(--unal-yellow);
+        }
+
+        .semester-card.pending {
+            border-left: 4px solid var(--unal-red);
+        }
+
+        .semester-header {
+            padding: 16px 20px;
+            background: var(--bg-secondary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+
+        .semester-header:hover {
+            background: var(--unal-light-green);
+            color: white;
+        }
+
+        .semester-title {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .semester-summary {
+            font-size: 0.85rem;
+            opacity: 0.8;
+        }
+
+        .semester-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .semester-toggle {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            color: inherit;
+            transition: transform 0.3s ease;
+        }
+
+        .semester-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .semester-status {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .status-completed {
+            background: #e8f5e8;
+            color: var(--unal-dark-green);
+        }
+
+        .status-current {
+            background: #fff8e1;
+            color: #f57c00;
+        }
+
+        .status-pending {
+            background: #ffebee;
+            color: var(--unal-red);
+        }
+
+        .semester-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .semester-content.expanded {
+            max-height: 2000px;
+        }
+
+        .semester-body {
+            padding: 20px;
+           overflow-x: auto;
+        }
+
+        .subjects-table {
+            width: 100%;
+            border-collapse: collapse;
+          min-width: 800px;
+        }
+
+        .subjects-table th,
+        .subjects-table td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .subjects-table th {
+            background: var(--bg-secondary);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+        }
+
+        .subjects-table tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        .type-badge {
+            padding: 3px 8px;
+            border-radius: 15px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .type-obligatoria {
+            background: #ffcdd2;
+            color: #b71c1c;
+        }
+
+        .type-optativa {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .type-libre {
+            background: #bbdefb;
+            color: #0d47a1;
+        }
+
+        .type-grado {
+            background: #e1bee7;
+            color: #4a148c;
+        }
+
+        .type-nivelacion {
+            background: #ffe0b2;
+            color: #e65100;
+        }
+
+        /* Buttons and Controls */
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--unal-green);
+            color: white;
+        }
+
+        .btn-success {
+            background: var(--unal-green);
+            color: white;
+        }
+
+        .btn-warning {
+            background: var(--unal-yellow);
+            color: white;
+        }
+
+        .btn-danger {
+            background: var(--unal-red);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: var(--text-secondary);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--unal-green);
+            box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+        }
+
+        .editable-field {
+            background: transparent;
+            border: 1px solid transparent;
+            padding: 4px 8px;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        .editable-field:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+        }
+
+        .editable-field:focus {
+            background: var(--bg-primary);
+            border-color: var(--unal-green);
+            outline: none;
+        }
+
+        /* Modals */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+.modal-content {
+    background: var(--bg-primary);
+    margin: 2% auto;
+    padding: 20px;
+    border-radius: 12px;
+    width: 95%;
+    max-width: 1400px;
+    border: 1px solid var(--border-color);
+    max-height: 96vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* Fix para scroll en móvil/tablet */
+#scheduleModal .modal-content {
+    overflow-y: scroll !important;
+}
+
+#currentScheduleContent {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+}
+
+.schedule-grid-viewer {
+    overflow-y: visible !important;
+    max-height: none !important;
+}
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: var(--unal-green);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            padding: 4px;
+            border-radius: 4px;
+        }
+
+        .close-btn:hover {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .subjects-bank {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .subject-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px;
+            background: var(--bg-primary);
+            border-radius: 6px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .subject-item:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-light);
+        }
+
+        .subject-info h4 {
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+
+        .subject-info p {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 200;
+            background: var(--unal-green);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 99;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: var(--bg-secondary);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--unal-green), var(--unal-light-green));
+            transition: width 0.5s ease;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .semesters-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mobile-toggle {
+                display: block;
+            }
+
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.open {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 60px 16px 16px;
+            }
+
+            .header-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .stats-summary {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .stats-summary {
+                grid-template-columns: 1fr;
+            }
+
+            .semester-header {
+                padding: 12px 16px;
+            }
+
+            .semester-body {
+                padding: 16px;
+            }
+
+            .subjects-table {
+                font-size: 0.8rem;
+            }
+
+            .subjects-table th,
+            .subjects-table td {
+                padding: 8px;
+            }
+        }
+
+        .no-data {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+            background: var(--bg-secondary);
+            border-radius: 12px;
+        }
+
+        .no-data h3 {
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        [data-theme="dark"] .type-obligatoria {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        [data-theme="dark"] .type-optativa {
+            background: #14532d;
+            color: #86efac;
+        }
+
+        [data-theme="dark"] .type-libre {
+            background: #1e3a8a;
+            color: #93c5fd;
+        }
+
+        [data-theme="dark"] .type-grado {
+            background: #581c87;
+            color: #c4b5fd;
+        }
+
+        [data-theme="dark"] .type-nivelacion {
+            background: #78350f;
+            color: #fcd34d;
+        }
+
+        [data-theme="dark"] .status-completed {
+            background: #14532d;
+            color: #86efac;
+        }
+
+        [data-theme="dark"] .status-current {
+            background: #78350f;
+            color: #fcd34d;
+        }
+
+        [data-theme="dark"] .status-pending {
+            background: #7f1d1d;
+            color: #fca5a5;
+        }
+
+        .typologies-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .typology-card {
+            background: var(--bg-secondary);
+            padding: 16px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+
+        .typology-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-light);
+        }
+
+
+
+
+        .typology-name {
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .typology-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 8px;
+        }
+
+        .typology-credits {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--unal-green);
+        }
+
+        .typology-count {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        /*colores tipologías--------------------------------------------*/
+        .type-disciplinar-obligatoria {
+            background: #ffcdd2;
+            color: #b71c1c;
+        }
+
+        .type-disciplinar-optativa {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .type-fundamentacion-obligatoria {
+            background: #e1f5fe;
+            color: #01579b;
+        }
+
+        .type-fundamentacion-optativa {
+            background: #f3e5f5;
+            color: #4a148c;
+        }
+
+        .type-libre-eleccion {
+            background: #bbdefb;
+            color: #0d47a1;
+        }
+
+        .type-trabajo-grado {
+            background: #e1bee7;
+            color: #4a148c;
+        }
+
+        .type-nivelacion {
+            background: #ffe0b2;
+            color: #e65100;
+        }
+
+        .semester-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .semester-content.expanded {
+            max-height: 2000px;
+        }
+
+        .move-mode .subject-item,
+        .move-mode .subjects-table tr {
+            cursor: move;
+            border: 2px dashed var(--unal-blue);
+        }
+
+        .move-mode .subjects-table tr:hover {
+            background: var(--unal-light-green);
+            color: white;
+        }
+
+        .semester-drop-zone {
+            min-height: 40px;
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            margin: 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .semester-drop-zone.drag-over {
+            border-color: var(--unal-green);
+            background: var(--bg-secondary);
+        }
+
+        .move-instructions {
+            background: var(--unal-yellow);
+            color: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Tarjetas móviles para materias */
+        .subjects-cards-mobile {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .subject-card-mobile {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .subject-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+            gap: 8px;
+        }
+
+        .subject-card-header h4 {
+            font-size: 0.95rem;
+            margin: 0;
+            flex: 1;
+        }
+
+        .subject-card-body {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .subject-card-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-item label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        .info-item strong {
+            font-size: 1.1rem;
+            color: var(--unal-green);
+        }
+
+        .info-item .form-control {
+            font-size: 0.85rem;
+            padding: 6px 8px;
+        }
+
+        .subject-card-actions {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .subject-card-actions .btn {
+            flex: 1;
+            min-width: calc(33.333% - 4px);
+            justify-content: center;
+        }
+
+        /* Hacer la tabla scrollable en tablet */
+        @media (max-width: 1024px) and (min-width: 769px) {
+            .subjects-table {
+                display: block;
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+        }
+      /* Estilos para el planificador de horarios */
+.schedule-card {
+    background: var(--bg-primary);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-light);
+}
+
+.schedule-grid {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);
+    gap: 1px;
+    background: var(--border-color);
+    border: 1px solid var(--border-color);
+    margin-top: 16px;
+}
+
+.schedule-cell {
+    background: var(--bg-primary);
+    padding: 8px;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+}
+
+.schedule-cell.header {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    color: var(--unal-green);
+}
+
+.schedule-cell.time {
+    background: var(--bg-secondary);
+    font-weight: 500;
+}
+
+.schedule-cell.class {
+    background: var(--unal-light-green);
+    color: white;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.schedule-cell.class:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.class-name {
+    font-weight: 600;
+    font-size: 0.8rem;
+    margin-bottom: 4px;
+}
+
+.class-group {
+    font-size: 0.7rem;
+    opacity: 0.9;
+}
+
+.subject-select-card {
+    background: var(--bg-secondary);
+    padding: 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.subject-select-card:hover {
+    border-color: var(--unal-green);
+}
+
+.subject-select-card.selected {
+    border-color: var(--unal-green);
+    background: rgba(46, 125, 50, 0.1);
+}
+
+.group-selector {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.group-option {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--bg-primary);
+}
+
+.group-option:hover {
+    border-color: var(--unal-green);
+}
+
+.group-option.selected {
+    background: var(--unal-green);
+    color: white;
+    border-color: var(--unal-green);
+}
+
+.conflict-warning {
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    color: #856404;
+    padding: 12px;
+    border-radius: 6px;
+    margin-top: 12px;
+}
+.schedule-grid-viewer {
+    display: grid;
+    grid-template-columns: 80px repeat(6, 1fr);  /* Reducir de 100px a 80px */
+    gap: 1px;
+    background: var(--border-color);
+    border: 2px solid var(--border-color);
+    margin-top: 12px;  /* Reducir de 16px a 12px */
+    border-radius: 8px;
+    overflow: hidden;
+    max-height: calc(96vh - 180px);  /* AÑADIR - ajustar al espacio disponible */
+    overflow-y: auto;  /* AÑADIR - scroll solo en el grid si es necesario */
+}
+
+.schedule-cell-viewer {
+    background: var(--bg-primary);
+    padding: 8px 6px;  /* Reducir de 12px 8px a 8px 6px */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;  /* Reducir de 0.85rem a 0.75rem */
+    position: relative;
+    min-height: 50px;  /* Reducir altura mínima */
+}
+
+.schedule-cell-viewer.header {
+    background: var(--bg-secondary);
+    font-weight: 700;
+    color: var(--unal-green);
+    padding: 12px 6px;  /* Reducir de 16px 8px a 12px 6px */
+    font-size: 0.8rem;  /* Reducir de 0.9rem a 0.8rem */
+}
+
+.schedule-cell-viewer.time {
+    background: var(--bg-secondary);
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.75rem;  /* Reducir de 0.85rem a 0.75rem */
+}
+
+.schedule-cell-viewer.class-block {
+    background: linear-gradient(135deg, var(--unal-green), var(--unal-light-green));
+    color: white;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: all 0.2s;
+    padding: 8px;  /* Reducir de 12px a 8px */
+    border-left: 4px solid var(--unal-dark-green);
+}
+
+.class-block-name {
+    font-weight: 700;
+    font-size: 0.75rem;  /* Reducir de 0.85rem a 0.75rem */
+    margin-bottom: 2px;  /* Reducir de 4px a 2px */
+    line-height: 1.1;
+}
+
+.class-block-info {
+    font-size: 0.65rem;  /* Reducir de 0.75rem a 0.65rem */
+    opacity: 0.95;
+    line-height: 1.2;
+}
+      /* AÑADIR este CSS nuevo */
+#currentScheduleContent {
+    flex: 1;
+    overflow-y: auto;
+    min-height: 0;  /* Importante para que flex funcione correctamente */
+}
+
+.schedule-cell-viewer.class-block:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+.schedule-cell-viewer.current-class {
+    background: linear-gradient(135deg, var(--unal-yellow), #ff6f00);
+    animation: pulse 2s infinite;
+    border-left: 4px solid #e65100;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.85; }
+}
+
+.schedule-cell-viewer.current-time {
+    background: rgba(255, 193, 7, 0.1);
+    border: 2px solid var(--unal-yellow);
+}
+
+.class-block-name {
+    font-weight: 700;
+    font-size: 0.85rem;
+    margin-bottom: 4px;
+    line-height: 1.2;
+}
+
+.class-block-info {
+    font-size: 0.75rem;
+    opacity: 0.95;
+    line-height: 1.3;
+}
+
+.current-day-indicator {
+    background: var(--unal-yellow);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 0.75rem;
+    position: absolute;
+    top: 4px;
+    right: 4px;
+}
+
+@media (max-width: 768px) {
+    .schedule-grid-viewer {
+        grid-template-columns: 80px repeat(6, 1fr);
+        font-size: 0.75rem;
+    }
+    
+    .class-block-name {
+        font-size: 0.75rem;
+    }
+    
+    .class-block-info {
+        font-size: 0.7rem;
+    }
+    /* AÑADIR al final de este bloque: */
+    .modal-content {
+        max-height: 90vh;
+        overflow-y: scroll;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #scheduleBuilder {
+        overflow-y: visible;
+    }
+
+}
+    </style>
+</head>
+
+<body>
+    <!-- Mobile menu toggle -->
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h1>SPA</h1>
+                <p>Sistema de Planificación Académica</p>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-item active" onclick="showView('overview')">
+                    📊 Resumen General
+                </div>
+                <div class="nav-item" onclick="showView('subjects')">
+                    📚 Banco de Materias
+                </div>
+              <div class="nav-item" onclick="showView('schedule')">
+    📅 Planificador de Horarios
+</div>
+                <div class="nav-item" onclick="showView('config')">
+                    ⚙️ Configuración
+                </div>
+            </nav>
+
+            <div class="sidebar-section" id="quickStats">
+                <div class="section-title">Estadísticas Rápidas</div>
+                <div style="font-size: 0.85rem;">
+                    <div style="margin-bottom: 8px;">
+                        <strong>Progreso:</strong> <span id="sidebarProgress">0%</span>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>Completados:</strong> <span id="sidebarCompleted">0</span>
+                    </div>
+                    <div style="margin-bottom: 8px;">
+                        <strong>Pendientes:</strong> <span id="sidebarPending"></span>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="sidebarProgressBar" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="sidebar-section" id="recentSemesters">
+                <div class="section-title">Semestres Activos</div>
+                <div id="activeSemestersList">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Overview View -->
+            <div id="overviewView" class="view-content">
+                <div class="header-bar">
+                    <div class="header-controls">
+                        <div>
+                            <h2 style="margin-bottom: 8px;">Plan de Estudios</h2>
+                            <p class="text-secondary" id="programName"></p>
+                        </div>
+                        <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                            <input type="file" id="csvFile" style="display: none" accept=".csv">
+                            <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
+                                📁 Cargar CSV
+                            </button>
+                           <!-- <button class="btn btn-success" onclick="saveData()">💾 Guardar</button>-->
+ 
+                            <button class="btn btn-warning" onclick="exportData()">📥 Exportar</button>
+                            <button class="btn btn-secondary" onclick="toggleTheme()">🌓</button>
+                            <button class="btn btn-success" onclick="addNewSemester()">➕ Nuevo Semestre</button>
+                          
+                          <!-- En la sección de botones del header, añade: -->
+<button class="btn btn-primary" onclick="showCurrentScheduleModal()" id="viewScheduleBtn" style="display: none;">
+    📅 Ver Mi Horario
+</button>
+                            <button class="btn btn-warning" onclick="toggleMoveMode()" id="moveBtn">🔄 Mover
+                                Materias</button>
+                                                   
+                          <a href="https://horarios-2026-1.mwp.workers.dev/" class="btn btn-success">Consulta Cronograma</a>
+                          
+                          
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stats-summary">
+                    <div class="stat-card">
+                        <div class="stat-number total" id="totalCredits"></div>
+                        <div class="stat-label">Total Requeridos</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number completed" id="completedCredits">0</div>
+                        <div class="stat-label">Completados</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number current" id="currentCredits">0</div>
+                        <div class="stat-label">Cursando</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number pending" id="pendingCredits"></div>
+                        <div class="stat-label">Pendientes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number" id="progressPercentage" style="color: var(--unal-blue)">0%</div>
+                        <div class="stat-label">Progreso</div>
+                    </div>
+                </div>
+
+                <div class="semesters-grid" id="semestersContainer">
+                    <div class="no-data">
+                        <h3>Carga tu plan de estudios</h3>
+                        <p>Importa tu archivo CSV para comenzar la planificación académica</p>
+                        <p style="margin-top: 12px;"><strong>Total de créditos: </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Subjects Bank View -->
+            <div id="subjectsView" class="view-content" style="display: none;">
+                <div class="header-bar">
+                    <div class="header-controls">
+                        <h2>Banco de Materias</h2>
+                        <button class="btn btn-success" onclick="openSubjectModal()">➕ Nueva Materia</button>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <input type="text" class="form-control" id="searchSubjects" placeholder="🔍 Buscar materias..."
+                        style="max-width: 400px;">
+                </div>
+
+                <div class="subjects-bank" id="subjectsBankContainer"
+                    style="max-height: none; background: var(--bg-primary);">
+                    <!-- Se llena dinámicamente -->
+                </div>
+            </div>
+
+            <!-- Configuration View -->
+            <div id="configView" class="view-content" style="display: none;">
+                <div class="header-bar">
+                    <h2>Configuración del Sistema</h2>
+                </div>
+
+                <div
+                    style="background: var(--bg-primary); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color); margin-bottom: 24px;">
+                    <div class="form-group">
+                        <label class="form-label">Nombre del Programa</label>
+                        <input type="text" class="form-control" id="configProgramName" placeholder="ej: Diseño Gráfico">
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label">Total de Créditos Requeridos</label>
+                            <input type="number" class="form-control" id="configTotalCredits" value="">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Universidad</label>
+                            <input type="text" class="form-control" id="configUniversity"
+                                placeholder="Tu Universidad">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 24px;">
+                        <button class="btn btn-success" onclick="saveConfig()">💾 Guardar Configuración</button>
+                        <button class="btn btn-danger" onclick="resetData()" style="margin-left: 12px;">🗑️ Reiniciar
+                            Sistema</button>
+                    </div>
+                </div>
+
+                <!-- Nuevo apartado de tipologías -->
+                <div
+                    style="background: var(--bg-primary); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color);">
+                    <h3 style="margin-bottom: 20px; color: var(--unal-green);">Distribución por Tipologías</h3>
+                    <h5 style="margin-bottom: 20px">(Hacer click para ver las asignaturas)</h5>
+                    <div class="typologies-grid" id="typologiesGrid">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+          <!-- Schedule Planning View -->
+<div id="scheduleView" class="view-content" style="display: none;">
+    <div class="header-bar">
+        <div class="header-controls">
+            <h2>Planificador de Horarios</h2>
+            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                <button class="btn btn-primary" onclick="uploadHorarios()">📁 Cargar Horarios JSON</button>
+                <button class="btn btn-success" onclick="createNewSchedule()">➕ Nuevo Horario</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuración del Periodo -->
+    <div style="background: var(--bg-primary); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color); margin-bottom: 24px;">
+        <h3 style="margin-bottom: 16px; color: var(--unal-green);">Configuración del Periodo Académico</h3>
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Periodo (ej: 2026-1)</label>
+                <input type="text" class="form-control" id="currentPeriod" placeholder="2026-1">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Inicio</label>
+                <input type="date" class="form-control" id="periodStart">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Fecha Fin</label>
+                <input type="date" class="form-control" id="periodEnd">
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="savePeriodConfig()">💾 Guardar Periodo</button>
+    </div>
+
+    <!-- Lista de Horarios Guardados -->
+    <div id="schedulesContainer"></div>
+</div>
+
+<!-- Modal para crear/editar horario -->
+<div id="scheduleModal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h3 class="modal-title">Crear Horario</h3>
+            <button class="close-btn" onclick="closeScheduleModal()">&times;</button>
+        </div>
+        
+        <div id="scheduleBuilder">
+            <div style="margin-bottom: 20px;">
+                <label class="form-label">Nombre del Horario</label>
+                <input type="text" class="form-control" id="scheduleName" placeholder="Mi Horario 2026-1">
+            </div>
+
+            <h4 style="margin-bottom: 16px;">Seleccionar Materias</h4>
+            <div id="subjectSelector"></div>
+
+            <div style="margin-top: 30px;">
+                <h4 style="margin-bottom: 16px;">Vista Previa del Horario</h4>
+                <div id="schedulePreview"></div>
+            </div>
+        </div>
+
+        <div style="margin-top: 24px; display: flex; gap: 12px;">
+            <button class="btn btn-success" onclick="saveSchedule()">💾 Guardar Horario</button>
+            <button class="btn btn-secondary" onclick="closeScheduleModal()">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Input oculto para cargar JSON -->
+<input type="file" id="horariosFile" style="display: none" accept=".json,.js">
+          <!-- Modal para visualizar horario actual -->
+<div id="currentScheduleModal" class="modal">
+    <div class="modal-content" style="max-width: 1200px;">
+        <div class="modal-header">
+            <div>
+                <h3 class="modal-title" id="currentScheduleTitle">Mi Horario Actual</h3>
+                <p style="color: var(--text-secondary); margin-top: 4px;" id="currentDayTime"></p>
+            </div>
+            <button class="close-btn" onclick="closeCurrentScheduleModal()">&times;</button>
+        </div>
+        <div id="currentScheduleContent"></div>
+    </div>
+</div>
+        </main>
+    </div>
+
+    <!-- Subject Modal -->
+    <div id="subjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="subjectModalTitle">Gestionar Materia</h3>
+                <button class="close-btn" onclick="closeSubjectModal()">&times;</button>
+            </div>
+
+            <form id="subjectForm" onsubmit="saveSubject(event)">
+                <div class="form-group">
+                    <label class="form-label">Nombre de la Materia</label>
+                    <input type="text" class="form-control" id="subjectName" required>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Tipología</label>
+                        <select class="form-control" id="subjectType" required>
+                            <option value="DISCIPLINAR OBLIGATORIA">Disciplinar Obligatoria</option>
+                            <option value="DISCIPLINAR OPTATIVA">Disciplinar Optativa</option>
+                            <option value="FUNDAMENTACIÓN OBLIGATORIA">Fundamentación Obligatoria</option>
+                            <option value="FUNDAMENTACIÓN OPTATIVA">Fundamentación Optativa</option>
+                            <option value="LIBRE ELECCIÓN">Libre Elección</option>
+                            <option value="TRABAJO DE GRADO">Trabajo de Grado</option>
+                            <option value="NIVELACIÓN">Nivelación</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Créditos</label>
+                        <input type="number" class="form-control" id="subjectCredits" min="1" max="12" required>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Código</label>
+                        <input type="text" class="form-control" id="subjectCode">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Grupo</label>
+                        <input type="text" class="form-control" id="subjectGroup" placeholder="ej: 1, 2, 3...">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Profesor</label>
+                    <input type="text" class="form-control" id="subjectProfessor">
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-success">💾 Guardar</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeSubjectModal()">❌ Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Typology Subjects Modal -->
+    <div id="typologySubjectsModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="typologyModalTitle">Materias por Tipología</h3>
+                <button class="close-btn" onclick="closeTypologyModal()">&times;</button>
+            </div>
+
+            <div id="typologySubjectsContainer">
+                <!-- Se llena dinámicamente -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let studyPlan = {};
+        let subjectBank = [];
+        let currentView = 'overview';
+        let currentEditingSubject = null;
+      let horariosData = []; // Datos de horarios cargados desde JSON
+let schedules = []; // Horarios creados por el usuario
+let currentPeriodConfig = {
+    period: '',
+    startDate: '',
+    endDate: ''
+};
+let currentEditingSchedule = null;
+        let config = {
+            programName: '',
+            university: '',
+            totalCredits: 0,
+            creditsByType: {}
+        };
+
+
+        // Initialize the application
+        function initApp() {
+            loadConfig();
+            loadData();
+            initializeSubjectBank();
+            updateUI();
+            setupEventListeners();
+        }
+
+        function loadConfig() {
+            const savedConfig = localStorage.getItem('academicPlannerConfig');
+            if (savedConfig) {
+                config = { ...config, ...JSON.parse(savedConfig) };
+            }
+
+            document.getElementById('configProgramName').value = config.programName;
+            document.getElementById('configTotalCredits').value = config.totalCredits;
+            document.getElementById('configUniversity').value = config.university;
+            document.getElementById('programName').textContent = `${config.programName} - ${config.university}`;
+        }
+
+        function loadData() {
+            const savedData = localStorage.getItem('academicPlannerData');
+            if (savedData) {
+                studyPlan = JSON.parse(savedData);
+            }
+        }
+
+        function initializeSubjectBank() {
+            const savedBank = localStorage.getItem('academicPlannerSubjects');
+            if (savedBank) {
+                subjectBank = JSON.parse(savedBank);
+            } else {
+                // Iniciar con banco vacío si no hay datos guardados
+                subjectBank = [];
+                saveSubjectBank();
+            }
+        }
+
+        function generateId() {
+            return Date.now() + Math.random().toString(36).substr(2, 9);
+        }
+
+        function setupEventListeners() {
+            document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
+            document.getElementById('searchSubjects').addEventListener('input', filterSubjects);
+        }
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            Papa.parse(file, {
+                header: false,
+                complete: function (results) {
+                    parseCSVData(results.data);
+                },
+                encoding: 'UTF-8'
+            });
+        }
+
+        function parseCSVData(data) {
+            studyPlan = {};
+            let currentSemester = 0;
+            let totalCreditsFromCSV = 0;
+            const typesFound = {};
+
+            for (let i = 0; i < data.length; i++) {
+                const row = data[i];
+
+                if (row[1] && row[1].includes('Periodo académico')) {
+                    const semesterMatch = row[1].match(/Periodo académico (\d+)/);
+                    if (semesterMatch) {
+                        currentSemester = parseInt(semesterMatch[1]);
+                        studyPlan[currentSemester] = {
+                            subjects: [],
+                            status: 'completed'
+                        };
+                    }
+                } else if (currentSemester > 0 && row[1] && row[2] && row[3] &&
+                    !row[1].includes('ASIGNATURAS INSCRITAS') &&
+                    !row[1].includes('Total Créditos')) {
+
+                    const credits = parseInt(row[3]) || parseInt(row[2]) || 0;
+                    if (credits > 0 && row[1].trim()) {
+                        const subjectType = row[2] ? row[2].trim() : 'DISCIPLINAR OBLIGATORIA';
+                        const subject = {
+                            id: generateId(),
+                            name: row[1].trim(),
+                            type: subjectType,
+                            credits: credits,
+                            code: '',
+                            professor: '',
+                            group: ''
+                        };
+
+                        studyPlan[currentSemester].subjects.push(subject);
+
+                        // Sumar créditos totales
+                        totalCreditsFromCSV += credits;
+
+                        // Contar tipos de materias
+                        if (!typesFound[subjectType]) {
+                            typesFound[subjectType] = 0;
+                        }
+                        typesFound[subjectType] += credits;
+
+                        // Add to subject bank if not exists
+                        const existingSubject = subjectBank.find(s => s.name === subject.name);
+                        if (!existingSubject) {
+                            subjectBank.push({
+                                ...subject,
+                                id: generateId()
+                            });
+                        }
+                    }
+                }
+            }
+
+            // Actualizar configuración con datos del CSV
+            config.totalCredits = totalCreditsFromCSV;
+            config.creditsByType = typesFound;
+
+            // Si no hay nombre de programa, poner uno genérico
+            if (!config.programName) {
+                config.programName = 'Plan de Estudios';
+            }
+            if (!config.university) {
+                config.university = 'Universidad';
+            }
+
+            saveData();
+            saveSubjectBank();
+            saveConfig();
+            updateUI();
+        }
+
+        function updateUI() {
+            updateStats();
+            updateSidebar();
+            renderSemesters();
+            renderSubjectsBank();
+            renderTypologies();
+        }
+
+        function updateStats() {
+            let completedCredits = 0;
+            let currentCredits = 0;
+            let totalPlannedCredits = 0;
+
+            Object.values(studyPlan).forEach(semester => {
+                const semesterCredits = semester.subjects.reduce((sum, subject) => sum + subject.credits, 0);
+                totalPlannedCredits += semesterCredits;
+
+                if (semester.status === 'completed') {
+                    completedCredits += semesterCredits;
+                } else if (semester.status === 'current') {
+                    currentCredits += semesterCredits;
+                }
+            });
+
+            const pendingCredits = Math.max(0, config.totalCredits - completedCredits - currentCredits);
+            const progressPercentage = Math.round((completedCredits / config.totalCredits) * 100);
+
+            document.getElementById('totalCredits').textContent = config.totalCredits;
+            document.getElementById('completedCredits').textContent = completedCredits;
+            document.getElementById('currentCredits').textContent = currentCredits;
+            document.getElementById('pendingCredits').textContent = pendingCredits;
+            document.getElementById('progressPercentage').textContent = progressPercentage + '%';
+        }
+
+        function updateSidebar() {
+            const completedCredits = parseInt(document.getElementById('completedCredits').textContent);
+            const pendingCredits = parseInt(document.getElementById('pendingCredits').textContent);
+            const progressPercentage = document.getElementById('progressPercentage').textContent;
+
+            document.getElementById('sidebarProgress').textContent = progressPercentage;
+            document.getElementById('sidebarCompleted').textContent = completedCredits;
+            document.getElementById('sidebarPending').textContent = pendingCredits;
+            document.getElementById('sidebarProgressBar').style.width = progressPercentage;
+
+            // Update active semesters list
+            const activeSemestersList = document.getElementById('activeSemestersList');
+            activeSemestersList.innerHTML = '';
+
+            Object.keys(studyPlan)
+                .filter(semesterNum => studyPlan[semesterNum].subjects && studyPlan[semesterNum].subjects.length > 0)
+                .sort((a, b) => parseInt(a) - parseInt(b))
+                .forEach(semesterNum => {
+                    const semester = studyPlan[semesterNum];
+                    if (semester.status !== 'pending') {
+                        const div = document.createElement('div');
+                        div.style.cssText = 'font-size: 0.8rem; margin-bottom: 6px; padding: 4px 8px; background: var(--bg-secondary); border-radius: 4px; cursor: pointer;';
+                        div.innerHTML = `Semestre ${semesterNum} <span style="color: var(--text-secondary);">(${semester.subjects.length})</span>`;
+                        div.onclick = () => scrollToSemester(semesterNum);
+                        activeSemestersList.appendChild(div);
+                    }
+                });
+        }
+
+        function renderSemesters() {
+            const container = document.getElementById('semestersContainer');
+
+            // Filtrar solo semestres con materias
+            const semestersWithSubjects = Object.keys(studyPlan).filter(semesterNum => {
+                return studyPlan[semesterNum].subjects && studyPlan[semesterNum].subjects.length > 0;
+            });
+
+            if (semestersWithSubjects.length === 0) {
+                container.innerHTML = `
+    <div class="no-data">
+        <h3>Bienvenido al Sistema de Planificación Académica</h3>
+        <p>Importa tu archivo CSV para comenzar</p>
+        <p style="margin-top: 12px;">El sistema detectará automáticamente:</p>
+        <ul style="text-align: left; display: inline-block; margin-top: 8px;">
+            <li>Total de créditos del plan</li>
+            <li>Materias y sus tipologías</li>
+            <li>Distribución por semestres</li>
+        </ul>
+    </div>
+`;
+                return;
+            }
+
+            container.innerHTML = '';
+            const sortedSemesters = semestersWithSubjects.sort((a, b) => parseInt(a) - parseInt(b));
+
+            sortedSemesters.forEach(semesterNum => {
+                const semester = studyPlan[semesterNum];
+                const semesterCard = createSemesterCard(semesterNum, semester);
+                container.appendChild(semesterCard);
+            });
+        }
+
+        function createSemesterCard(semesterNum, semester) {
+            const totalCredits = semester.subjects.reduce((sum, subject) => sum + subject.credits, 0);
+            const statusClass = semester.status || 'pending';
+            const statusLabel = getStatusLabel(semester.status);
+
+            const card = document.createElement('div');
+            card.className = `semester-card ${statusClass}`;
+            card.id = `semester-${semesterNum}`;
+
+            card.innerHTML = `
+                <div class="semester-header" onclick="toggleSemester(${semesterNum})">
+                    <div>
+                        <div class="semester-title">
+                            <span class="semester-status status-${statusClass}">${statusLabel}</span>
+                            Semestre ${semesterNum}
+                        </div>
+                        <div class="semester-summary">
+                            ${semester.subjects.length} materias • ${totalCredits} créditos
+                        </div>
+                    </div>
+                    <div class="semester-controls">
+                        <select class="btn btn-sm" onclick="event.stopPropagation()" onchange="changeSemesterStatus(${semesterNum}, this.value)">
+                            <option value="pending" ${semester.status === 'pending' ? 'selected' : ''}>Pendiente</option>
+                            <option value="current" ${semester.status === 'current' ? 'selected' : ''}>Cursando</option>
+                            <option value="completed" ${semester.status === 'completed' ? 'selected' : ''}>Completado</option>
+                        </select>
+                        <button class="btn btn-primary btn-sm" onclick="event.stopPropagation(); addSubjectToSemester(${semesterNum})">+ Agregar</button>
+<button class="btn btn-danger btn-sm" onclick="event.stopPropagation(); deleteSemester(${semesterNum})">🗑️</button>
+                        <button class="semester-toggle" id="toggle-${semesterNum}">▶</button>
+                    </div>
+                </div>
+                <div class="semester-content" id="content-${semesterNum}">
+                    <div class="semester-body">
+                        ${createSubjectsTable(semester.subjects, semesterNum)}
+                    </div>
+                </div>
+            `;
+
+            return card;
+        }
+
+        function createSubjectsTable(subjects, semesterNum) {
+            if (subjects.length === 0) {
+                return '<div class="no-data" style="margin: 0;"><p>No hay materias en este semestre</p></div>';
+            }
+
+            // Para móvil, usar diseño de tarjetas
+            if (window.innerWidth <= 768) {
+                return `
+            <div class="subjects-cards-mobile">
+                ${subjects.map((subject, index) => createSubjectCard(subject, semesterNum, index)).join('')}
+            </div>
+        `;
+            }
+
+            // Para desktop, usar tabla
+            return `
+        <table class="subjects-table">
+            <thead>
+                <tr>
+                    <th>Materia</th>
+                    <th>Tipo</th>
+                    <th>Créditos</th>
+                    <th>Código</th>
+                    <th>Profesor</th>
+                    <th>Grupo</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${subjects.map((subject, index) => createSubjectRow(subject, semesterNum, index)).join('')}
+            </tbody>
+        </table>
+    `;
+        }
+
+        function createSubjectCard(subject, semesterNum, index) {
+            const typeClass = getTypeClass(subject.type);
+            return `
+        <div class="subject-card-mobile">
+            <div class="subject-card-header">
+                <h4>${subject.name}</h4>
+                <span class="type-badge ${typeClass}">${subject.type}</span>
+            </div>
+            <div class="subject-card-body">
+                <div class="subject-card-info">
+                    <div class="info-item">
+                        <label>Créditos:</label>
+                        <strong>${subject.credits}</strong>
+                    </div>
+                    <div class="info-item">
+                        <label>Código:</label>
+                        <input type="text" class="form-control" value="${subject.code || ''}" 
+                               onchange="updateSubjectField(${semesterNum}, ${index}, 'code', this.value)"
+                               placeholder="Código">
+                    </div>
+                    <div class="info-item">
+                        <label>Profesor:</label>
+                        <input type="text" class="form-control" value="${subject.professor || ''}" 
+                               onchange="updateSubjectField(${semesterNum}, ${index}, 'professor', this.value)"
+                               placeholder="Profesor">
+                    </div>
+                    <div class="info-item">
+                        <label>Grupo:</label>
+                        <input type="text" class="form-control" value="${subject.group || ''}" 
+                               onchange="updateSubjectField(${semesterNum}, ${index}, 'group', this.value)"
+                               placeholder="Grupo">
+                    </div>
+                </div>
+                <div class="subject-card-actions">
+                    <button class="btn btn-primary btn-sm" onclick="editSubject('${subject.id}', ${semesterNum}, ${index})">✏️ Editar</button>
+                    <button class="btn btn-danger btn-sm" onclick="removeSubjectFromSemester(${semesterNum}, ${index})">🗑️ Eliminar</button>
+                    <button class="btn btn-secondary btn-sm" onclick="startMoveSubject(${semesterNum}, ${index})">🔄 Mover</button>
+                </div>
+            </div>
+        </div>
+    `;
+        }
+
+        function createSubjectRow(subject, semesterNum, index) {
+            const typeClass = getTypeClass(subject.type);
+            return `
+        <tr>
+            <td><strong>${subject.name}</strong></td>
+            <td><span class="type-badge ${typeClass}">${subject.type}</span></td>
+            <td><strong>${subject.credits}</strong></td>
+            <td><input type="text" class="editable-field" value="${subject.code || ''}" onchange="updateSubjectField(${semesterNum}, ${index}, 'code', this.value)"></td>
+            <td><input type="text" class="editable-field" value="${subject.professor || ''}" onchange="updateSubjectField(${semesterNum}, ${index}, 'professor', this.value)"></td>
+            <td><input type="text" class="editable-field" value="${subject.group || ''}" onchange="updateSubjectField(${semesterNum}, ${index}, 'group', this.value)"></td>
+            <td>
+    <button class="btn btn-primary btn-sm" onclick="editSubject('${subject.id}', ${semesterNum}, ${index})">✏️</button>
+    <button class="btn btn-danger btn-sm" onclick="removeSubjectFromSemester(${semesterNum}, ${index})">🗑️</button>
+    <button class="btn btn-secondary btn-sm move-subject-btn" onclick="startMoveSubject(${semesterNum}, ${index})" data-semester="${semesterNum}" data-index="${index}">🔄</button>
+</td>
+        </tr>
+    `;
+        }
+
+
+        function getTypeClass(type) {
+            const typeMap = {
+                'DISCIPLINAR OBLIGATORIA': 'type-disciplinar-obligatoria',
+                'DISCIPLINAR OPTATIVA': 'type-disciplinar-optativa',
+                'FUNDAMENTACIÓN OBLIGATORIA': 'type-fundamentacion-obligatoria',
+                'FUNDAMENTACIÓN OPTATIVA': 'type-fundamentacion-optativa',
+                'LIBRE ELECCIÓN': 'type-libre-eleccion',
+                'TRABAJO DE GRADO': 'type-trabajo-grado',
+                'NIVELACIÓN': 'type-nivelacion'
+            };
+
+            return typeMap[type] || 'type-disciplinar-obligatoria';
+        }
+
+        function getStatusLabel(status) {
+            const labels = {
+                'completed': 'Completado',
+                'current': 'Cursando',
+                'pending': 'Pendiente'
+            };
+            return labels[status] || 'Pendiente';
+        }
+
+        function toggleSemester(semesterNum) {
+            const content = document.getElementById(`content-${semesterNum}`);
+            const toggle = document.getElementById(`toggle-${semesterNum}`);
+
+            // Cerrar todos los demás semestres primero
+            document.querySelectorAll('.semester-content').forEach(otherContent => {
+                if (otherContent !== content && otherContent.classList.contains('expanded')) {
+                    otherContent.classList.remove('expanded');
+                }
+            });
+
+            document.querySelectorAll('.semester-toggle').forEach(otherToggle => {
+                if (otherToggle !== toggle && otherToggle.classList.contains('expanded')) {
+                    otherToggle.textContent = '▶';
+                    otherToggle.classList.remove('expanded');
+                }
+            });
+
+            // Alternar el semestre actual
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.textContent = '▶';
+                toggle.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                toggle.textContent = '▼';
+                toggle.classList.add('expanded');
+            }
+        }
+
+        function changeSemesterStatus(semesterNum, newStatus) {
+            studyPlan[semesterNum].status = newStatus;
+            saveData();
+            updateUI();
+        }
+
+        function saveSubject(event) {
+            event.preventDefault();
+
+            const subjectData = {
+                id: (currentEditingSubject?.subject?.id && currentEditingSubject?.isEdit) ? currentEditingSubject.subject.id : generateId(),
+                name: document.getElementById('subjectName').value,
+                type: document.getElementById('subjectType').value,
+                credits: parseInt(document.getElementById('subjectCredits').value),
+                code: document.getElementById('subjectCode').value,
+                professor: document.getElementById('subjectProfessor').value,
+                group: document.getElementById('subjectGroup').value
+            };
+
+            const oldName = currentEditingSubject?.subject?.name;
+
+            if (currentEditingSubject?.isEdit && currentEditingSubject?.semesterNum) {
+                // Update subject in semester
+                const semester = currentEditingSubject.semesterNum;
+                const index = currentEditingSubject.subjectIndex;
+                studyPlan[semester].subjects[index] = subjectData;
+
+                // Actualizar en banco de materias
+                const bankSubject = subjectBank.find(s => s.name === oldName);
+                if (bankSubject) {
+                    Object.assign(bankSubject, subjectData);
+                }
+
+                // Actualizar en todos los semestres
+                Object.keys(studyPlan).forEach(semesterNum => {
+                    studyPlan[semesterNum].subjects.forEach(subject => {
+                        if (subject.name === oldName) {
+                            Object.assign(subject, subjectData);
+                        }
+                    });
+                });
+
+            } else {
+                // Add/update in subject bank
+                const existingIndex = subjectBank.findIndex(s => s.id === subjectData.id);
+                if (existingIndex >= 0) {
+                    const oldSubjectName = subjectBank[existingIndex].name;
+                    subjectBank[existingIndex] = subjectData;
+
+                    // Actualizar en todos los semestres
+                    Object.keys(studyPlan).forEach(semesterNum => {
+                        studyPlan[semesterNum].subjects.forEach(subject => {
+                            if (subject.name === oldSubjectName) {
+                                Object.assign(subject, subjectData);
+                            }
+                        });
+                    });
+                } else {
+                    subjectBank.push(subjectData);
+                }
+                saveSubjectBank();
+            }
+
+            saveData();
+            updateUI();
+            closeSubjectModal();
+        }
+
+        function addSubjectToSemester(semesterNum) {
+            // Show modal to select from subject bank
+            currentEditingSubject = { semesterNum, isNew: true };
+            showSubjectBankModal();
+        }
+
+        function removeSubjectFromSemester(semesterNum, subjectIndex) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta materia del semestre?')) {
+                const subjectToRemove = studyPlan[semesterNum].subjects[subjectIndex];
+
+                // Eliminar del semestre
+                studyPlan[semesterNum].subjects.splice(subjectIndex, 1);
+
+                // La materia sigue existiendo en el banco, solo se quita del semestre
+                saveData();
+                updateUI(); // Esto actualizará las estadísticas y configuración
+            }
+        }
+
+        function editSubject(subjectId, semesterNum, subjectIndex) {
+            const subject = studyPlan[semesterNum].subjects[subjectIndex];
+            currentEditingSubject = { subject, semesterNum, subjectIndex, isEdit: true };
+            openSubjectModal(subject);
+        }
+
+        function renderSubjectsBank() {
+            const container = document.getElementById('subjectsBankContainer');
+            const searchTerm = document.getElementById('searchSubjects').value.toLowerCase();
+
+            const filteredSubjects = subjectBank.filter(subject =>
+                subject.name.toLowerCase().includes(searchTerm) ||
+                subject.type.toLowerCase().includes(searchTerm)
+            );
+
+            if (filteredSubjects.length === 0) {
+                container.innerHTML = '<div class="no-data"><p>No se encontraron materias</p></div>';
+                return;
+            }
+
+            container.innerHTML = filteredSubjects.map(subject => `
+                <div class="subject-item">
+                    <div class="subject-info">
+                        <h4>${subject.name}</h4>
+                        <p><span class="type-badge ${getTypeClass(subject.type)}">${subject.type}</span> • ${subject.credits} créditos</p>
+                    </div>
+                    <div>
+                        <button class="btn btn-primary btn-sm" onclick="editBankSubject('${subject.id}')">✏️</button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteBankSubject('${subject.id}')">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterSubjects() {
+            renderSubjectsBank();
+        }
+
+        function openSubjectModal(subject = null) {
+            const modal = document.getElementById('subjectModal');
+            const title = document.getElementById('subjectModalTitle');
+            // Construir opciones dinámicas de tipología
+            const typeSelect = document.getElementById('subjectType');
+            const currentTypes = new Set();
+
+            // Obtener tipos del CSV/config
+            Object.keys(config.creditsByType || {}).forEach(type => currentTypes.add(type));
+
+            // Agregar tipos por defecto si no hay ninguno
+            if (currentTypes.size === 0) {
+                ['DISCIPLINAR OBLIGATORIA', 'DISCIPLINAR OPTATIVA', 'FUNDAMENTACIÓN OBLIGATORIA',
+                    'FUNDAMENTACIÓN OPTATIVA', 'LIBRE ELECCIÓN', 'TRABAJO DE GRADO', 'NIVELACIÓN'].forEach(type =>
+                        currentTypes.add(type)
+                    );
+            }
+
+            typeSelect.innerHTML = Array.from(currentTypes).sort().map(type =>
+                `<option value="${type}">${type}</option>`
+            ).join('');
+
+            if (subject) {
+                title.textContent = 'Editar Materia';
+                document.getElementById('subjectName').value = subject.name;
+                document.getElementById('subjectType').value = subject.type;
+                document.getElementById('subjectCredits').value = subject.credits;
+                document.getElementById('subjectCode').value = subject.code || '';
+                document.getElementById('subjectProfessor').value = subject.professor || '';
+                document.getElementById('subjectGroup').value = subject.group || '';
+            } else {
+                title.textContent = 'Nueva Materia';
+                document.getElementById('subjectForm').reset();
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closeSubjectModal() {
+            document.getElementById('subjectModal').style.display = 'none';
+            currentEditingSubject = null;
+        }
+
+        function saveSubject(event) {
+            event.preventDefault();
+
+            const subjectData = {
+                id: currentEditingSubject?.subject?.id || generateId(),
+                name: document.getElementById('subjectName').value,
+                type: document.getElementById('subjectType').value,
+                credits: parseInt(document.getElementById('subjectCredits').value),
+                code: document.getElementById('subjectCode').value,
+                professor: document.getElementById('subjectProfessor').value,
+                group: document.getElementById('subjectGroup').value
+            };
+
+            const oldSubject = currentEditingSubject?.subject;
+            const isNewSubject = !oldSubject;
+
+            if (isNewSubject) {
+                // Agregar nueva materia al banco
+                subjectBank.push(subjectData);
+            } else {
+                // Actualizar en banco de materias
+                const bankIndex = subjectBank.findIndex(s => s.id === oldSubject.id || s.name === oldSubject.name);
+                if (bankIndex >= 0) {
+                    subjectBank[bankIndex] = { ...subjectBank[bankIndex], ...subjectData };
+                }
+
+                // Actualizar en TODOS los semestres donde aparezca esta materia
+                Object.keys(studyPlan).forEach(semesterNum => {
+                    studyPlan[semesterNum].subjects.forEach((subject, index) => {
+                        if (subject.id === oldSubject.id || subject.name === oldSubject.name) {
+                            // Mantener el ID original si existe
+                            studyPlan[semesterNum].subjects[index] = {
+                                ...subjectData,
+                                id: subject.id || subjectData.id
+                            };
+                        }
+                    });
+                });
+            }
+
+            // Guardar cambios
+            saveData();
+            saveSubjectBank();
+            updateUI();
+            closeSubjectModal();
+        }
+
+        //-------Función de sicnronización
+        // Función para sincronizar una materia en todos los lugares
+        function syncSubjectEverywhere(updatedSubject, originalName = null) {
+            const nameToMatch = originalName || updatedSubject.name;
+
+            // Actualizar en banco de materias
+            const bankIndex = subjectBank.findIndex(s => s.name === nameToMatch || s.id === updatedSubject.id);
+            if (bankIndex >= 0) {
+                subjectBank[bankIndex] = { ...subjectBank[bankIndex], ...updatedSubject };
+            }
+
+            // Actualizar en todos los semestres
+            Object.keys(studyPlan).forEach(semesterNum => {
+                studyPlan[semesterNum].subjects.forEach((subject, index) => {
+                    if (subject.name === nameToMatch || subject.id === updatedSubject.id) {
+                        studyPlan[semesterNum].subjects[index] = {
+                            ...studyPlan[semesterNum].subjects[index],
+                            ...updatedSubject
+                        };
+                    }
+                });
+            });
+
+            // Guardar y actualizar UI
+            saveData();
+            saveSubjectBank();
+            updateUI();
+        }
+        //--------------------------------------
+
+        function updateSubjectField(semesterNum, subjectIndex, field, value) {
+            const subject = studyPlan[semesterNum].subjects[subjectIndex];
+            const originalSubject = { ...subject };
+
+            // Actualizar el campo
+            subject[field] = value;
+
+            // Sincronizar en todos lados
+            syncSubjectEverywhere(subject, originalSubject.name);
+        }
+
+        function editBankSubject(subjectId) {
+            const subject = subjectBank.find(s => s.id === subjectId);
+            if (subject) {
+                currentEditingSubject = { subject, isBank: true };
+                openSubjectModal(subject);
+            }
+        }
+
+        function deleteBankSubject(subjectId) {
+            if (confirm('¿Estás seguro de que quieres eliminar esta materia del banco?')) {
+                const subjectToDelete = subjectBank.find(s => s.id === subjectId);
+                const subjectName = subjectToDelete ? subjectToDelete.name : null;
+
+                // Eliminar del banco de materias
+                subjectBank = subjectBank.filter(s => s.id !== subjectId);
+
+                // Eliminar de todos los semestres si existe
+                if (subjectName) {
+                    Object.keys(studyPlan).forEach(semesterNum => {
+                        studyPlan[semesterNum].subjects = studyPlan[semesterNum].subjects.filter(
+                            subject => subject.name !== subjectName && subject.id !== subjectId
+                        );
+                    });
+                }
+
+                saveData();
+                saveSubjectBank();
+                updateUI(); // Esto actualizará todas las vistas incluyendo configuración
+                renderSubjectsBank();
+            }
+        }
+
+        function showSubjectBankModal() {
+            // Implementation for selecting subjects from bank to add to semester
+            // This would show a modal with the subject bank for selection
+            showView('subjects');
+        }
+
+        //-------Para tipologías con créditos
+        function renderTypologies() {
+            const container = document.getElementById('typologiesGrid');
+            if (!container) return;
+
+            // Calcular estadísticas por tipología
+            const typologyStats = {};
+
+            // Inicializar con 0
+            const typologyTypes = [
+                'DISCIPLINAR OBLIGATORIA',
+                'DISCIPLINAR OPTATIVA',
+                'FUNDAMENTACIÓN OBLIGATORIA',
+                'FUNDAMENTACIÓN OPTATIVA',
+                'LIBRE ELECCIÓN',
+                'TRABAJO DE GRADO',
+                'NIVELACIÓN'
+            ];
+
+            typologyTypes.forEach(type => {
+                typologyStats[type] = { credits: 0, count: 0 };
+            });
+
+            // Contar SOLO desde el plan de estudios (materias asignadas a semestres)
+            Object.values(studyPlan).forEach(semester => {
+                if (semester.subjects) {
+                    semester.subjects.forEach(subject => {
+                        if (typologyStats[subject.type]) {
+                            typologyStats[subject.type].credits += subject.credits;
+                            typologyStats[subject.type].count += 1;
+                        }
+                    });
+                }
+            });
+
+            // Renderizar las tarjetas
+            container.innerHTML = typologyTypes.map(type => {
+                const stats = typologyStats[type];
+                const typeClass = getTypeClass(type);
+
+                return `
+    <div class="typology-card" onclick="showTypologySubjects('${type}')">
+        <div class="typology-name">
+            <span class="type-badge ${typeClass}" style="display: inline-block; margin-bottom: 4px;">
+                ${type}
+            </span>
+        </div>
+        <div class="typology-stats">
+            <div class="typology-credits">${stats.credits}</div>
+            <div class="typology-count">${stats.count} materias</div>
+        </div>
+    </div>
+`;
+            }).join('');
+        }
+        //----------------------------------
+
+        function showTypologySubjects(typologyType) {
+            const modal = document.getElementById('typologySubjectsModal');
+            const title = document.getElementById('typologyModalTitle');
+            const container = document.getElementById('typologySubjectsContainer');
+
+            title.textContent = `Materias: ${typologyType}`;
+
+            // Obtener todas las materias de esta tipología
+            const typologySubjects = [];
+
+            // Buscar en el plan de estudios
+            Object.entries(studyPlan).forEach(([semesterNum, semester]) => {
+                semester.subjects.forEach(subject => {
+                    if (subject.type === typologyType) {
+                        typologySubjects.push({
+                            ...subject,
+                            semester: semesterNum,
+                            status: semester.status
+                        });
+                    }
+                });
+            });
+
+            // Buscar en el banco de materias (no asignadas)
+            subjectBank.forEach(subject => {
+                if (subject.type === typologyType) {
+                    const isInPlan = Object.values(studyPlan).some(semester =>
+                        semester.subjects.some(s => s.name === subject.name)
+                    );
+
+                    if (!isInPlan) {
+                        typologySubjects.push({
+                            ...subject,
+                            semester: 'No asignado',
+                            status: 'available'
+                        });
+                    }
+                }
+            });
+
+            if (typologySubjects.length === 0) {
+                container.innerHTML = '<div class="no-data"><p>No hay materias de esta tipología</p></div>';
+            } else {
+                container.innerHTML = `
+            <div style="margin-bottom: 16px;">
+                <strong>Total: ${typologySubjects.length} materias | ${typologySubjects.reduce((sum, s) => sum + s.credits, 0)} créditos</strong>
+            </div>
+            <table class="subjects-table">
+                <thead>
+                    <tr>
+                        <th>Materia</th>
+                        <th>Créditos</th>
+                        <th>Semestre</th>
+                        <th>Estado</th>
+                        <th>Código</th>
+                        <th>Profesor</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${typologySubjects.map(subject => `
+                        <tr>
+                            <td><strong>${subject.name}</strong></td>
+                            <td>${subject.credits}</td>
+                            <td>${subject.semester}</td>
+                            <td>
+                                <span class="type-badge status-${subject.status}">
+                                    ${getStatusLabel(subject.status)}
+                                </span>
+                            </td>
+                            <td>${subject.code || '-'}</td>
+                            <td>${subject.professor || '-'}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closeTypologyModal() {
+            document.getElementById('typologySubjectsModal').style.display = 'none';
+        }
+
+function showView(viewName) {
+    // Hide all views
+    document.querySelectorAll('.view-content').forEach(view => {
+        view.style.display = 'none';
+    });
+
+    // Remove active class from all nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+    });
+
+    // Show selected view
+    document.getElementById(viewName + 'View').style.display = 'block';
+
+    // Add active class to clicked nav item
+    if (event && event.target) {
+        event.target.classList.add('active');
+    }
+
+    currentView = viewName;
+
+    // Cerrar sidebar automáticamente en móvil
+    closeSidebar();
+
+    if (viewName === 'subjects') {
+        renderSubjectsBank();
+    } else if (viewName === 'config') {
+        renderTypologies();
+    } else if (viewName === 'schedule') {
+        renderSchedules();
+        loadPeriodConfig();
+    }
+}
+
+        function scrollToSemester(semesterNum) {
+            // Cerrar sidebar antes de hacer scroll
+            closeSidebar();
+
+            const element = document.getElementById(`semester-${semesterNum}`);
+            const content = document.getElementById(`content-${semesterNum}`);
+            const toggle = document.getElementById(`toggle-${semesterNum}`);
+
+            if (element) {
+                // Desplegar el semestre si está cerrado
+                if (content && !content.classList.contains('expanded')) {
+                    content.classList.add('expanded');
+                    if (toggle) {
+                        toggle.textContent = '▼';
+                        toggle.classList.add('expanded');
+                    }
+                }
+
+                // Hacer scroll al elemento
+                element.scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+        function scrollToSemester(semesterNum) {
+            // Cerrar sidebar antes de hacer scroll
+            closeSidebar();
+
+            // Desplegar el semestre
+            expandSemester(semesterNum);
+
+            // Hacer scroll después de un pequeño delay para asegurar que se expandió
+            setTimeout(() => {
+                const element = document.getElementById(`semester-${semesterNum}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth' });
+                }
+            }, 100);
+        }
+
+        function expandSemester(semesterNum) {
+            const content = document.getElementById(`content-${semesterNum}`);
+            const toggle = document.getElementById(`toggle-${semesterNum}`);
+
+            if (content && !content.classList.contains('expanded')) {
+                content.classList.add('expanded');
+                if (toggle) {
+                    toggle.textContent = '▼';
+                    toggle.classList.add('expanded');
+                }
+            }
+        }
+
+        function saveConfig() {
+            // Actualizar desde formulario si existe
+            const programNameInput = document.getElementById('configProgramName');
+            const totalCreditsInput = document.getElementById('configTotalCredits');
+            const universityInput = document.getElementById('configUniversity');
+
+            if (programNameInput) config.programName = programNameInput.value;
+            if (totalCreditsInput) config.totalCredits = parseInt(totalCreditsInput.value);
+            if (universityInput) config.university = universityInput.value;
+
+            localStorage.setItem('academicPlannerConfig', JSON.stringify(config));
+
+            // Actualizar UI
+            const programNameDisplay = document.getElementById('programName');
+            if (programNameDisplay) {
+                programNameDisplay.textContent = `${config.programName} - ${config.university}`;
+            }
+
+            updateUI();
+
+            // Solo mostrar alerta si fue guardado manualmente
+            if (programNameInput) {
+                alert('Configuración guardada correctamente');
+            }
+        }
+
+
+        function resetData() {
+            if (confirm('¿Estás seguro de que quieres reiniciar todo el sistema? Esta acción no se puede deshacer.')) {
+                // Limpiar localStorage completamente
+                localStorage.removeItem('academicPlannerData');
+                localStorage.removeItem('academicPlannerSubjects');
+                localStorage.removeItem('academicPlannerConfig');
+                localStorage.removeItem('theme');
+
+                // Reinicializar variables globales
+                studyPlan = {};
+                subjectBank = [];
+                config = {
+                    programName: '',
+                    university: '',
+                    totalCredits: 0,
+                    creditsByType: {}
+                };
+
+                // Limpiar el input de archivo
+                const csvInput = document.getElementById('csvFile');
+                if (csvInput) {
+                    csvInput.value = '';
+                }
+
+                // Forzar guardado del estado vacío
+                saveData();
+                saveSubjectBank();
+                saveConfig();
+
+                // Recargar la página para estado limpio
+                location.reload();
+            }
+        }
+        
+        // ============================================
+// FUNCIONES DE GESTIÓN DE HORARIOS
+// ============================================
+
+function uploadHorarios() {
+    document.getElementById('horariosFile').click();
+}
+
+// Cargar archivo de horarios
+document.getElementById('horariosFile')?.addEventListener('change', function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            let content = e.target.result;
+            
+            // Si es un archivo .js, extraer el array
+            if (file.name.endsWith('.js')) {
+                const match = content.match(/const\s+materias\s*=\s*(\[[\s\S]*\]);?/);
+                if (match) {
+                    content = match[1];
+                }
+            }
+            
+            horariosData = JSON.parse(content);
+            
+            // Actualizar banco de materias con códigos y datos
+            updateSubjectBankFromHorarios();
+            
+            alert(`✅ ${horariosData.length} materias cargadas correctamente`);
+            
+        } catch (error) {
+            alert('❌ Error al cargar el archivo: ' + error.message);
+        }
+    };
+    reader.readAsText(file);
+});
+
+function updateSubjectBankFromHorarios() {
+    let updated = 0;
+    let notFound = 0;
+    
+    horariosData.forEach(horarioMateria => {
+        // Buscar en el banco por nombre (normalizado)
+        const bankSubject = subjectBank.find(s => 
+            normalizeString(s.name) === normalizeString(horarioMateria.nombre)
+        );
+        
+        if (bankSubject) {
+            // Actualizar código si no existe
+            if (!bankSubject.code || bankSubject.code === '') {
+                bankSubject.code = horarioMateria.codigo;
+                updated++;
+            }
+            
+            // Guardar info de grupos para usar después
+            bankSubject.horariosInfo = horarioMateria.grupos;
+            
+            // Sincronizar en todos los semestres
+            Object.keys(studyPlan).forEach(semesterNum => {
+                studyPlan[semesterNum].subjects.forEach(subject => {
+                    if (normalizeString(subject.name) === normalizeString(horarioMateria.nombre)) {
+                        subject.code = horarioMateria.codigo;
+                        subject.horariosInfo = horarioMateria.grupos;
+                    }
+                });
+            });
+        } else {
+            notFound++;
+        }
+    });
+    
+    saveData();
+    saveSubjectBank();
+    updateUI();
+    
+    console.log(`✅ Actualizadas: ${updated} | ⚠️ No encontradas en banco: ${notFound}`);
+}
+
+function normalizeString(str) {
+    return str.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^\w\s]/g, '')
+        .trim();
+}
+
+function savePeriodConfig() {
+    currentPeriodConfig = {
+        period: document.getElementById('currentPeriod').value,
+        startDate: document.getElementById('periodStart').value,
+        endDate: document.getElementById('periodEnd').value
+    };
+    
+    localStorage.setItem('currentPeriod', JSON.stringify(currentPeriodConfig));
+    alert('✅ Configuración del periodo guardada');
+}
+
+function loadPeriodConfig() {
+    const saved = localStorage.getItem('currentPeriod');
+    if (saved) {
+        currentPeriodConfig = JSON.parse(saved);
+        document.getElementById('currentPeriod').value = currentPeriodConfig.period;
+        document.getElementById('periodStart').value = currentPeriodConfig.startDate;
+        document.getElementById('periodEnd').value = currentPeriodConfig.endDate;
+    }
+}
+
+function createNewSchedule() {
+    if (horariosData.length === 0) {
+        alert('⚠️ Primero debes cargar el archivo de horarios');
+        return;
+    }
+    
+    currentEditingSchedule = null;
+    document.getElementById('scheduleName').value = `Horario ${currentPeriodConfig.period || ''}`;
+    renderSubjectSelector();
+    document.getElementById('scheduleModal').style.display = 'block';
+}
+
+function renderSubjectSelector() {
+    const container = document.getElementById('subjectSelector');
+    
+    // Obtener materias de semestres pendientes o cursando
+    const availableSubjects = [];
+    Object.entries(studyPlan).forEach(([semNum, semester]) => {
+        if (semester.status === 'pending' || semester.status === 'current') {
+            semester.subjects.forEach(subject => {
+                if (subject.horariosInfo && subject.horariosInfo.length > 0) {
+                    availableSubjects.push({
+                        ...subject,
+                        semester: semNum
+                    });
+                }
+            });
+        }
+    });
+    
+    if (availableSubjects.length === 0) {
+        container.innerHTML = '<p>No hay materias disponibles. Asegúrate de haber cargado los horarios.</p>';
+        return;
+    }
+    
+    container.innerHTML = availableSubjects.map(subject => `
+        <div class="subject-select-card" id="subject-${subject.id}">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <strong>${subject.name}</strong>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                        Semestre ${subject.semester} • ${subject.credits} créditos • ${subject.code}
+                    </div>
+                </div>
+            </div>
+            <div class="group-selector">
+                ${subject.horariosInfo.map((grupo, idx) => `
+                    <div class="group-option" onclick="selectGroup('${subject.id}', ${idx})">
+                        <strong>Grupo ${grupo.numero}</strong><br>
+                        <small>${grupo.profesor}</small><br>
+                        <small>${grupo.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}</small>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `).join('');
+}
+
+let selectedSubjects = {};
+
+function selectGroup(subjectId, groupIndex) {
+    const subjectCard = document.getElementById(`subject-${subjectId}`);
+    const groupOptions = subjectCard.querySelectorAll('.group-option');
+    
+    // Toggle selection
+    if (selectedSubjects[subjectId] === groupIndex) {
+        delete selectedSubjects[subjectId];
+        subjectCard.classList.remove('selected');
+        groupOptions[groupIndex].classList.remove('selected');
+    } else {
+        selectedSubjects[subjectId] = groupIndex;
+        subjectCard.classList.add('selected');
+        groupOptions.forEach(opt => opt.classList.remove('selected'));
+        groupOptions[groupIndex].classList.add('selected');
+    }
+    
+    updateSchedulePreview();
+}
+
+function updateSchedulePreview() {
+    const preview = document.getElementById('schedulePreview');
+    
+    // Construir horario
+    const days = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const hours = Array.from({length: 14}, (_, i) => 7 + i); // 7am a 8pm
+    
+    let grid = `<div class="schedule-grid">`;
+    
+    // Headers
+    grid += `<div class="schedule-cell header"></div>`;
+    days.forEach(day => {
+        grid += `<div class="schedule-cell header">${day}</div>`;
+    });
+    
+    // Grid cells
+    hours.forEach(hour => {
+        grid += `<div class="schedule-cell time">${hour}:00</div>`;
+        days.forEach(day => {
+            grid += `<div class="schedule-cell" data-day="${day}" data-hour="${hour}"></div>`;
+        });
+    });
+    
+    grid += `</div>`;
+    preview.innerHTML = grid;
+    
+    // Llenar con clases seleccionadas
+    Object.entries(selectedSubjects).forEach(([subjectId, groupIdx]) => {
+        const subject = findSubjectById(subjectId);
+        if (!subject || !subject.horariosInfo) return;
+        
+        const grupo = subject.horariosInfo[groupIdx];
+        grupo.horarios.forEach(horario => {
+            const startHour = parseInt(horario.inicio.split(':')[0]);
+            const endHour = parseInt(horario.fin.split(':')[0]);
+            
+            for (let h = startHour; h < endHour; h++) {
+                const cell = preview.querySelector(`[data-day="${horario.dia}"][data-hour="${h}"]`);
+                if (cell) {
+                    cell.classList.add('class');
+                    cell.innerHTML = `
+                        <div class="class-name">${subject.name}</div>
+                        <div class="class-group">Grupo ${grupo.numero}</div>
+                    `;
+                }
+            }
+        });
+    });
+}
+
+function findSubjectById(id) {
+    for (let semester of Object.values(studyPlan)) {
+        const found = semester.subjects.find(s => s.id === id);
+        if (found) return found;
+    }
+    return null;
+}
+
+function saveSchedule() {
+    const scheduleName = document.getElementById('scheduleName').value;
+    if (!scheduleName) {
+        alert('⚠️ Debes darle un nombre al horario');
+        return;
+    }
+    
+    const scheduleData = {
+        id: currentEditingSchedule?.id || generateId(),
+        name: scheduleName,
+        period: currentPeriodConfig.period,
+        subjects: { ...selectedSubjects },
+        createdAt: new Date().toISOString()
+    };
+    
+    if (currentEditingSchedule) {
+        const idx = schedules.findIndex(s => s.id === currentEditingSchedule.id);
+        schedules[idx] = scheduleData;
+    } else {
+        schedules.push(scheduleData);
+    }
+    
+    localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+    
+    // Actualizar materias con grupo y profesor
+    Object.entries(selectedSubjects).forEach(([subjectId, groupIdx]) => {
+        const subject = findSubjectById(subjectId);
+        if (!subject || !subject.horariosInfo) return;
+        
+        const grupo = subject.horariosInfo[groupIdx];
+        subject.group = grupo.numero.toString();
+        subject.professor = grupo.profesor;
+        
+        // Sincronizar en banco
+        const bankSubject = subjectBank.find(s => s.id === subjectId || s.name === subject.name);
+        if (bankSubject) {
+            bankSubject.group = grupo.numero.toString();
+            bankSubject.professor = grupo.profesor;
+        }
+    });
+    
+    saveData();
+    saveSubjectBank();
+    
+    closeScheduleModal();
+    renderSchedules();
+    alert('✅ Horario guardado correctamente');
+}
+
+function renderSchedules() {
+    const container = document.getElementById('schedulesContainer');
+    const saved = localStorage.getItem('savedSchedules');
+    if (saved) {
+        schedules = JSON.parse(saved);
+    }
+    
+    if (schedules.length === 0) {
+        container.innerHTML = '<div class="no-data"><p>No tienes horarios guardados</p></div>';
+        return;
+    }
+    
+    container.innerHTML = schedules.map(schedule => `
+        <div class="schedule-card">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
+                <div>
+                    <h3>${schedule.name}</h3>
+                    <p style="color: var(--text-secondary);">Periodo: ${schedule.period}</p>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-primary btn-sm" onclick="viewSchedule('${schedule.id}')">👁️ Ver</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.id}')">🗑️</button>
+                </div>
+            </div>
+            <p><strong>${Object.keys(schedule.subjects).length}</strong> materias seleccionadas</p>
+        </div>
+    `).join('');
+}
+
+function viewSchedule(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    selectedSubjects = { ...schedule.subjects };
+    currentEditingSchedule = schedule;
+    document.getElementById('scheduleName').value = schedule.name;
+    renderSubjectSelector();
+    updateSchedulePreview();
+    document.getElementById('scheduleModal').style.display = 'block';
+}
+
+function deleteSchedule(scheduleId) {
+    if (confirm('¿Eliminar este horario?')) {
+        schedules = schedules.filter(s => s.id !== scheduleId);
+        localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+        renderSchedules();
+    }
+}
+
+function closeScheduleModal() {
+    document.getElementById('scheduleModal').style.display = 'none';
+    selectedSubjects = {};
+    currentEditingSchedule = null;
+}
+
+// Cargar configuración al iniciar
+window.addEventListener('DOMContentLoaded', () => {
+    loadPeriodConfig();
+    renderSchedules();
+});
+
+        function saveData() {
+            localStorage.setItem('academicPlannerData', JSON.stringify(studyPlan));
+        }
+
+        function saveSubjectBank() {
+            localStorage.setItem('academicPlannerSubjects', JSON.stringify(subjectBank));
+        }
+
+        function exportData() {
+            const data = {
+                studyPlan,
+                subjectBank,
+                config,
+                exportDate: new Date().toISOString()
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `plan_estudios_${config.programName}_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        }
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        function closeSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.remove('open');
+            overlay.classList.remove('open');
+        }
+
+        // Modal event handlers
+       // Modal event handlers (REEMPLAZAR el window.onclick existente)
+window.onclick = function (event) {
+    const subjectModal = document.getElementById('subjectModal');
+    const typologyModal = document.getElementById('typologySubjectsModal');
+    const currentScheduleModal = document.getElementById('currentScheduleModal');
+
+    if (event.target === subjectModal) {
+        closeSubjectModal();
+    }
+    if (event.target === typologyModal) {
+        closeTypologyModal();
+    }
+    if (event.target === currentScheduleModal) {
+        closeCurrentScheduleModal();
+    }
+};
+        // Variables globales para el modo de movimiento
+        let moveMode = false;
+        let movingSubject = null;
+
+        function addNewSemester() {
+            // Buscar semestres vacíos existentes
+            const allSemesters = Object.keys(studyPlan).map(n => parseInt(n)).filter(n => !isNaN(n)).sort((a, b) => a - b);
+            const emptySemesters = allSemesters.filter(num =>
+                !studyPlan[num].subjects || studyPlan[num].subjects.length === 0
+            );
+
+            let targetSemester;
+
+            if (emptySemesters.length > 0) {
+                // Usar el primer semestre vacío disponible
+                targetSemester = emptySemesters[0];
+                alert(`Activando Semestre ${targetSemester} (estaba vacío)`);
+            } else {
+                // Si no hay semestres vacíos, crear uno nuevo
+                targetSemester = allSemesters.length > 0 ? Math.max(...allSemesters) + 1 : 1;
+                studyPlan[targetSemester] = {
+                    subjects: [],
+                    status: 'pending'
+                };
+            }
+
+            // Preguntar si desea añadir materia
+            setTimeout(() => {
+                if (confirm(`¿Deseas añadir una materia al Semestre ${targetSemester}?`)) {
+                    addSubjectToSemester(targetSemester);
+                } else {
+                    // Si no añade materia pero el semestre estaba vacío, actualizamos la UI
+                    saveData();
+                    updateUI();
+                }
+            }, 100);
+
+            saveData();
+            updateUI();
+        }
+
+        function deleteSemester(semesterNum) {
+            const semester = studyPlan[semesterNum];
+            if (semester.subjects.length > 0) {
+                if (!confirm(`¿Estás seguro de eliminar el Semestre ${semesterNum}? Tiene ${semester.subjects.length} materias que se perderán.`)) {
+                    return;
+                }
+            } else {
+                if (!confirm(`¿Eliminar el Semestre ${semesterNum}?`)) {
+                    return;
+                }
+            }
+
+            delete studyPlan[semesterNum];
+            saveData();
+            updateUI();
+        }
+
+        function toggleMoveMode() {
+            moveMode = !moveMode;
+            const btn = document.getElementById('moveBtn');
+            const container = document.getElementById('semestersContainer');
+
+            if (moveMode) {
+                btn.textContent = '❌ Cancelar Mover';
+                btn.className = 'btn btn-danger';
+                container.classList.add('move-mode');
+                showMoveInstructions();
+            } else {
+                btn.textContent = '🔄 Mover Materias';
+                btn.className = 'btn btn-warning';
+                container.classList.remove('move-mode');
+                hideMoveInstructions();
+                movingSubject = null;
+            }
+        }
+
+        function showMoveInstructions() {
+            const container = document.getElementById('semestersContainer');
+            const instructions = document.createElement('div');
+            instructions.id = 'moveInstructions';
+            instructions.className = 'move-instructions';
+            instructions.innerHTML = '📋 Modo Mover Materias: Haz clic en una materia (fila de la tabla) para seleccionarla, luego haz clic en otro semestre para moverla';
+            container.insertBefore(instructions, container.firstChild);
+        }
+
+        function hideMoveInstructions() {
+            const instructions = document.getElementById('moveInstructions');
+            if (instructions) {
+                instructions.remove();
+            }
+        }
+
+        function startMoveSubject(semesterNum, subjectIndex) {
+            if (!moveMode) return;
+
+            movingSubject = {
+                subject: studyPlan[semesterNum].subjects[subjectIndex],
+                fromSemester: semesterNum,
+                fromIndex: subjectIndex
+            };
+
+            // Destacar la materia seleccionada
+            document.querySelectorAll('.subjects-table tr').forEach(row => {
+                row.style.background = '';
+            });
+
+            const rows = document.querySelectorAll(`#semester-${semesterNum} .subjects-table tbody tr`);
+            if (rows[subjectIndex]) {
+                rows[subjectIndex].style.background = 'var(--unal-yellow)';
+            }
+
+            alert(`Materia "${movingSubject.subject.name}" seleccionada. Ahora haz clic en el semestre destino.`);
+        }
+
+        // Modificar la función toggleSemester para manejar el modo mover
+        function toggleSemester(semesterNum) {
+            // Si estamos en modo mover y hay una materia seleccionada
+            if (moveMode && movingSubject && movingSubject.fromSemester != semesterNum) {
+                if (confirm(`¿Mover "${movingSubject.subject.name}" del Semestre ${movingSubject.fromSemester} al Semestre ${semesterNum}?`)) {
+                    moveSubjectToSemester(semesterNum);
+                }
+                return;
+            }
+
+            // Funcionalidad original de toggle
+            const content = document.getElementById(`content-${semesterNum}`);
+            const toggle = document.getElementById(`toggle-${semesterNum}`);
+
+            document.querySelectorAll('.semester-content').forEach(otherContent => {
+                if (otherContent !== content && otherContent.classList.contains('expanded')) {
+                    otherContent.classList.remove('expanded');
+                }
+            });
+
+            document.querySelectorAll('.semester-toggle').forEach(otherToggle => {
+                if (otherToggle !== toggle && otherToggle.classList.contains('expanded')) {
+                    otherToggle.textContent = '▶';
+                    otherToggle.classList.remove('expanded');
+                }
+            });
+
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                toggle.textContent = '▶';
+                toggle.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                toggle.textContent = '▼';
+                toggle.classList.add('expanded');
+            }
+        }
+
+        function moveSubjectToSemester(targetSemester) {
+            if (!movingSubject) return;
+
+            // Remover del semestre origen
+            studyPlan[movingSubject.fromSemester].subjects.splice(movingSubject.fromIndex, 1);
+
+            // Añadir al semestre destino
+            if (!studyPlan[targetSemester]) {
+                studyPlan[targetSemester] = { subjects: [], status: 'pending' };
+            }
+            studyPlan[targetSemester].subjects.push(movingSubject.subject);
+
+            // Limpiar estado de movimiento
+            movingSubject = null;
+            toggleMoveMode(); // Salir del modo mover
+
+            saveData();
+            updateUI();
+        }
+
+        // Nueva función para añadir materias del banco
+        function addSubjectToSemester(semesterNum) {
+            if (subjectBank.length === 0) {
+                alert('No hay materias en el banco. Agrega materias primero.');
+                return;
+            }
+
+            // Crear modal simple para seleccionar materia
+            const availableSubjects = subjectBank.filter(bankSubject => {
+                // Verificar si la materia ya está en algún semestre
+                return !Object.values(studyPlan).some(semester =>
+                    semester.subjects.some(semesterSubject =>
+                        semesterSubject.name === bankSubject.name
+                    )
+                );
+            });
+
+            if (availableSubjects.length === 0) {
+                alert('Todas las materias del banco ya están asignadas a semestres.');
+                return;
+            }
+
+            // Crear lista de opciones
+            const options = availableSubjects.map((subject, index) =>
+                `${index + 1}. ${subject.name} (${subject.type} - ${subject.credits} créditos)`
+            ).join('\n');
+
+            const selection = prompt(`Selecciona una materia para añadir al Semestre ${semesterNum}:\n\n${options}\n\nEscribe el número:`);
+
+            if (selection) {
+                const index = parseInt(selection) - 1;
+                if (index >= 0 && index < availableSubjects.length) {
+                    const selectedSubject = { ...availableSubjects[index] };
+                    studyPlan[semesterNum].subjects.push(selectedSubject);
+                    saveData();
+                    updateUI();
+                } else {
+                    alert('Selección inválida');
+                }
+            }
+        }
+        // Initialize theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+
+        // Recargar vista al cambiar tamaño de ventana (para cambiar entre tabla y tarjetas)
+        let resizeTimer;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(() => {
+                if (currentView === 'overview') {
+                    renderSemesters();
+                }
+            }, 250);
+        });
+      // Mostrar/ocultar botón de horario según haya horarios guardados
+function updateScheduleButton() {
+    const btn = document.getElementById('viewScheduleBtn');
+    if (schedules.length > 0) {
+        btn.style.display = 'inline-flex';
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function showCurrentScheduleModal() {
+    if (schedules.length === 0) {
+        alert('No tienes horarios guardados');
+        return;
+    }
+    
+    // Usar el horario más reciente
+    const latestSchedule = schedules[schedules.length - 1];
+    renderCurrentScheduleView(latestSchedule);
+    document.getElementById('currentScheduleModal').style.display = 'block';
+    updateCurrentTimeIndicator();
+    
+    // Actualizar cada minuto
+    if (window.scheduleUpdateInterval) {
+        clearInterval(window.scheduleUpdateInterval);
+    }
+    window.scheduleUpdateInterval = setInterval(updateCurrentTimeIndicator, 60000);
+}
+
+function closeCurrentScheduleModal() {
+    document.getElementById('currentScheduleModal').style.display = 'none';
+    if (window.scheduleUpdateInterval) {
+        clearInterval(window.scheduleUpdateInterval);
+    }
+}
+
+function renderCurrentScheduleView(schedule) {
+    const container = document.getElementById('currentScheduleContent');
+    const title = document.getElementById('currentScheduleTitle');
+    
+    title.textContent = schedule.name;
+    
+    const days = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const hours = Array.from({length: 14}, (_, i) => 7 + i); // 7am a 8pm
+    
+    // Estructura para almacenar bloques de clases
+    const schedule_map = {};
+    days.forEach(day => {
+        schedule_map[day] = {};
+        hours.forEach(hour => {
+            schedule_map[day][hour] = null;
+        });
+    });
+    
+    // Llenar con clases y marcar bloques completos
+    Object.entries(schedule.subjects).forEach(([subjectId, groupIdx]) => {
+        const subject = findSubjectById(subjectId);
+        if (!subject || !subject.horariosInfo) return;
+        
+        const grupo = subject.horariosInfo[groupIdx];
+        
+        grupo.horarios.forEach(horario => {
+            const startHour = parseInt(horario.inicio.split(':')[0]);
+            const endHour = parseInt(horario.fin.split(':')[0]);
+            const duration = endHour - startHour;
+            
+            // Marcar la primera hora con toda la info
+            schedule_map[horario.dia][startHour] = {
+                subject: subject,
+                grupo: grupo,
+                duration: duration,
+                start: true
+            };
+            
+            // Marcar las horas siguientes como ocupadas
+            for (let h = startHour + 1; h < endHour; h++) {
+                schedule_map[horario.dia][h] = {
+                    occupied: true
+                };
+            }
+        });
+    });
+    
+    // Renderizar grid
+    let grid = `<div class="schedule-grid-viewer">`;
+    
+    // Headers
+    grid += `<div class="schedule-cell-viewer header"></div>`;
+    days.forEach(day => {
+        grid += `<div class="schedule-cell-viewer header" id="day-${day}">${day}</div>`;
+    });
+    
+    // Celdas
+    hours.forEach(hour => {
+        grid += `<div class="schedule-cell-viewer time" id="time-${hour}">${hour}:00</div>`;
+        days.forEach(day => {
+            const cell_data = schedule_map[day][hour];
+            
+            if (cell_data && cell_data.occupied) {
+                // Celda ocupada (parte de un bloque), no renderizar nada
+                return;
+            } else if (cell_data && cell_data.start) {
+                // Inicio de bloque de clase
+                const rowspan_style = cell_data.duration > 1 ? 
+                    `grid-row: span ${cell_data.duration};` : '';
+                
+                grid += `<div class="schedule-cell-viewer class-block" 
+                         style="${rowspan_style}" 
+                         data-day="${day}" 
+                         data-hour="${hour}"
+                         data-duration="${cell_data.duration}">
+                    <div class="class-block-name">${cell_data.subject.name}</div>
+                    <div class="class-block-info">
+                        Grupo ${cell_data.grupo.numero}<br>
+                        ${cell_data.grupo.profesor}<br>
+                        ${hour}:00 - ${hour + cell_data.duration}:00
+                    </div>
+                </div>`;
+            } else {
+                // Celda vacía
+                grid += `<div class="schedule-cell-viewer" data-day="${day}" data-hour="${hour}"></div>`;
+            }
+        });
+    });
+    
+    grid += `</div>`;
+    container.innerHTML = grid;
+}
+
+function updateCurrentTimeIndicator() {
+    const now = new Date();
+    const dayNames = ['DOMINGO', 'LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const currentDay = dayNames[now.getDay()];
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    // Actualizar texto de fecha/hora
+    const dateTimeEl = document.getElementById('currentDayTime');
+    if (dateTimeEl) {
+        dateTimeEl.textContent = `${currentDay}, ${now.toLocaleDateString('es-ES', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        })} - ${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
+    }
+    
+    // Limpiar indicadores anteriores
+    document.querySelectorAll('.current-day-indicator').forEach(el => el.remove());
+    document.querySelectorAll('.schedule-cell-viewer.current-time').forEach(el => {
+        el.classList.remove('current-time');
+    });
+    document.querySelectorAll('.schedule-cell-viewer.current-class').forEach(el => {
+        el.classList.remove('current-class');
+    });
+    
+    // Marcar día actual en header
+    const dayHeader = document.getElementById(`day-${currentDay}`);
+    if (dayHeader) {
+        const indicator = document.createElement('span');
+        indicator.className = 'current-day-indicator';
+        indicator.textContent = 'HOY';
+        dayHeader.appendChild(indicator);
+    }
+    
+    // Marcar hora actual
+    const timeCell = document.getElementById(`time-${currentHour}`);
+    if (timeCell) {
+        timeCell.classList.add('current-time');
+    }
+    
+    // Marcar clase actual
+    const currentClasses = document.querySelectorAll(
+        `.schedule-cell-viewer.class-block[data-day="${currentDay}"][data-hour="${currentHour}"]`
+    );
+    
+    currentClasses.forEach(classBlock => {
+        const hour = parseInt(classBlock.getAttribute('data-hour'));
+        const duration = parseInt(classBlock.getAttribute('data-duration'));
+        
+        // Verificar si estamos dentro del rango de la clase
+        if (currentHour >= hour && currentHour < hour + duration) {
+            classBlock.classList.add('current-class');
+        }
+    });
+}
+
+// Modificar la función renderSchedules para actualizar el botón
+const originalRenderSchedules = renderSchedules;
+renderSchedules = function() {
+    originalRenderSchedules();
+    updateScheduleButton();
+};
+
+// Modificar saveSchedule para actualizar el botón
+const originalSaveSchedule = saveSchedule;
+saveSchedule = function() {
+    originalSaveSchedule();
+    updateScheduleButton();
+};
+
+// Inicializar botón al cargar
+document.addEventListener('DOMContentLoaded', function() {
+    updateScheduleButton();
+});
+    </script>
+</body>
+
+</html>
