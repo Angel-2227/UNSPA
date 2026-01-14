@@ -1038,8 +1038,11 @@
     margin-bottom: 12px;
     border: 2px solid transparent;
     transition: all 0.2s;
+    cursor: pointer;
 }
-
+.subject-select-card.expanded {
+    border-color: var(--unal-green);
+} 
 .subject-select-card:hover {
     border-color: var(--unal-green);
 }
@@ -1050,12 +1053,17 @@
 }
 
 .group-selector {
-    display: flex;
+    display: none; /* Cambiar de flex a none */
     gap: 8px;
     margin-top: 12px;
     flex-wrap: wrap;
+    padding: 12px;
+    background: var(--bg-primary);
+    border-radius: 8px;
 }
-
+.group-selector.visible {
+    display: flex;
+}
 .group-option {
     padding: 8px 16px;
     border: 2px solid var(--border-color);
@@ -1068,7 +1076,12 @@
 .group-option:hover {
     border-color: var(--unal-green);
 }
-
+.subject-header-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
 .group-option.selected {
     background: var(--unal-green);
     color: white;
@@ -1132,7 +1145,25 @@
     padding: 6px;  /* Reducir de 12px a 8px */
     border-left: 4px solid var(--unal-dark-green);
 }
+.expand-icon {
+    font-size: 1.2rem;
+    transition: transform 0.3s ease;
+}
 
+.expand-icon.expanded {
+    transform: rotate(180deg);
+}
+        .schedule-filters {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.schedule-filters input {
+    flex: 1;
+    min-width: 200px;
+}
 .class-block-name {
     font-weight: 700;
     font-size: 0.7rem;  /* Reducir de 0.85rem a 0.75rem */
@@ -1497,6 +1528,18 @@
         <div class="modal-header">
             <h3 class="modal-title">Crear Horario</h3>
             <button class="close-btn" onclick="closeScheduleModal()">&times;</button>
+        </div>
+        
+        <div class="schedule-filters">
+            <input type="text" class="form-control" id="searchSubject" 
+                   placeholder="🔍 Buscar por materia..." 
+                   oninput="filterSubjectSelector()">
+            <input type="text" class="form-control" id="searchProfessor" 
+                   placeholder="👨‍🏫 Buscar por profesor..." 
+                   oninput="filterSubjectSelector()">
+            <input type="text" class="form-control" id="searchSchedule" 
+                   placeholder="📅 Buscar por horario (ej: LUNES, 7:00)..." 
+                   oninput="filterSubjectSelector()">
         </div>
         
         <div id="scheduleBuilder">
@@ -2764,7 +2807,6 @@ function createNewSchedule() {
 function renderSubjectSelector() {
     const container = document.getElementById('subjectSelector');
     
-    // Obtener materias de semestres pendientes o cursando
     const availableSubjects = [];
     Object.entries(studyPlan).forEach(([semNum, semester]) => {
         if (semester.status === 'pending' || semester.status === 'current') {
@@ -2785,26 +2827,81 @@ function renderSubjectSelector() {
     }
     
     container.innerHTML = availableSubjects.map(subject => `
-        <div class="subject-select-card" id="subject-${subject.id}">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
+        <div class="subject-select-card" id="subject-${subject.id}" onclick="toggleSubjectCard('${subject.id}')">
+            <div class="subject-header-info">
                 <div>
                     <strong>${subject.name}</strong>
                     <div style="font-size: 0.85rem; color: var(--text-secondary);">
                         Semestre ${subject.semester} • ${subject.credits} créditos • ${subject.code}
                     </div>
                 </div>
+                <span class="expand-icon" id="expand-${subject.id}">▼</span>
             </div>
-            <div class="group-selector">
+            <div class="group-selector" id="groups-${subject.id}">
                 ${subject.horariosInfo.map((grupo, idx) => `
-                    <div class="group-option" onclick="selectGroup('${subject.id}', ${idx})">
+                    <div class="group-option" onclick="event.stopPropagation(); selectGroup('${subject.id}', ${idx})">
                         <strong>Grupo ${grupo.numero}</strong><br>
-                        <small>${grupo.profesor}</small><br>
-                        <small>${grupo.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}</small>
+                        <small>👨‍🏫 ${grupo.profesor}</small><br>
+                        <small>📅 ${grupo.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}</small>
                     </div>
                 `).join('')}
             </div>
         </div>
     `).join('');
+}
+        
+        function toggleSubjectCard(subjectId) {
+    const card = document.getElementById(`subject-${subjectId}`);
+    const groups = document.getElementById(`groups-${subjectId}`);
+    const icon = document.getElementById(`expand-${subjectId}`);
+    
+    card.classList.toggle('expanded');
+    groups.classList.toggle('visible');
+    icon.classList.toggle('expanded');
+}
+
+function filterSubjectSelector() {
+    const searchSubject = document.getElementById('searchSubject').value.toLowerCase();
+    const searchProfessor = document.getElementById('searchProfessor').value.toLowerCase();
+    const searchSchedule = document.getElementById('searchSchedule').value.toLowerCase();
+    
+    const cards = document.querySelectorAll('.subject-select-card');
+    
+    cards.forEach(card => {
+        const subjectName = card.querySelector('strong').textContent.toLowerCase();
+        const groupsDiv = card.querySelector('.group-selector');
+        const groupOptions = groupsDiv.querySelectorAll('.group-option');
+        
+        let matchSubject = subjectName.includes(searchSubject);
+        let hasMatchingGroup = false;
+        
+        groupOptions.forEach(option => {
+            const optionText = option.textContent.toLowerCase();
+            const matchProfessor = searchProfessor === '' || optionText.includes(searchProfessor);
+            const matchSchedule = searchSchedule === '' || optionText.includes(searchSchedule);
+            
+            if (matchProfessor && matchSchedule) {
+                option.style.display = 'block';
+                hasMatchingGroup = true;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        
+        // Mostrar tarjeta si coincide el nombre O si tiene grupos que coinciden
+        if (matchSubject && hasMatchingGroup) {
+            card.style.display = 'block';
+            // Auto-expandir si hay filtros activos
+            if (searchProfessor || searchSchedule) {
+                groupsDiv.classList.add('visible');
+                card.querySelector('.expand-icon').classList.add('expanded');
+            }
+        } else if (matchSubject && !searchProfessor && !searchSchedule) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    });
 }
 
 let selectedSubjects = {};
@@ -2955,16 +3052,17 @@ function renderSchedules() {
                     <p style="color: var(--text-secondary);">Periodo: ${schedule.period}</p>
                 </div>
                 <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary btn-sm" onclick="viewSchedule('${schedule.id}')">👁️ Ver</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.id}')">🗑️</button>
-                </div>
+    <button class="btn btn-primary btn-sm" onclick="viewSchedule('${schedule.id}')">👁️ Ver</button>
+    <button class="btn btn-warning btn-sm" onclick="editSchedule('${schedule.id}')">✏️ Editar</button>
+    <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.id}')">🗑️</button>
+</div>
             </div>
             <p><strong>${Object.keys(schedule.subjects).length}</strong> materias seleccionadas</p>
         </div>
     `).join('');
 }
-
-function viewSchedule(scheduleId) {
+      
+      function editSchedule(scheduleId) {
     const schedule = schedules.find(s => s.id === scheduleId);
     if (!schedule) return;
     
@@ -2974,6 +3072,21 @@ function viewSchedule(scheduleId) {
     renderSubjectSelector();
     updateSchedulePreview();
     document.getElementById('scheduleModal').style.display = 'block';
+}
+
+function viewSchedule(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    
+    renderCurrentScheduleView(schedule);
+    document.getElementById('currentScheduleModal').style.display = 'block';
+    updateCurrentTimeIndicator();
+    
+    // Actualizar cada minuto
+    if (window.scheduleUpdateInterval) {
+        clearInterval(window.scheduleUpdateInterval);
+    }
+    window.scheduleUpdateInterval = setInterval(updateCurrentTimeIndicator, 60000);
 }
 
 function deleteSchedule(scheduleId) {
