@@ -534,6 +534,16 @@
             color: var(--unal-green);
         }
 
+        @media (max-width: 768px) {
+            .modal-title {
+                font-size: 1.1rem;
+            }
+
+            #currentDayTime {
+                font-size: 0.75rem !important;
+            }
+        }
+
         .close-btn {
             background: none;
             border: none;
@@ -1587,8 +1597,15 @@
             <div id="scheduleModal" class="modal">
                 <div class="modal-content" style="max-width: 900px;">
                     <div class="modal-header">
-                        <h3 class="modal-title">Crear Horario</h3>
-                        <button class="close-btn" onclick="closeScheduleModal()">&times;</button>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                                <h3 class="modal-title" id="currentScheduleTitle" style="margin: 0;">Mi Horario Actual
+                                </h3>
+                                <span style="color: var(--text-secondary); font-size: 0.85rem;"
+                                    id="currentDayTime"></span>
+                            </div>
+                        </div>
+                        <button class="close-btn" onclick="closeCurrentScheduleModal()">&times;</button>
                     </div>
 
                     <div class="schedule-filters">
