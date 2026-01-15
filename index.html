@@ -3554,8 +3554,28 @@
             title.textContent = schedule.name;
 
             const days = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
-            const hours = Array.from({ length: 14 }, (_, i) => 7 + i); // 7am a 8pm
 
+            // Detectar el rango de horas usado
+            let minHour = 20;
+            let maxHour = 7;
+
+            Object.entries(schedule.subjects).forEach(([subjectId, groupIdx]) => {
+                const subject = findSubjectById(subjectId);
+                if (!subject || !subject.horariosInfo) return;
+
+                const grupo = subject.horariosInfo[groupIdx];
+                grupo.horarios.forEach(horario => {
+                    const startHour = parseInt(horario.inicio.split(':')[0]);
+                    const endHour = parseInt(horario.fin.split(':')[0]);
+                    minHour = Math.min(minHour, startHour);
+                    maxHour = Math.max(maxHour, endHour);
+                });
+            });
+
+            // Si no hay clases, usar rango por defecto
+            const hours = (minHour <= maxHour)
+                ? Array.from({ length: maxHour - minHour }, (_, i) => minHour + i)
+                : Array.from({ length: 14 }, (_, i) => 7 + i);
             // Estructura para almacenar bloques de clases
             const schedule_map = {};
             days.forEach(day => {
