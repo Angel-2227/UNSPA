@@ -93,6 +93,7 @@ function setupEventListeners() {
     document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
     document.getElementById('searchSubjects').addEventListener('input', filterSubjects);
 
+    // Reemplazar window.onclick por addEventListener para no sobrescribir otros handlers
     window.addEventListener('click', function (event) {
         const subjectModal = document.getElementById('subjectModal');
         const typologyModal = document.getElementById('typologySubjectsModal');
@@ -126,6 +127,8 @@ function parseCSVData(data) {
     let currentSemester = 0;
     const typesFound = {};
 
+    // FIX: Leer el total de créditos exigidos directamente del CSV
+    // Busca la fila con "TOTAL DE CRÉDITOS EXIGIDOS AL ESTUDIANTE"
     let totalCreditsFromCSV = 0;
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
@@ -182,12 +185,14 @@ function parseCSVData(data) {
         }
     }
 
+    // FIX: Eliminar semestres vacíos para no guardar datos innecesarios en Firestore
     Object.keys(studyPlan).forEach(key => {
         if (studyPlan[key].subjects.length === 0) {
             delete studyPlan[key];
         }
     });
 
+    // FIX: Si no se encontró el total en el CSV, sumar manualmente
     if (totalCreditsFromCSV === 0) {
         Object.values(studyPlan).forEach(semester => {
             semester.subjects.forEach(s => { totalCreditsFromCSV += s.credits; });
@@ -202,7 +207,7 @@ function parseCSVData(data) {
 
     saveData();
     saveSubjectBank();
-    saveConfig(false);
+    saveConfig(false); // false = no mostrar alerta
     updateUI();
 }
 
@@ -228,7 +233,7 @@ function updateStats() {
         else if (semester.status === 'current') currentCredits += semesterCredits;
     });
 
-    const total = config.totalCredits || 1;
+    const total = config.totalCredits || 1; // evitar división por cero
     const pendingCredits = Math.max(0, total - completedCredits - currentCredits);
     const progressPercentage = Math.round((completedCredits / total) * 100);
 
@@ -601,6 +606,7 @@ function syncSubjectEverywhere(updatedSubject, originalName = null) {
         });
     });
 
+    // FIX: Guardar localmente de inmediato, pero diferir Firestore con debounce
     _saveDataLocal();
     _saveSubjectBankLocal();
     updateUI();
@@ -838,6 +844,7 @@ function closeTypologyModal() {
 // NAVEGACIÓN
 // ============================================
 
+// FIX: showView recibe el elemento clicado explícitamente
 function showView(viewName, clickedEl) {
     document.querySelectorAll('.view-content').forEach(view => {
         view.style.display = 'none';
@@ -849,9 +856,11 @@ function showView(viewName, clickedEl) {
     const targetView = document.getElementById(viewName + 'View');
     if (targetView) targetView.style.display = 'block';
 
+    // Marcar activo: usar el elemento pasado o buscar por viewName
     if (clickedEl) {
         clickedEl.classList.add('active');
     } else {
+        // Si se llama programáticamente, buscar el nav-item correspondiente
         document.querySelectorAll('.nav-item').forEach(item => {
             if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${viewName}'`)) {
                 item.classList.add('active');
@@ -892,6 +901,7 @@ function expandSemester(semesterNum) {
 // CONFIGURACIÓN
 // ============================================
 
+// FIX: saveConfig unificada, con parámetro para controlar la alerta
 async function saveConfig(showAlert = true) {
     const programNameInput = document.getElementById('configProgramName');
     const totalCreditsInput = document.getElementById('configTotalCredits');
@@ -922,18 +932,16 @@ function resetData() {
         localStorage.removeItem('theme');
         localStorage.removeItem('savedSchedules');
         localStorage.removeItem('currentPeriod');
-        localStorage.removeItem('mallaPDF');
 
         studyPlan = {};
         subjectBank = [];
         schedules = [];
         config = { programName: '', university: '', totalCredits: 0, creditsByType: {} };
-        mallaData = null;
-        mallaSubjects = [];
 
         const csvInput = document.getElementById('csvFile');
         if (csvInput) csvInput.value = '';
 
+        // Limpiar también en Firestore
         if (currentUser) {
             db.collection('users').doc(currentUser.uid).delete().catch(console.error);
         }
@@ -943,7 +951,7 @@ function resetData() {
 }
 
 // ============================================
-// GUARDADO LOCAL
+// GUARDADO LOCAL (funciones privadas base)
 // ============================================
 
 function _saveDataLocal() {
@@ -953,6 +961,10 @@ function _saveDataLocal() {
 function _saveSubjectBankLocal() {
     localStorage.setItem('academicPlannerSubjects', JSON.stringify(subjectBank));
 }
+
+// ============================================
+// FUNCIONES DE GUARDADO PÚBLICAS (con Firestore)
+// ============================================
 
 async function saveData() {
     _saveDataLocal();
@@ -1566,7 +1578,7 @@ function renderCurrentScheduleView(schedule) {
     });
 
     grid += `</div></div>`;
-    container.innerHTML = grid;
+container.innerHTML = grid;
 }
 
 function updateCurrentTimeIndicator() {
@@ -1726,6 +1738,7 @@ async function loadUserDataFromFirestore() {
         updateUI();
     } catch (error) {
         console.error('Error cargando datos de Firestore:', error);
+        // FIX: Fallback a localStorage si Firestore falla (sin internet, etc.)
         console.warn('⚠️ Usando datos locales como fallback...');
         loadData();
         initializeSubjectBank();
@@ -1777,13 +1790,14 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ============================================
-// DOMContentLoaded
+// DOMContentLoaded: cargar horarios file listener y schedules
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
     updateScheduleButton();
     loadPeriodConfig();
     renderSchedules();
 
+    // Listener para cargar archivo de horarios JSON
     const horariosFile = document.getElementById('horariosFile');
     if (horariosFile) {
         horariosFile.addEventListener('change', function (event) {
@@ -1807,249 +1821,4 @@ document.addEventListener('DOMContentLoaded', () => {
             reader.readAsText(file);
         });
     }
-
-    // ---- MALLA PDF file listener ----
-    const mallaPDFFile = document.getElementById('mallaPDFFile');
-    if (mallaPDFFile) {
-        mallaPDFFile.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            // Guardar en localStorage para persistencia entre sesiones
-            const readerStore = new FileReader();
-            readerStore.onload = function(e) {
-                try {
-                    localStorage.setItem('mallaPDF', e.target.result);
-                    mallaData = e.target.result;
-                    renderMallaPDF();
-                } catch(err) {
-                    console.warn('PDF demasiado grande para localStorage:', err);
-                    mallaData = e.target.result;
-                    renderMallaPDF();
-                }
-            };
-            readerStore.readAsDataURL(file);
-
-            // Extracción IA en paralelo
-            extractMallaSubjectsFromPDF(file);
-        });
-    }
-
-    // Cargar PDF guardado si existe
-    const savedPDF = localStorage.getItem('mallaPDF');
-    if (savedPDF) {
-        mallaData = savedPDF;
-    }
 });
-
-// ============================================
-// MALLA CURRICULAR - VISOR Y VALIDACIÓN
-// ============================================
-
-let mallaData = null;
-let mallaSubjects = [];
-
-function loadMallaPDF() {
-    document.getElementById('mallaPDFFile').click();
-}
-
-function showMallaView(el) {
-    showView('malla', el);
-    if (mallaData) {
-        renderMallaPDF();
-    }
-    if (mallaSubjects.length > 0) {
-        renderValidationReport();
-    }
-}
-
-function renderMallaPDF() {
-    const viewer = document.getElementById('mallaPDFViewer');
-    const placeholder = document.getElementById('mallaPlaceholder');
-    if (!mallaData) return;
-
-    if (placeholder) placeholder.style.display = 'none';
-    if (viewer) {
-        viewer.style.display = 'block';
-        viewer.src = mallaData;
-    }
-}
-
-async function extractMallaSubjectsFromPDF(file) {
-    const statusEl = document.getElementById('mallaExtractionStatus');
-    if (statusEl) {
-        statusEl.style.display = 'block';
-        statusEl.textContent = '⏳ Extrayendo materias del PDF con IA...';
-        statusEl.style.background = '#fff3cd';
-        statusEl.style.color = '#856404';
-    }
-
-    try {
-        const base64Data = await new Promise((res, rej) => {
-            const r = new FileReader();
-            r.onload = () => res(r.result.split(',')[1]);
-            r.onerror = () => rej(new Error('Error leyendo archivo'));
-            r.readAsDataURL(file);
-        });
-
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                model: 'claude-sonnet-4-20250514',
-                max_tokens: 4000,
-                messages: [{
-                    role: 'user',
-                    content: [
-                        {
-                            type: 'document',
-                            source: { type: 'base64', media_type: 'application/pdf', data: base64Data }
-                        },
-                        {
-                            type: 'text',
-                            text: `Extrae TODAS las materias/asignaturas de esta malla curricular universitaria.
-Responde ÚNICAMENTE con un array JSON válido, sin texto adicional, sin backticks, sin markdown.
-Formato exacto:
-[{"nombre":"NOMBRE EXACTO","creditos":3,"tipo":"DISCIPLINAR OBLIGATORIA","semestre":1}]
-Para "tipo" usa exactamente uno de: DISCIPLINAR OBLIGATORIA, DISCIPLINAR OPTATIVA, FUNDAMENTACIÓN OBLIGATORIA, FUNDAMENTACIÓN OPTATIVA, LIBRE ELECCIÓN, TRABAJO DE GRADO, NIVELACIÓN
-Si no puedes determinar el semestre usa 0. Si no hay créditos usa 0.`
-                        }
-                    ]
-                }]
-            })
-        });
-
-        const data = await response.json();
-        const text = data.content.map(i => i.text || '').join('');
-        const clean = text.replace(/```json|```/g, '').trim();
-        mallaSubjects = JSON.parse(clean);
-
-        if (statusEl) {
-            statusEl.textContent = `✅ ${mallaSubjects.length} materias extraídas. Comparando con tu plan...`;
-            statusEl.style.background = '#d4edda';
-            statusEl.style.color = '#155724';
-        }
-        renderValidationReport();
-    } catch (err) {
-        console.error('Error extrayendo materias:', err);
-        if (statusEl) {
-            statusEl.textContent = '❌ No se pudieron extraer materias automáticamente. Puedes seguir usando el visor.';
-            statusEl.style.background = '#f8d7da';
-            statusEl.style.color = '#721c24';
-        }
-    }
-}
-
-function renderValidationReport() {
-    const container = document.getElementById('mallaValidationContainer');
-    if (!container || mallaSubjects.length === 0) return;
-
-    const planSubjects = [];
-    Object.values(studyPlan).forEach(semester => {
-        semester.subjects.forEach(s => planSubjects.push(s));
-    });
-
-    if (planSubjects.length === 0) {
-        container.innerHTML = `<div class="no-data"><p>Carga tu plan de estudios (CSV) para ver la comparación</p></div>`;
-        return;
-    }
-
-    const normalize = (str) => str.toLowerCase()
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-        .replace(/[^\w\s]/g, '').trim();
-
-    const planNormalized = planSubjects.map(s => ({ norm: normalize(s.name), orig: s }));
-
-    const inPlan = [];
-    const missingFromPlan = [];
-
-    mallaSubjects.forEach(ms => {
-        const normName = normalize(ms.nombre);
-        const found = planNormalized.some(p =>
-            p.norm === normName ||
-            (normName.length > 8 && p.norm.includes(normName.substring(0, 8))) ||
-            (p.norm.length > 8 && normName.includes(p.norm.substring(0, 8)))
-        );
-        if (found) inPlan.push(ms);
-        else missingFromPlan.push(ms);
-    });
-
-    const mallaNormalized = mallaSubjects.map(ms => normalize(ms.nombre));
-    const notInMalla = planSubjects.filter(ps => {
-        const normName = normalize(ps.name);
-        return !mallaNormalized.some(mn =>
-            mn === normName ||
-            (normName.length > 8 && mn.includes(normName.substring(0, 8))) ||
-            (mn.length > 8 && normName.includes(mn.substring(0, 8)))
-        );
-    });
-
-    const matchRate = Math.round((inPlan.length / mallaSubjects.length) * 100);
-
-    container.innerHTML = `
-        <h3 style="color: var(--unal-green); margin-bottom: 16px;">📊 Reporte de Validación</h3>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 24px;">
-            <div class="stat-card">
-                <div class="stat-number total">${mallaSubjects.length}</div>
-                <div class="stat-label">En la Malla</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number completed">${inPlan.length}</div>
-                <div class="stat-label">En tu plan ✓</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number pending">${missingFromPlan.length}</div>
-                <div class="stat-label">Faltan en plan</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number current">${notInMalla.length}</div>
-                <div class="stat-label">Extra en plan</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-number" style="color:var(--unal-blue)">${matchRate}%</div>
-                <div class="stat-label">Coincidencia</div>
-            </div>
-        </div>
-
-        ${missingFromPlan.length > 0 ? `
-        <div style="margin-bottom: 24px; background: var(--bg-primary); border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);">
-            <h4 style="color: var(--unal-red); margin-bottom: 12px;">⚠️ Materias de la malla que NO están en tu plan (${missingFromPlan.length})</h4>
-            <div style="overflow-x: auto;">
-            <table class="subjects-table">
-                <thead><tr><th>Materia</th><th>Tipo</th><th>Créditos</th><th>Semestre</th></tr></thead>
-                <tbody>
-                    ${missingFromPlan.map(s => `
-                        <tr>
-                            <td><strong>${s.nombre}</strong></td>
-                            <td><span class="type-badge ${getTypeClass(s.tipo)}">${s.tipo || '-'}</span></td>
-                            <td>${s.creditos || '?'}</td>
-                            <td>${s.semestre || '?'}</td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>
-            </div>
-        </div>` : `
-        <div style="background: #d4edda; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-weight: 600;">
-            ✅ Todas las materias de la malla están en tu plan
-        </div>`}
-
-        ${notInMalla.length > 0 ? `
-        <div style="background: var(--bg-primary); border-radius: 8px; padding: 16px; border: 1px solid var(--border-color);">
-            <h4 style="color: var(--unal-yellow); margin-bottom: 12px;">ℹ️ Materias en tu plan que no coinciden con la malla (${notInMalla.length})</h4>
-            <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Pueden ser materias de libre elección o con nombre ligeramente diferente.</p>
-            <div style="overflow-x: auto;">
-            <table class="subjects-table">
-                <thead><tr><th>Materia</th><th>Tipo</th><th>Créditos</th></tr></thead>
-                <tbody>
-                    ${notInMalla.map(s => `
-                        <tr>
-                            <td>${s.name}</td>
-                            <td><span class="type-badge ${getTypeClass(s.type)}">${s.type}</span></td>
-                            <td>${s.credits}</td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>
-            </div>
-        </div>` : ''}
-    `;
-}

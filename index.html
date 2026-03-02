@@ -30,6 +30,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
     <script>
+        // REEMPLAZA ESTO con tu configuración de Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyDGfWj0TKSKPqQmtmVvAjaRwcSRP8ThHVQ",
             authDomain: "unalspa.firebaseapp.com",
@@ -39,6 +40,7 @@
             appId: "1:262261060132:web:21116990b8a1fda92c1eb1"
         };
 
+        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -46,18 +48,20 @@
 </head>
 
 <body>
-    <!-- Pantalla de Login -->
+    <!-- Pantalla de Login (mostrar SOLO cuando no está autenticado) -->
     <div id="loginScreen" style="display: none;">
         <div
             style="min-height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #2e7d32, #1b5e20); padding: 20px;">
             <div
                 style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px; width: 100%; text-align: center;">
 
+                <!-- Logo/Icono -->
                 <div
                     style="width: 80px; height: 80px; background: linear-gradient(135deg, #2e7d32, #66bb6a); border-radius: 20px; margin: 0 auto 24px; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; font-weight: bold;">
                     SPA
                 </div>
 
+                <!-- Título -->
                 <h1 style="color: #2e7d32; margin-bottom: 8px; font-size: 1.8rem;">
                     Sistema de Planificación Académica
                 </h1>
@@ -65,6 +69,7 @@
                     Organiza tu carrera universitaria
                 </p>
 
+                <!-- Botón de Google -->
                 <button id="googleLoginBtn" style="
         width: 100%;
         padding: 14px 24px;
@@ -93,10 +98,12 @@
                     Continuar con Google
                 </button>
 
+                <!-- Información adicional -->
                 <p style="margin-top: 24px; font-size: 0.85rem; color: #6c757d;">
                     🔒 Tus datos se sincronizan de forma segura en la nube
                 </p>
 
+                <!-- Loading spinner (oculto por defecto) -->
                 <div id="loginLoading" style="display: none; margin-top: 20px;">
                     <div
                         style="border: 3px solid #f3f3f3; border-top: 3px solid #2e7d32; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;">
@@ -109,18 +116,25 @@
 
     <style>
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
     </style>
 
+   
+    
+
     <div id="appContainer" style="display: none;">
         <!-- Mobile menu toggle -->
-        <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
 
-        <!-- Sidebar overlay for mobile -->
-        <div class="sidebar-overlay" onclick="closeSidebar()"></div>
-
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
         <div class="app-container">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
@@ -138,10 +152,6 @@
                     </div>
                     <div class="nav-item" onclick="showView('schedule', this)">
                         📅 Planificador de Horarios
-                    </div>
-                    <!-- NUEVO: Malla Curricular -->
-                    <div class="nav-item" onclick="showMallaView(this)">
-                        🗺️ Malla Curricular
                     </div>
                     <div class="nav-item" onclick="showView('config', this)">
                         ⚙️ Configuración
@@ -189,17 +199,24 @@
                                 <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
                                     📁 Cargar CSV
                                 </button>
+                                <!-- <button class="btn btn-success" onclick="saveData()">💾 Guardar</button>-->
+
                                 <button class="btn btn-warning" onclick="exportData()">📥 Exportar</button>
                                 <button class="btn btn-secondary" onclick="toggleTheme()">🌓</button>
                                 <button class="btn btn-success" onclick="addNewSemester()">➕ Nuevo Semestre</button>
+
+                                <!-- En la sección de botones del header, añade: -->
                                 <button class="btn btn-primary" onclick="showCurrentScheduleModal()"
                                     id="viewScheduleBtn" style="display: none;">
                                     📅 Ver Mi Horario
                                 </button>
                                 <button class="btn btn-warning" onclick="toggleMoveMode()" id="moveBtn">🔄 Mover
                                     Materias</button>
+
                                 <a href="https://cronograma-26-1.pages.dev/" class="btn btn-success">Consulta
                                     Cronograma</a>
+
+
                             </div>
                         </div>
                     </div>
@@ -252,74 +269,9 @@
 
                     <div class="subjects-bank" id="subjectsBankContainer"
                         style="max-height: none; background: var(--bg-primary);">
+                        <!-- Se llena dinámicamente -->
                     </div>
                 </div>
-
-                <!-- ==========================================
-                     NUEVA VISTA: MALLA CURRICULAR
-                     ========================================== -->
-                <div id="mallaView" class="view-content" style="display: none;">
-                    <div class="header-bar">
-                        <div class="header-controls">
-                            <div>
-                                <h2 style="margin-bottom: 4px;">🗺️ Malla Curricular</h2>
-                                <p style="color: var(--text-secondary); font-size: 0.9rem;">
-                                    Visualiza tu malla y valida tu plan de estudios
-                                </p>
-                            </div>
-                            <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
-                                <button class="btn btn-primary" onclick="loadMallaPDF()">📄 Cargar PDF</button>
-                                <button class="btn btn-success" onclick="renderValidationReport()" id="revalidateBtn"
-                                    style="display:none;">🔄 Revalidar</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Estado de extracción IA -->
-                    <div id="mallaExtractionStatus" style="
-                        display: none;
-                        padding: 12px 16px;
-                        border-radius: 8px;
-                        margin-bottom: 16px;
-                        font-weight: 500;
-                        font-size: 0.9rem;
-                    "></div>
-
-                    <!-- Layout: visor PDF arriba, validación abajo -->
-                    <div style="display: flex; flex-direction: column; gap: 24px;">
-
-                        <!-- Visor PDF -->
-                        <div style="background: var(--bg-primary); border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color); overflow: hidden;">
-                            <!-- Placeholder cuando no hay PDF -->
-                            <div id="mallaPlaceholder" style="
-                                text-align: center;
-                                padding: 48px 24px;
-                                color: var(--text-secondary);
-                            ">
-                                <div style="font-size: 3rem; margin-bottom: 16px;">📄</div>
-                                <h3 style="margin-bottom: 8px; color: var(--text-primary);">Sin malla cargada</h3>
-                                <p style="margin-bottom: 20px;">Carga el PDF de tu malla curricular para visualizarla y validar tu plan</p>
-                                <button class="btn btn-primary" onclick="loadMallaPDF()" style="font-size: 1rem; padding: 12px 24px;">
-                                    📄 Cargar PDF de la Malla
-                                </button>
-                            </div>
-                            <!-- Iframe del PDF -->
-                            <iframe
-                                id="mallaPDFViewer"
-                                style="display: none; width: 100%; height: 70vh; border: none;"
-                                title="Malla Curricular"
-                            ></iframe>
-                        </div>
-
-                        <!-- Reporte de validación -->
-                        <div id="mallaValidationContainer"
-                            style="background: var(--bg-secondary); border-radius: 12px; padding: 24px; border: 1px solid var(--border-color);">
-                            <!-- Se llena dinámicamente cuando se extraen materias -->
-                        </div>
-
-                    </div>
-                </div>
-                <!-- FIN VISTA MALLA -->
 
                 <!-- Configuration View -->
                 <div id="configView" class="view-content" style="display: none;">
@@ -350,19 +302,21 @@
                         <div class="form-group" style="margin-top: 24px;">
                             <button class="btn btn-success" onclick="saveConfig()">💾 Guardar Configuración</button>
                             <button class="btn btn-danger" onclick="resetData()" style="margin-left: 12px;">🗑️
-                                Reiniciar Sistema</button>
+                                Reiniciar
+                                Sistema</button>
                         </div>
                     </div>
 
+                    <!-- Nuevo apartado de tipologías -->
                     <div
                         style="background: var(--bg-primary); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color);">
                         <h3 style="margin-bottom: 20px; color: var(--unal-green);">Distribución por Tipologías</h3>
                         <h5 style="margin-bottom: 20px">(Hacer click para ver las asignaturas)</h5>
                         <div class="typologies-grid" id="typologiesGrid">
+                            <!-- Se llena dinámicamente -->
                         </div>
                     </div>
                 </div>
-
                 <!-- Schedule Planning View -->
                 <div id="scheduleView" class="view-content" style="display: none;">
                     <div class="header-bar">
@@ -376,9 +330,11 @@
                         </div>
                     </div>
 
+                    <!-- Configuración del Periodo -->
                     <div
                         style="background: var(--bg-primary); padding: 24px; border-radius: 12px; box-shadow: var(--shadow-light); border: 1px solid var(--border-color); margin-bottom: 24px;">
-                        <h3 style="margin-bottom: 16px; color: var(--unal-green);">Configuración del Periodo Académico</h3>
+                        <h3 style="margin-bottom: 16px; color: var(--unal-green);">Configuración del Periodo Académico
+                        </h3>
                         <div class="form-row">
                             <div class="form-group">
                                 <label class="form-label">Periodo (ej: 2026-1)</label>
@@ -396,6 +352,7 @@
                         <button class="btn btn-success" onclick="savePeriodConfig()">💾 Guardar Periodo</button>
                     </div>
 
+                    <!-- Lista de Horarios Guardados -->
                     <div id="schedulesContainer"></div>
                 </div>
 
@@ -405,8 +362,11 @@
                         <div class="modal-header">
                             <div style="display: flex; flex-direction: column; gap: 4px;">
                                 <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                                    <h3 class="modal-title" id="currentScheduleTitle" style="margin: 0;">Mi Horario Actual</h3>
-                                    <span style="color: var(--text-secondary); font-size: 0.85rem;" id="currentDayTime"></span>
+                                    <h3 class="modal-title" id="currentScheduleTitle" style="margin: 0;">Mi Horario
+                                        Actual
+                                    </h3>
+                                    <span style="color: var(--text-secondary); font-size: 0.85rem;"
+                                        id="currentDayTime"></span>
                                 </div>
                             </div>
                             <button class="close-btn" onclick="closeCurrentScheduleModal()">&times;</button>
@@ -445,12 +405,8 @@
                     </div>
                 </div>
 
-                <!-- Input oculto para cargar JSON de horarios -->
+                <!-- Input oculto para cargar JSON -->
                 <input type="file" id="horariosFile" style="display: none" accept=".json,.js">
-
-                <!-- Input oculto para PDF de malla -->
-                <input type="file" id="mallaPDFFile" style="display: none" accept=".pdf">
-
                 <!-- Modal para visualizar horario actual -->
                 <div id="currentScheduleModal" class="modal">
                     <div class="modal-content" style="max-width: 1200px;">
@@ -518,12 +474,12 @@
 
                     <div style="display: flex; gap: 12px; margin-top: 24px;">
                         <button type="submit" class="btn btn-success">💾 Guardar</button>
-                        <button type="button" class="btn btn-secondary" onclick="closeSubjectModal()">❌ Cancelar</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeSubjectModal()">❌
+                            Cancelar</button>
                     </div>
                 </form>
             </div>
         </div>
-
         <!-- Typology Subjects Modal -->
         <div id="typologySubjectsModal" class="modal">
             <div class="modal-content">
@@ -531,83 +487,100 @@
                     <h3 class="modal-title" id="typologyModalTitle">Materias por Tipología</h3>
                     <button class="close-btn" onclick="closeTypologyModal()">&times;</button>
                 </div>
-                <div id="typologySubjectsContainer"></div>
+
+                <div id="typologySubjectsContainer">
+                    <!-- Se llena dinámicamente -->
+                </div>
             </div>
         </div>
-
+         </div> <!-- Cierra app-container -->
     </div> <!-- Cierra appContainer -->
 
-    <script src="scripts/script.js"></script>
+        <script src="scripts/script.js"></script>
 
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
-                    .then(registration => console.log('✅ Service Worker registrado:', registration.scope))
-                    .catch(error => console.log('❌ Error al registrar Service Worker:', error));
+        <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
+        <script>
+            // Registro del Service Worker
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    navigator.serviceWorker.register('/service-worker.js')
+                        .then(registration => {
+                            console.log('✅ Service Worker registrado:', registration.scope);
+                        })
+                        .catch(error => {
+                            console.log('❌ Error al registrar Service Worker:', error);
+                        });
+                });
+            }
+
+            // Detectar si se puede instalar la app
+            let deferredPrompt = null;
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                // Prevenir el mini-infobar automático en móvil
+                e.preventDefault();
+                deferredPrompt = e;
+                console.log('✅ beforeinstallprompt capturado');
+                showInstallButton();
             });
-        }
 
-        let deferredPrompt = null;
+            function showInstallButton() {
+                // Evitar duplicados
+                if (document.getElementById('installBtn')) return;
 
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            showInstallButton();
-        });
+                const installBtn = document.createElement('button');
+                installBtn.id = 'installBtn';
+                installBtn.innerHTML = '📱 Instalar App';
+                installBtn.style.cssText = `
+                    position: fixed;
+                    bottom: 24px;
+                    right: 24px;
+                    background: linear-gradient(135deg, #2e7d32, #1b5e20);
+                    color: white;
+                    border: none;
+                    padding: 14px 24px;
+                    border-radius: 28px;
+                    font-weight: bold;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+                    z-index: 9999;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    animation: pwaButtonPulse 2s infinite;
+                `;
 
-        function showInstallButton() {
-            if (document.getElementById('installBtn')) return;
+                installBtn.onclick = async () => {
+                    if (!deferredPrompt) return;
+                    installBtn.disabled = true;
+                    installBtn.innerHTML = '⏳ Instalando...';
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    console.log(outcome === 'accepted' ? '✅ App instalada' : '❌ Instalación rechazada');
+                    deferredPrompt = null;
+                    installBtn.remove();
+                };
 
-            const installBtn = document.createElement('button');
-            installBtn.id = 'installBtn';
-            installBtn.innerHTML = '📱 Instalar App';
-            installBtn.style.cssText = `
-                position: fixed;
-                bottom: 24px;
-                right: 24px;
-                background: linear-gradient(135deg, #2e7d32, #1b5e20);
-                color: white;
-                border: none;
-                padding: 14px 24px;
-                border-radius: 28px;
-                font-weight: bold;
-                font-size: 1rem;
-                cursor: pointer;
-                box-shadow: 0 6px 20px rgba(0,0,0,0.35);
-                z-index: 9999;
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                animation: pwaButtonPulse 2s infinite;
-            `;
+                document.body.appendChild(installBtn);
+            }
 
-            installBtn.onclick = async () => {
-                if (!deferredPrompt) return;
-                installBtn.disabled = true;
-                installBtn.innerHTML = '⏳ Instalando...';
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
+            // Limpiar botón si ya se instaló
+            window.addEventListener('appinstalled', () => {
+                console.log('✅ App instalada exitosamente');
+                const installBtn = document.getElementById('installBtn');
+                if (installBtn) installBtn.remove();
                 deferredPrompt = null;
-                installBtn.remove();
-            };
+            });
+        </script>
 
-            document.body.appendChild(installBtn);
-        }
-
-        window.addEventListener('appinstalled', () => {
-            const installBtn = document.getElementById('installBtn');
-            if (installBtn) installBtn.remove();
-            deferredPrompt = null;
-        });
-    </script>
-
-    <style>
-        @keyframes pwaButtonPulse {
-            0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
-            50% { transform: scale(1.05); box-shadow: 0 8px 28px rgba(46,125,50,0.5); }
-        }
-    </style>
-
+        <style>
+            @keyframes pwaButtonPulse {
+                0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
+                50% { transform: scale(1.05); box-shadow: 0 8px 28px rgba(46,125,50,0.5); }
+            }
+        </style>
+   
 </body>
+
 </html>
