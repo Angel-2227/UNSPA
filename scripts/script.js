@@ -38,6 +38,7 @@ function debounce(fn, delay) {
 }
 const debouncedFirestoreSave = debounce(() => saveToFirestore(), 1500);
 
+
 // ============================================
 // INICIALIZACIÓN
 // ============================================
