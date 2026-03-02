@@ -1554,7 +1554,7 @@ function renderCurrentScheduleView(schedule) {
         return parts.length <= 2 ? name : `${parts[0]} ${parts[parts.length - 1]}`;
     };
 
-    let grid = `<div class="schedule-grid-viewer">`;
+    let grid = `<div class="schedule-grid-wrapper"><div class="schedule-grid-viewer">`;
     grid += `<div class="schedule-cell-viewer header"></div>`;
     days.forEach(day => { grid += `<div class="schedule-cell-viewer header" id="day-${day}">${day}</div>`; });
 
@@ -1576,8 +1576,8 @@ function renderCurrentScheduleView(schedule) {
         });
     });
 
-    grid += `</div>`;
-    container.innerHTML = grid;
+    grid += `</div></div>`;
+container.innerHTML = grid;
 }
 
 function updateCurrentTimeIndicator() {

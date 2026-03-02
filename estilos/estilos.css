@@ -10,7 +10,7 @@
   --unal-yellow: #ffa000;
   --unal-red: #d32f2f;
   --unal-blue: #1976d2;
-  
+
   /* Tema Claro */
   --bg-primary: #ffffff;
   --bg-secondary: #f8f9fa;
@@ -230,21 +230,10 @@ body {
   margin-bottom: 4px;
 }
 
-.stat-number.completed {
-  color: var(--unal-green);
-}
-
-.stat-number.current {
-  color: var(--unal-yellow);
-}
-
-.stat-number.pending {
-  color: var(--unal-red);
-}
-
-.stat-number.total {
-  color: var(--unal-blue);
-}
+.stat-number.completed { color: var(--unal-green); }
+.stat-number.current   { color: var(--unal-yellow); }
+.stat-number.pending   { color: var(--unal-red); }
+.stat-number.total     { color: var(--unal-blue); }
 
 .stat-label {
   color: var(--text-secondary);
@@ -271,17 +260,9 @@ body {
   transition: all 0.3s ease;
 }
 
-.semester-card.completed {
-  border-left: 4px solid var(--unal-green);
-}
-
-.semester-card.current {
-  border-left: 4px solid var(--unal-yellow);
-}
-
-.semester-card.pending {
-  border-left: 4px solid var(--unal-red);
-}
+.semester-card.completed { border-left: 4px solid var(--unal-green); }
+.semester-card.current   { border-left: 4px solid var(--unal-yellow); }
+.semester-card.pending   { border-left: 4px solid var(--unal-red); }
 
 .semester-header {
   padding: 16px 20px;
@@ -335,20 +316,9 @@ body {
   margin-right: 8px;
 }
 
-.status-completed {
-  background: #e8f5e8;
-  color: var(--unal-dark-green);
-}
-
-.status-current {
-  background: #fff8e1;
-  color: #f57c00;
-}
-
-.status-pending {
-  background: #ffebee;
-  color: var(--unal-red);
-}
+.status-completed { background: #e8f5e8; color: var(--unal-dark-green); }
+.status-current   { background: #fff8e1; color: #f57c00; }
+.status-pending   { background: #ffebee; color: var(--unal-red); }
 
 .semester-content {
   max-height: 0;
@@ -365,7 +335,6 @@ body {
   overflow-x: auto;
 }
 
-/* Zona de drop para mover materias */
 .semester-drop-zone {
   min-height: 40px;
   border: 2px dashed var(--border-color);
@@ -426,118 +395,38 @@ body {
   text-transform: uppercase;
 }
 
-/* Tipos genéricos */
-.type-obligatoria {
-  background: #ffcdd2;
-  color: #b71c1c;
-}
-
-.type-optativa {
-  background: #c8e6c9;
-  color: #2e7d32;
-}
-
-.type-libre {
-  background: #bbdefb;
-  color: #0d47a1;
-}
-
-.type-grado {
-  background: #e1bee7;
-  color: #4a148c;
-}
-
-.type-nivelacion {
-  background: #ffe0b2;
-  color: #e65100;
-}
-
-/* Tipos específicos de tipologías */
-.type-disciplinar-obligatoria {
-  background: #ffcdd2;
-  color: #b71c1c;
-}
-
-.type-disciplinar-optativa {
-  background: #c8e6c9;
-  color: #2e7d32;
-}
-
-.type-fundamentacion-obligatoria {
-  background: #e1f5fe;
-  color: #01579b;
-}
-
-.type-fundamentacion-optativa {
-  background: #f3e5f5;
-  color: #4a148c;
-}
-
-.type-libre-eleccion {
-  background: #bbdefb;
-  color: #0d47a1;
-}
-
-.type-trabajo-grado {
-  background: #e1bee7;
-  color: #4a148c;
-}
+.type-obligatoria                { background: #ffcdd2; color: #b71c1c; }
+.type-optativa                   { background: #c8e6c9; color: #2e7d32; }
+.type-libre                      { background: #bbdefb; color: #0d47a1; }
+.type-grado                      { background: #e1bee7; color: #4a148c; }
+.type-nivelacion                 { background: #ffe0b2; color: #e65100; }
+.type-disciplinar-obligatoria    { background: #ffcdd2; color: #b71c1c; }
+.type-disciplinar-optativa       { background: #c8e6c9; color: #2e7d32; }
+.type-fundamentacion-obligatoria { background: #e1f5fe; color: #01579b; }
+.type-fundamentacion-optativa    { background: #f3e5f5; color: #4a148c; }
+.type-libre-eleccion             { background: #bbdefb; color: #0d47a1; }
+.type-trabajo-grado              { background: #e1bee7; color: #4a148c; }
 
 /* Badges en tema oscuro */
 [data-theme="dark"] .type-obligatoria,
-[data-theme="dark"] .type-disciplinar-obligatoria {
-  background: #7f1d1d;
-  color: #fca5a5;
-}
+[data-theme="dark"] .type-disciplinar-obligatoria    { background: #7f1d1d; color: #fca5a5; }
 
 [data-theme="dark"] .type-optativa,
-[data-theme="dark"] .type-disciplinar-optativa {
-  background: #14532d;
-  color: #86efac;
-}
+[data-theme="dark"] .type-disciplinar-optativa       { background: #14532d; color: #86efac; }
 
 [data-theme="dark"] .type-libre,
-[data-theme="dark"] .type-libre-eleccion {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
+[data-theme="dark"] .type-libre-eleccion             { background: #1e3a8a; color: #93c5fd; }
 
 [data-theme="dark"] .type-grado,
-[data-theme="dark"] .type-trabajo-grado {
-  background: #581c87;
-  color: #c4b5fd;
-}
+[data-theme="dark"] .type-trabajo-grado              { background: #581c87; color: #c4b5fd; }
 
-[data-theme="dark"] .type-nivelacion {
-  background: #78350f;
-  color: #fcd34d;
-}
+[data-theme="dark"] .type-nivelacion                 { background: #78350f; color: #fcd34d; }
+[data-theme="dark"] .type-fundamentacion-obligatoria { background: #1e3a8a; color: #93c5fd; }
+[data-theme="dark"] .type-fundamentacion-optativa    { background: #581c87; color: #c4b5fd; }
 
-[data-theme="dark"] .type-fundamentacion-obligatoria {
-  background: #1e3a8a;
-  color: #93c5fd;
-}
-
-[data-theme="dark"] .type-fundamentacion-optativa {
-  background: #581c87;
-  color: #c4b5fd;
-}
-
-/* Status badges en tema oscuro */
-[data-theme="dark"] .status-completed {
-  background: #14532d;
-  color: #86efac;
-}
-
-[data-theme="dark"] .status-current {
-  background: #78350f;
-  color: #fcd34d;
-}
-
-[data-theme="dark"] .status-pending {
-  background: #7f1d1d;
-  color: #fca5a5;
-}
+[data-theme="dark"] .status-completed { background: #14532d; color: #86efac; }
+[data-theme="dark"] .status-current   { background: #78350f; color: #fcd34d; }
+[data-theme="dark"] .status-pending   { background: #7f1d1d; color: #fca5a5; }
 
 
 /* ============================================
@@ -609,30 +498,11 @@ body {
   text-decoration: none;
 }
 
-.btn-primary {
-  background: var(--unal-green);
-  color: white;
-}
-
-.btn-success {
-  background: var(--unal-green);
-  color: white;
-}
-
-.btn-warning {
-  background: var(--unal-yellow);
-  color: white;
-}
-
-.btn-danger {
-  background: var(--unal-red);
-  color: white;
-}
-
-.btn-secondary {
-  background: var(--text-secondary);
-  color: white;
-}
+.btn-primary   { background: var(--unal-green);    color: white; }
+.btn-success   { background: var(--unal-green);    color: white; }
+.btn-warning   { background: var(--unal-yellow);   color: white; }
+.btn-danger    { background: var(--unal-red);      color: white; }
+.btn-secondary { background: var(--text-secondary); color: white; }
 
 .btn-sm {
   padding: 4px 8px;
@@ -704,6 +574,9 @@ body {
 
 /* ============================================
    MODALES
+   FIX: El .modal tiene overflow-y: auto para que el click
+   fuera del contenido cierre el modal. El scroll se maneja
+   dentro de cada modal según su tipo.
    ============================================ */
 
 .modal {
@@ -716,20 +589,37 @@ body {
   background: rgba(0, 0, 0, 0.6);
   z-index: 1000;
   backdrop-filter: blur(4px);
+  /* overflow-y permite que el click en el fondo funcione correctamente */
+  overflow-y: auto;
+  /* Centrado vertical */
+  display: none;
+  align-items: center;
+  justify-content: center;
 }
 
+/* Cuando el modal está abierto se muestra como flex */
+.modal[style*="display: block"] {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2vh 0;
+}
+
+/* Contenido base de todos los modales */
 .modal-content {
   background: var(--bg-primary);
-  margin: 2vh auto;
-  padding: 16px;
   border-radius: 12px;
   width: 95%;
-  max-width: 1400px;
+  max-width: 600px;
   border: 1px solid var(--border-color);
-  height: 96vh;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  box-shadow: var(--shadow-medium);
+  /* El scroll va aquí adentro */
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: 24px;
+  /* Impide que el click dentro cierre el modal */
+  position: relative;
+  flex-shrink: 0;
 }
 
 .modal-header {
@@ -739,6 +629,13 @@ body {
   margin-bottom: 20px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--border-color);
+  /* Header sticky dentro del modal */
+  position: sticky;
+  top: -24px; /* compensa el padding */
+  background: var(--bg-primary);
+  z-index: 2;
+  margin-top: -24px;
+  padding-top: 24px;
 }
 
 .modal-title {
@@ -753,8 +650,9 @@ body {
   font-size: 24px;
   cursor: pointer;
   color: var(--text-secondary);
-  padding: 4px;
+  padding: 4px 8px;
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .close-btn:hover {
@@ -762,35 +660,60 @@ body {
   color: var(--text-primary);
 }
 
-/* Modal específico para horario actual */
+/* Modal de horario actual - más ancho y con grid con scroll propio */
 #currentScheduleModal .modal-content {
-  overflow: hidden !important;
-  height: 96vh;
-  margin: 2vh auto;
-  padding: 12px;
+  max-width: 1200px;
+  height: 94vh;
+  overflow: hidden; /* El modal en sí no hace scroll */
   display: flex;
   flex-direction: column;
+  padding: 16px;
+}
+
+#currentScheduleModal .modal-header {
+  position: static; /* No sticky en este modal, es flex */
+  margin-top: 0;
+  padding-top: 0;
+  top: auto;
+  flex-shrink: 0;
 }
 
 #currentScheduleContent {
   flex: 1;
-  overflow: auto; /* Cambiar de hidden a auto */
   min-height: 0;
-  display: flex;
-  flex-direction: column;
-  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
-}
-
-/* AGREGAR esta nueva regla */
-.schedule-grid-viewer {
-  overflow: auto; /* Permitir scroll dentro del grid */
-  max-height: 100%;
+  overflow: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Modal para construcción de horario */
+/* Modal de construcción/edición de horario - scroll libre */
 #scheduleModal .modal-content {
-  overflow-y: scroll !important;
+  max-width: 900px;
+  height: 94vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+#scheduleModal .modal-header {
+  position: static;
+  margin-top: 0;
+  padding-top: 0;
+  top: auto;
+  flex-shrink: 0;
+}
+
+/* Filtros pegados bajo el header */
+#scheduleModal .schedule-filters {
+  flex-shrink: 0;
+}
+
+#scheduleBuilder {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
 }
 
 
@@ -906,7 +829,7 @@ body {
   min-width: 200px;
 }
 
-/* Grid de construcción de horario */
+/* Grid de construcción de horario (preview) */
 .schedule-grid {
   display: grid;
   grid-template-columns: 80px repeat(6, 1fr);
@@ -914,6 +837,7 @@ body {
   background: var(--border-color);
   border: 1px solid var(--border-color);
   margin-top: 16px;
+  overflow-x: auto;
 }
 
 .schedule-cell {
@@ -977,14 +901,8 @@ body {
   cursor: pointer;
 }
 
-.subject-select-card:hover {
-  border-color: var(--unal-green);
-}
-
-.subject-select-card.expanded {
-  border-color: var(--unal-green);
-}
-
+.subject-select-card:hover   { border-color: var(--unal-green); }
+.subject-select-card.expanded { border-color: var(--unal-green); }
 .subject-select-card.selected {
   border-color: var(--unal-green);
   background: rgba(46, 125, 50, 0.1);
@@ -1029,9 +947,7 @@ body {
   background: var(--bg-primary);
 }
 
-.group-option:hover {
-  border-color: var(--unal-green);
-}
+.group-option:hover { border-color: var(--unal-green); }
 
 .group-option.selected {
   background: var(--unal-green);
@@ -1050,20 +966,30 @@ body {
 
 
 /* ============================================
-   VISUALIZADOR DE HORARIO
+   VISUALIZADOR DE HORARIO (schedule-grid-viewer)
+   FIX: El contenedor padre (#currentScheduleContent) 
+   maneja el scroll. El grid define su tamaño mínimo.
    ============================================ */
+
+/* Wrapper para el scroll horizontal en desktop */
+.schedule-grid-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
 
 .schedule-grid-viewer {
   display: grid;
-  grid-template-columns: 80px repeat(6, 1fr);
+  /* Desktop: columnas proporcionales */
+  grid-template-columns: 80px repeat(6, minmax(100px, 1fr));
   gap: 1px;
   background: var(--border-color);
   border: 2px solid var(--border-color);
   margin-top: 12px;
   border-radius: 8px;
-  overflow: auto; /* Permitir scroll horizontal y vertical */
-  max-height: calc(96vh - 180px);
-  -webkit-overflow-scrolling: touch;
+  /* Ancho mínimo para garantizar que caben los 6 días */
+  min-width: 700px;
 }
 
 .schedule-cell-viewer {
@@ -1075,6 +1001,7 @@ body {
   font-size: 0.7rem;
   position: relative;
   min-height: 40px;
+  text-align: center;
 }
 
 .schedule-cell-viewer.header {
@@ -1083,6 +1010,9 @@ body {
   color: var(--unal-green);
   padding: 10px 4px;
   font-size: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .schedule-cell-viewer.time {
@@ -1090,6 +1020,17 @@ body {
   font-weight: 600;
   color: var(--text-primary);
   font-size: 0.7rem;
+  position: sticky;
+  left: 0;
+  z-index: 9;
+}
+
+/* Celda esquina (header + time) */
+.schedule-cell-viewer.header:first-child {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 11;
 }
 
 .schedule-cell-viewer.class-block {
@@ -1122,10 +1063,9 @@ body {
   line-height: 1.2;
 }
 
-/* Estilos para bloques de clase de 1-2 horas */
-.schedule-cell-viewer.class-block[data-duration="1"] .class-block-name {
+.schedule-cell-viewer.class-block[data-duration="1"] .class-block-name,
+.schedule-cell-viewer.class-block[data-duration="2"] .class-block-name {
   font-size: 0.65rem;
-  margin-bottom: 2px;
 }
 
 .schedule-cell-viewer.class-block[data-duration="1"] .class-block-info,
@@ -1146,12 +1086,8 @@ body {
 }
 
 @keyframes pulse {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.85;
-  }
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.85; }
 }
 
 .schedule-cell-viewer.current-time {
@@ -1162,13 +1098,13 @@ body {
 .current-day-indicator {
   background: var(--unal-yellow);
   color: white;
-  padding: 4px 8px;
+  padding: 2px 6px;
   border-radius: 4px;
   font-weight: 700;
-  font-size: 0.75rem;
+  font-size: 0.65rem;
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 2px;
+  right: 2px;
 }
 
 
@@ -1251,7 +1187,7 @@ body {
 
 
 /* ============================================
-   RESPONSIVE - TABLETS (768px - 1024px)
+   RESPONSIVE - TABLETS (max-width: 1200px)
    ============================================ */
 
 @media (max-width: 1200px) {
@@ -1274,7 +1210,7 @@ body {
    ============================================ */
 
 @media (max-width: 768px) {
-  /* Sidebar y navegación móvil */
+  /* Sidebar y navegación */
   .mobile-toggle {
     display: block;
   }
@@ -1297,27 +1233,26 @@ body {
     padding: 60px 16px 16px;
   }
 
-  /* Header y controles */
   .header-controls {
     flex-direction: column;
     align-items: stretch;
   }
 
-  /* Estadísticas */
   .stats-summary {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  /* Formularios */
   .form-row {
     grid-template-columns: 1fr;
   }
 
-  /* Modales */
+  /* ---- MODALES EN MÓVIL ---- */
+  /* Modal genérico: pantalla completa con scroll */
   .modal-content {
     width: 100%;
-    height: 100vh;
-    max-height: 100vh;
+    max-width: 100%;
+    height: 100dvh; /* dvh para evitar problemas con barra del navegador */
+    max-height: 100dvh;
     margin: 0;
     border-radius: 0;
     padding: 12px;
@@ -1325,103 +1260,103 @@ body {
     -webkit-overflow-scrolling: touch;
   }
 
-  /* AGREGAR estas reglas específicas para el modal de horario */
+  .modal-header {
+    position: sticky;
+    top: -12px; /* compensa el padding en móvil */
+    padding-top: 12px;
+    margin-top: -12px;
+    z-index: 2;
+  }
+
+  /* Modal de horario actual en móvil: flex column, grid con scroll */
   #currentScheduleModal .modal-content {
-    height: 100vh;
-    max-height: 100vh;
-    margin: 0;
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden; /* el grid scroll internamente */
     padding: 10px;
-    overflow: hidden; /* El modal no hace scroll */
+    display: flex;
+    flex-direction: column;
+  }
+
+  #currentScheduleModal .modal-header {
+    position: static;
+    margin-top: 0;
+    padding-top: 0;
+    flex-shrink: 0;
   }
 
   #currentScheduleContent {
-    overflow: auto; /* El contenido sí hace scroll */
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .schedule-grid-viewer {
-    overflow: auto; /* Grid con scroll horizontal y vertical */
-    max-height: 100%;
-    width: 100%;
-    -webkit-overflow-scrolling: touch;
-    /* IMPORTANTE: Permitir scroll en ambas direcciones */
-  }
-  @media (max-width: 768px) {
-  /* ... otras reglas ... */
-
-  /* AGREGAR/REEMPLAZAR estas reglas para el grid en móvil */
-  .schedule-grid-viewer {
-    /* Ancho mínimo fijo para forzar scroll horizontal */
-    min-width: 600px; /* Esto fuerza el scroll horizontal */
-    width: max-content; /* Se adapta al contenido */
-    max-width: none; /* Sin límite máximo */
-    
-    /* Grid con columnas de ancho fijo */
-    grid-template-columns: 50px repeat(6, 90px);
-    gap: 1px;
-    
-    /* Scroll suave */
-    overflow-x: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    
-    /* Altura máxima */
-    max-height: calc(100vh - 120px);
-    
-    /* Evitar que se corte */
-    margin-right: 0;
-    padding-right: 0;
-  }
-
-  #currentScheduleContent {
+    flex: 1;
+    min-height: 0;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
-    /* IMPORTANTE: Contenedor con scroll */
-    width: 100%;
-    height: 100%;
+  }
+
+  /* Modal de construcción de horario en móvil */
+  #scheduleModal .modal-content {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #scheduleModal .modal-header {
+    position: static;
+    margin-top: 0;
+    padding-top: 0;
+    flex-shrink: 0;
+  }
+
+  #scheduleModal .schedule-filters {
+    flex-shrink: 0;
+  }
+
+  #scheduleBuilder {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---- HORARIO VIEWER EN MÓVIL ---- */
+  /* FIX principal: forzar orientación horizontal con scroll */
+  .schedule-grid-viewer {
+    /* Columnas fijas para garantizar que todos los días son visibles */
+    grid-template-columns: 48px repeat(6, 90px);
+    min-width: 588px; /* 48 + (90*6) + gaps */
+    margin-top: 8px;
+    border-radius: 4px;
   }
 
   .schedule-cell-viewer {
-    padding: 4px 2px;
+    padding: 4px 3px;
     font-size: 0.65rem;
-    min-height: 35px;
-    /* Ancho mínimo para cada celda */
-    min-width: 85px;
+    min-height: 36px;
   }
 
   .schedule-cell-viewer.header {
-    padding: 8px 2px;
-    font-size: 0.7rem;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--bg-secondary);
+    padding: 8px 3px;
+    font-size: 0.68rem;
   }
 
   .schedule-cell-viewer.time {
-    position: sticky;
-    left: 0;
-    z-index: 9;
-    background: var(--bg-secondary);
-    min-width: 45px;
+    font-size: 0.65rem;
+    padding: 4px 2px;
+    min-width: 44px;
   }
 
-  /* Esquina superior izquierda sticky */
-  .schedule-cell-viewer.header:first-child {
-    position: sticky;
-    left: 0;
-    z-index: 11;
-    background: var(--bg-secondary);
-  }
-}
-
-  .modal-header {
-    flex-shrink: 0; /* Header fijo, no se comprime */
-    margin-bottom: 8px;
-    padding-bottom: 8px;
+  .class-block-name {
+    font-size: 0.62rem;
+    line-height: 1.1;
   }
 
-  #currentScheduleTitle {
+  .class-block-info {
+    font-size: 0.52rem;
+  }
+
+  .modal-title {
     font-size: 1rem;
   }
 
@@ -1431,68 +1366,15 @@ body {
 }
 
 
-  .modal-title {
-    font-size: 1.1rem;
-  }
-
-  #currentDayTime {
-    font-size: 0.75rem !important;
-  }
-
-  #currentScheduleModal .modal-content {
-    height: 100vh;
-    margin: 0;
-    padding: 10px;
-  }
-
-  #scheduleBuilder {
-    overflow-y: visible;
-  }
-
-  /* Horarios en móvil */
-  .schedule-grid-viewer {
-    grid-template-columns: 50px repeat(6, 1fr);
-    font-size: 0.65rem;
-    margin-top: 8px;
-  }
-
-  .schedule-cell-viewer {
-    padding: 4px 2px;
-    font-size: 0.65rem;
-    min-height: 35px;
-  }
-
-  .schedule-cell-viewer.header {
-    padding: 8px 2px;
-    font-size: 0.7rem;
-  }
-
-  .class-block-name {
-    font-size: 0.65rem;
-  }
-
-  .class-block-info {
-    font-size: 0.55rem;
-  }
-
-  .modal-header {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-  }
-
-
-
 /* ============================================
    RESPONSIVE - MÓVIL PEQUEÑO (max-width: 480px)
    ============================================ */
 
 @media (max-width: 480px) {
-  /* Estadísticas en una columna */
   .stats-summary {
     grid-template-columns: 1fr;
   }
 
-  /* Semestres más compactos */
   .semester-header {
     padding: 12px 16px;
   }
@@ -1501,7 +1383,6 @@ body {
     padding: 16px;
   }
 
-  /* Tabla de materias más pequeña */
   .subjects-table {
     font-size: 0.8rem;
   }
@@ -1510,50 +1391,25 @@ body {
   .subjects-table td {
     padding: 8px;
   }
-}
-/* AGREGAR al final del archivo, después de max-width: 768px */
-@media (max-width: 480px) {
+
+  /* Horario en pantallas muy pequeñas */
   .schedule-grid-viewer {
-    grid-template-columns: 40px repeat(6, minmax(70px, 1fr));
-    font-size: 0.6rem;
+    grid-template-columns: 40px repeat(6, 78px);
+    min-width: 508px; /* 40 + (78*6) + gaps */
   }
 
   .schedule-cell-viewer {
     padding: 3px 2px;
     font-size: 0.6rem;
-    min-height: 30px;
-  }
-
-  .class-block-name {
-    font-size: 0.6rem;
-    line-height: 1;
-  }
-
-  .class-block-info {
-    font-size: 0.5rem;
-  }
-}
-@media (max-width: 480px) {
-  .schedule-grid-viewer {
-    /* Columnas más estrechas pero con mínimo */
-    grid-template-columns: 40px repeat(6, 75px);
-    min-width: 490px; /* 40 + (75*6) + gaps */
-    font-size: 0.6rem;
-  }
-
-  .schedule-cell-viewer {
-    min-width: 70px;
-    padding: 3px 2px;
-    font-size: 0.6rem;
-    min-height: 30px;
+    min-height: 32px;
   }
 
   .schedule-cell-viewer.time {
-    min-width: 35px;
+    min-width: 36px;
   }
 
   .class-block-name {
-    font-size: 0.6rem;
+    font-size: 0.58rem;
     line-height: 1;
   }
 
