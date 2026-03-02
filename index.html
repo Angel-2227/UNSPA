@@ -45,6 +45,7 @@
         const auth = firebase.auth();
         const db = firebase.firestore();
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 </head>
 
 <body>
@@ -126,15 +127,15 @@
         }
     </style>
 
-   
-    
+
+
 
     <div id="appContainer" style="display: none;">
         <!-- Mobile menu toggle -->
-    <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
+        <button class="mobile-toggle" onclick="toggleSidebar()">☰</button>
 
-    <!-- Sidebar overlay for mobile -->
-    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" onclick="closeSidebar()"></div>
         <div class="app-container">
             <!-- Sidebar -->
             <aside class="sidebar" id="sidebar">
@@ -153,6 +154,10 @@
                     <div class="nav-item" onclick="showView('schedule', this)">
                         📅 Planificador de Horarios
                     </div>
+                    <div class="nav-item" onclick="showView('malla', this)">
+                        🗺️ Malla Curricular
+                    </div>
+
                     <div class="nav-item" onclick="showView('config', this)">
                         ⚙️ Configuración
                     </div>
@@ -420,6 +425,86 @@
                         <div id="currentScheduleContent"></div>
                     </div>
                 </div>
+                
+<div id="mallaView" class="view-content" style="display: none;">
+    <div class="header-bar">
+        <div class="header-controls">
+            <div>
+                <h2 style="margin-bottom: 4px;">Malla Curricular</h2>
+                <p class="text-secondary" style="font-size:0.85rem;">
+                    Haz clic sobre una materia para marcarla • Clic sucesivos cambian el estado
+                </p>
+            </div>
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                <span class="malla-stats-bar" id="mallaStatsText">Cargando...</span>
+                <button class="btn btn-danger btn-sm" onclick="clearAllMallaMarks()">🗑️ Borrar marcas</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Barra de herramientas -->
+    <div class="malla-toolbar">
+        <!-- Herramientas de marcado -->
+        <div class="malla-toolbar-group">
+            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">MARCAR:</span>
+            <button id="mallaTool_completed" class="malla-tool-btn completed active"
+                    onclick="setMallaTool('completed')">
+                ✅ Completada
+            </button>
+            <button id="mallaTool_current" class="malla-tool-btn current"
+                    onclick="setMallaTool('current')">
+                ▶ En curso
+            </button>
+            <button id="mallaTool_erase" class="malla-tool-btn erase"
+                    onclick="setMallaTool('erase')">
+                🚫 Borrar
+            </button>
+        </div>
+
+        <!-- Zoom -->
+        <div class="malla-toolbar-group">
+            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">ZOOM:</span>
+            <button class="malla-tool-btn" onclick="mallaZoomOut()">−</button>
+            <span class="malla-zoom-label" id="mallaZoomLevel">150%</span>
+            <button class="malla-tool-btn" onclick="mallaZoomIn()">+</button>
+            <button class="malla-tool-btn" onclick="mallaZoomFit()" title="Ajustar al ancho">⊡ Fit</button>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="malla-toolbar-group" style="border-right:none;">
+            <div class="malla-legend">
+                <div class="malla-legend-item">
+                    <div class="malla-legend-dot completed"></div>
+                    <span>Completada</span>
+                </div>
+                <div class="malla-legend-item">
+                    <div class="malla-legend-dot current"></div>
+                    <span>En curso</span>
+                </div>
+                <span style="font-size:0.75rem; color:var(--text-secondary);">
+                    Clic para marcar • Clic de nuevo para cambiar estado • 3er clic para borrar
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas PDF + overlay de marcas -->
+    <div class="malla-canvas-wrapper" id="mallaCanvasWrapper">
+        <!-- Loading -->
+        <div class="malla-loading" id="mallaLoading">
+            <div class="malla-spinner"></div>
+            <span>Cargando malla curricular...</span>
+        </div>
+        <!-- Error / placeholder -->
+        <div class="malla-error" id="mallaError" style="display:none;"></div>
+        <!-- Stack de canvas -->
+        <div class="malla-canvas-stack" id="mallaCanvasStack">
+            <canvas id="mallaCanvas"></canvas>
+            <canvas id="mallaOverlay"></canvas>
+        </div>
+    </div>
+</div>
+
             </main>
         </div>
 
@@ -493,45 +578,45 @@
                 </div>
             </div>
         </div>
-         </div> <!-- Cierra app-container -->
+    </div> <!-- Cierra app-container -->
     </div> <!-- Cierra appContainer -->
 
-        <script src="scripts/script.js"></script>
+    <script src="scripts/script.js"></script>
 
-        <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
-        <script>
-            // Registro del Service Worker
-            if ('serviceWorker' in navigator) {
-                window.addEventListener('load', () => {
-                    navigator.serviceWorker.register('/service-worker.js')
-                        .then(registration => {
-                            console.log('✅ Service Worker registrado:', registration.scope);
-                        })
-                        .catch(error => {
-                            console.log('❌ Error al registrar Service Worker:', error);
-                        });
-                });
-            }
-
-            // Detectar si se puede instalar la app
-            let deferredPrompt = null;
-
-            window.addEventListener('beforeinstallprompt', (e) => {
-                // Prevenir el mini-infobar automático en móvil
-                e.preventDefault();
-                deferredPrompt = e;
-                console.log('✅ beforeinstallprompt capturado');
-                showInstallButton();
+    <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
+    <script>
+        // Registro del Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registrado:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('❌ Error al registrar Service Worker:', error);
+                    });
             });
+        }
 
-            function showInstallButton() {
-                // Evitar duplicados
-                if (document.getElementById('installBtn')) return;
+        // Detectar si se puede instalar la app
+        let deferredPrompt = null;
 
-                const installBtn = document.createElement('button');
-                installBtn.id = 'installBtn';
-                installBtn.innerHTML = '📱 Instalar App';
-                installBtn.style.cssText = `
+        window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevenir el mini-infobar automático en móvil
+            e.preventDefault();
+            deferredPrompt = e;
+            console.log('✅ beforeinstallprompt capturado');
+            showInstallButton();
+        });
+
+        function showInstallButton() {
+            // Evitar duplicados
+            if (document.getElementById('installBtn')) return;
+
+            const installBtn = document.createElement('button');
+            installBtn.id = 'installBtn';
+            installBtn.innerHTML = '📱 Instalar App';
+            installBtn.style.cssText = `
                     position: fixed;
                     bottom: 24px;
                     right: 24px;
@@ -551,36 +636,45 @@
                     animation: pwaButtonPulse 2s infinite;
                 `;
 
-                installBtn.onclick = async () => {
-                    if (!deferredPrompt) return;
-                    installBtn.disabled = true;
-                    installBtn.innerHTML = '⏳ Instalando...';
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    console.log(outcome === 'accepted' ? '✅ App instalada' : '❌ Instalación rechazada');
-                    deferredPrompt = null;
-                    installBtn.remove();
-                };
-
-                document.body.appendChild(installBtn);
-            }
-
-            // Limpiar botón si ya se instaló
-            window.addEventListener('appinstalled', () => {
-                console.log('✅ App instalada exitosamente');
-                const installBtn = document.getElementById('installBtn');
-                if (installBtn) installBtn.remove();
+            installBtn.onclick = async () => {
+                if (!deferredPrompt) return;
+                installBtn.disabled = true;
+                installBtn.innerHTML = '⏳ Instalando...';
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(outcome === 'accepted' ? '✅ App instalada' : '❌ Instalación rechazada');
                 deferredPrompt = null;
-            });
-        </script>
+                installBtn.remove();
+            };
 
-        <style>
-            @keyframes pwaButtonPulse {
-                0%, 100% { transform: scale(1); box-shadow: 0 6px 20px rgba(0,0,0,0.35); }
-                50% { transform: scale(1.05); box-shadow: 0 8px 28px rgba(46,125,50,0.5); }
+            document.body.appendChild(installBtn);
+        }
+
+        // Limpiar botón si ya se instaló
+        window.addEventListener('appinstalled', () => {
+            console.log('✅ App instalada exitosamente');
+            const installBtn = document.getElementById('installBtn');
+            if (installBtn) installBtn.remove();
+            deferredPrompt = null;
+        });
+    </script>
+
+    <style>
+        @keyframes pwaButtonPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
             }
-        </style>
-   
+
+            50% {
+                transform: scale(1.05);
+                box-shadow: 0 8px 28px rgba(46, 125, 50, 0.5);
+            }
+        }
+    </style>
+
 </body>
 
 </html>

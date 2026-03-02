@@ -93,7 +93,6 @@ function setupEventListeners() {
     document.getElementById('csvFile').addEventListener('change', handleCSVUpload);
     document.getElementById('searchSubjects').addEventListener('input', filterSubjects);
 
-    // Reemplazar window.onclick por addEventListener para no sobrescribir otros handlers
     window.addEventListener('click', function (event) {
         const subjectModal = document.getElementById('subjectModal');
         const typologyModal = document.getElementById('typologySubjectsModal');
@@ -127,8 +126,6 @@ function parseCSVData(data) {
     let currentSemester = 0;
     const typesFound = {};
 
-    // FIX: Leer el total de créditos exigidos directamente del CSV
-    // Busca la fila con "TOTAL DE CRÉDITOS EXIGIDOS AL ESTUDIANTE"
     let totalCreditsFromCSV = 0;
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
@@ -185,14 +182,12 @@ function parseCSVData(data) {
         }
     }
 
-    // FIX: Eliminar semestres vacíos para no guardar datos innecesarios en Firestore
     Object.keys(studyPlan).forEach(key => {
         if (studyPlan[key].subjects.length === 0) {
             delete studyPlan[key];
         }
     });
 
-    // FIX: Si no se encontró el total en el CSV, sumar manualmente
     if (totalCreditsFromCSV === 0) {
         Object.values(studyPlan).forEach(semester => {
             semester.subjects.forEach(s => { totalCreditsFromCSV += s.credits; });
@@ -207,7 +202,7 @@ function parseCSVData(data) {
 
     saveData();
     saveSubjectBank();
-    saveConfig(false); // false = no mostrar alerta
+    saveConfig(false);
     updateUI();
 }
 
@@ -233,7 +228,7 @@ function updateStats() {
         else if (semester.status === 'current') currentCredits += semesterCredits;
     });
 
-    const total = config.totalCredits || 1; // evitar división por cero
+    const total = config.totalCredits || 1;
     const pendingCredits = Math.max(0, total - completedCredits - currentCredits);
     const progressPercentage = Math.round((completedCredits / total) * 100);
 
@@ -606,7 +601,6 @@ function syncSubjectEverywhere(updatedSubject, originalName = null) {
         });
     });
 
-    // FIX: Guardar localmente de inmediato, pero diferir Firestore con debounce
     _saveDataLocal();
     _saveSubjectBankLocal();
     updateUI();
@@ -844,7 +838,6 @@ function closeTypologyModal() {
 // NAVEGACIÓN
 // ============================================
 
-// FIX: showView recibe el elemento clicado explícitamente
 function showView(viewName, clickedEl) {
     document.querySelectorAll('.view-content').forEach(view => {
         view.style.display = 'none';
@@ -856,11 +849,9 @@ function showView(viewName, clickedEl) {
     const targetView = document.getElementById(viewName + 'View');
     if (targetView) targetView.style.display = 'block';
 
-    // Marcar activo: usar el elemento pasado o buscar por viewName
     if (clickedEl) {
         clickedEl.classList.add('active');
     } else {
-        // Si se llama programáticamente, buscar el nav-item correspondiente
         document.querySelectorAll('.nav-item').forEach(item => {
             if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${viewName}'`)) {
                 item.classList.add('active');
@@ -876,6 +867,12 @@ function showView(viewName, clickedEl) {
     else if (viewName === 'schedule') {
         renderSchedules();
         loadPeriodConfig();
+    } else if (viewName === 'malla') {
+        // Pequeño delay para que el DOM esté listo
+        setTimeout(() => {
+            initMallaView();
+            setupMallaOverlayEvents();
+        }, 100);
     }
 }
 
@@ -901,7 +898,6 @@ function expandSemester(semesterNum) {
 // CONFIGURACIÓN
 // ============================================
 
-// FIX: saveConfig unificada, con parámetro para controlar la alerta
 async function saveConfig(showAlert = true) {
     const programNameInput = document.getElementById('configProgramName');
     const totalCreditsInput = document.getElementById('configTotalCredits');
@@ -932,16 +928,17 @@ function resetData() {
         localStorage.removeItem('theme');
         localStorage.removeItem('savedSchedules');
         localStorage.removeItem('currentPeriod');
+        localStorage.removeItem('mallaMarks');
 
         studyPlan = {};
         subjectBank = [];
         schedules = [];
+        mallaMarks = {};
         config = { programName: '', university: '', totalCredits: 0, creditsByType: {} };
 
         const csvInput = document.getElementById('csvFile');
         if (csvInput) csvInput.value = '';
 
-        // Limpiar también en Firestore
         if (currentUser) {
             db.collection('users').doc(currentUser.uid).delete().catch(console.error);
         }
@@ -951,7 +948,7 @@ function resetData() {
 }
 
 // ============================================
-// GUARDADO LOCAL (funciones privadas base)
+// GUARDADO LOCAL
 // ============================================
 
 function _saveDataLocal() {
@@ -963,7 +960,7 @@ function _saveSubjectBankLocal() {
 }
 
 // ============================================
-// FUNCIONES DE GUARDADO PÚBLICAS (con Firestore)
+// FUNCIONES DE GUARDADO PÚBLICAS
 // ============================================
 
 async function saveData() {
@@ -1578,7 +1575,7 @@ function renderCurrentScheduleView(schedule) {
     });
 
     grid += `</div></div>`;
-container.innerHTML = grid;
+    container.innerHTML = grid;
 }
 
 function updateCurrentTimeIndicator() {
@@ -1729,6 +1726,11 @@ async function loadUserDataFromFirestore() {
             if (data.config) config = { ...config, ...data.config };
             if (data.schedules) schedules = data.schedules;
             if (data.currentPeriodConfig) currentPeriodConfig = data.currentPeriodConfig;
+            // Cargar marcas de la malla desde Firestore
+            if (data.mallaMarks) {
+                mallaMarks = data.mallaMarks;
+                localStorage.setItem('mallaMarks', JSON.stringify(mallaMarks));
+            }
             console.log('✅ Datos cargados desde Firestore');
         } else {
             console.log('⚠️ Primera vez del usuario, intentando migrar desde localStorage...');
@@ -1738,7 +1740,6 @@ async function loadUserDataFromFirestore() {
         updateUI();
     } catch (error) {
         console.error('Error cargando datos de Firestore:', error);
-        // FIX: Fallback a localStorage si Firestore falla (sin internet, etc.)
         console.warn('⚠️ Usando datos locales como fallback...');
         loadData();
         initializeSubjectBank();
@@ -1757,6 +1758,7 @@ async function saveToFirestore() {
             config,
             schedules,
             currentPeriodConfig,
+            mallaMarks,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         console.log('✅ Datos guardados en Firestore');
@@ -1790,14 +1792,13 @@ window.addEventListener('beforeunload', () => {
 });
 
 // ============================================
-// DOMContentLoaded: cargar horarios file listener y schedules
+// DOMContentLoaded
 // ============================================
 document.addEventListener('DOMContentLoaded', () => {
     updateScheduleButton();
     loadPeriodConfig();
     renderSchedules();
 
-    // Listener para cargar archivo de horarios JSON
     const horariosFile = document.getElementById('horariosFile');
     if (horariosFile) {
         horariosFile.addEventListener('change', function (event) {
@@ -1822,3 +1823,320 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+
+// ============================================
+// MALLA CURRICULAR
+// ============================================
+
+let mallaMarks = {};
+let mallaPdfDoc = null;
+let mallaCurrentPage = 1;
+let mallaScale = 1.5;
+let mallaIsDragging = false;
+let mallaOverlayEventsReady = false;
+const MALLA_PDF_URL = 'Malla_no_electivas.pdf';
+
+// ---- Inicializar vista ----
+async function initMallaView() {
+    loadMallaMarks();
+    updateMallaStats();
+    if (!mallaPdfDoc) {
+        await loadMallaPDF();
+    } else {
+        renderMallaPage(mallaCurrentPage);
+    }
+    updateMallaToolbar();
+}
+
+async function loadMallaPDF() {
+    const loadingEl = document.getElementById('mallaLoading');
+    const errorEl = document.getElementById('mallaError');
+    const stackEl = document.getElementById('mallaCanvasStack');
+
+    if (loadingEl) loadingEl.style.display = 'flex';
+    if (errorEl) errorEl.style.display = 'none';
+    if (stackEl) stackEl.style.display = 'none';
+
+    try {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        mallaPdfDoc = await pdfjsLib.getDocument(MALLA_PDF_URL).promise;
+
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (stackEl) stackEl.style.display = 'block';
+
+        renderMallaPage(mallaCurrentPage);
+    } catch (err) {
+        console.error('Error cargando PDF de malla:', err);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (stackEl) stackEl.style.display = 'none';
+        if (errorEl) {
+            errorEl.style.display = 'flex';
+            errorEl.innerHTML = `
+                <div style="text-align:center; padding:40px;">
+                    <div style="font-size:3rem; margin-bottom:16px;">📄</div>
+                    <p style="color:var(--text-secondary); margin-bottom:16px;">
+                        No se encontró <strong>Malla_no_electivas.pdf</strong> en la raíz del proyecto.
+                    </p>
+                    <p style="font-size:0.85rem; color:var(--text-secondary);">
+                        Asegúrate de que el PDF esté junto a <code>index.html</code>
+                    </p>
+                </div>`;
+        }
+    }
+}
+
+async function renderMallaPage(pageNum) {
+    if (!mallaPdfDoc) return;
+
+    const canvas = document.getElementById('mallaCanvas');
+    const overlay = document.getElementById('mallaOverlay');
+    if (!canvas || !overlay) return;
+
+    const page = await mallaPdfDoc.getPage(pageNum);
+    const viewport = page.getViewport({ scale: mallaScale });
+
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    overlay.width = viewport.width;
+    overlay.height = viewport.height;
+
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
+    redrawOverlay();
+    updateMallaStats();
+}
+
+function redrawOverlay() {
+    const overlay = document.getElementById('mallaOverlay');
+    if (!overlay) return;
+    const ctx = overlay.getContext('2d');
+    ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+    Object.entries(mallaMarks).forEach(([key, mark]) => {
+        if (!mark || mark.state === 'none') return;
+        const [x, y] = key.split('_').map(Number);
+
+        const isCompleted = mark.state === 'completed';
+        const fillColor  = isCompleted ? 'rgba(46,125,50,0.5)'   : 'rgba(255,160,0,0.5)';
+        const strokeColor = isCompleted ? '#1b5e20'               : '#e65100';
+        const icon        = isCompleted ? '✓'                     : '▶';
+
+        // Sombra suave
+        ctx.shadowColor = 'rgba(0,0,0,0.25)';
+        ctx.shadowBlur = 6;
+
+        ctx.beginPath();
+        ctx.arc(x, y, 24, 0, Math.PI * 2);
+        ctx.fillStyle = fillColor;
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        ctx.fillStyle = strokeColor;
+        ctx.font = 'bold 15px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(icon, x, y);
+    });
+}
+
+// ---- Eventos del canvas overlay ----
+function setupMallaOverlayEvents() {
+    if (mallaOverlayEventsReady) return;
+
+    const overlay = document.getElementById('mallaOverlay');
+    const wrapper = document.getElementById('mallaCanvasWrapper');
+    if (!overlay || !wrapper) return;
+
+    mallaOverlayEventsReady = true;
+
+    // Clic → marcar/desmarcar
+    overlay.addEventListener('click', (e) => {
+        if (mallaIsDragging) return;
+
+        const rect = overlay.getBoundingClientRect();
+        const scaleX = overlay.width / rect.width;
+        const scaleY = overlay.height / rect.height;
+        const x = Math.round((e.clientX - rect.left) * scaleX);
+        const y = Math.round((e.clientY - rect.top) * scaleY);
+
+        const nearKey = findNearbyMark(x, y, 32);
+
+        if (nearKey) {
+            const states = ['completed', 'current', 'none'];
+            const cur = mallaMarks[nearKey].state;
+            const next = states[(states.indexOf(cur) + 1) % states.length];
+            if (next === 'none') {
+                delete mallaMarks[nearKey];
+            } else {
+                mallaMarks[nearKey].state = next;
+            }
+        } else {
+            if (mallaCurrentTool !== 'erase') {
+                mallaMarks[`${x}_${y}`] = { state: mallaCurrentTool };
+            }
+        }
+
+        saveMallaMarks();
+        redrawOverlay();
+        updateMallaStats();
+    });
+
+    // ---- Drag para hacer scroll ----
+    let dragStartX, dragStartY, scrollLeft, scrollTop, hasDragged;
+
+    wrapper.addEventListener('mousedown', (e) => {
+        hasDragged = false;
+        dragStartX = e.pageX - wrapper.offsetLeft;
+        dragStartY = e.pageY - wrapper.offsetTop;
+        scrollLeft = wrapper.scrollLeft;
+        scrollTop  = wrapper.scrollTop;
+        wrapper.style.cursor = 'grabbing';
+
+        const onMove = (ev) => {
+            const dx = ev.pageX - wrapper.offsetLeft - dragStartX;
+            const dy = ev.pageY - wrapper.offsetTop  - dragStartY;
+            if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasDragged = true;
+            wrapper.scrollLeft = scrollLeft - dx;
+            wrapper.scrollTop  = scrollTop  - dy;
+        };
+
+        const onUp = () => {
+            wrapper.style.cursor = 'crosshair';
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+            // Bloquear el clic que dispara el overlay si hubo drag
+            if (hasDragged) {
+                setTimeout(() => { mallaIsDragging = false; }, 50);
+                mallaIsDragging = true;
+            }
+        };
+
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    });
+
+    // ---- Touch scroll + pinch zoom ----
+    let touchStartData = null;
+    let lastPinchDist = 0;
+
+    wrapper.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+            touchStartData = {
+                x: e.touches[0].clientX,
+                y: e.touches[0].clientY,
+                sl: wrapper.scrollLeft,
+                st: wrapper.scrollTop
+            };
+        } else if (e.touches.length === 2) {
+            lastPinchDist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+        }
+    }, { passive: true });
+
+    wrapper.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 1 && touchStartData) {
+            wrapper.scrollLeft = touchStartData.sl - (e.touches[0].clientX - touchStartData.x);
+            wrapper.scrollTop  = touchStartData.st - (e.touches[0].clientY - touchStartData.y);
+        } else if (e.touches.length === 2) {
+            e.preventDefault();
+            const dist = Math.hypot(
+                e.touches[0].clientX - e.touches[1].clientX,
+                e.touches[0].clientY - e.touches[1].clientY
+            );
+            mallaZoom((dist - lastPinchDist) * 0.003);
+            lastPinchDist = dist;
+        }
+    }, { passive: false });
+}
+
+function findNearbyMark(x, y, radius) {
+    for (const key of Object.keys(mallaMarks)) {
+        const [mx, my] = key.split('_').map(Number);
+        if (Math.hypot(x - mx, y - my) <= radius) return key;
+    }
+    return null;
+}
+
+// ---- Zoom ----
+function mallaZoom(delta) {
+    mallaScale = Math.min(4, Math.max(0.5, mallaScale + delta));
+    const label = document.getElementById('mallaZoomLevel');
+    if (label) label.textContent = Math.round(mallaScale * 100) + '%';
+    renderMallaPage(mallaCurrentPage);
+}
+
+function mallaZoomIn()  { mallaZoom(0.25); }
+function mallaZoomOut() { mallaZoom(-0.25); }
+
+function mallaZoomFit() {
+    const wrapper = document.getElementById('mallaCanvasWrapper');
+    if (!mallaPdfDoc || !wrapper) return;
+    mallaPdfDoc.getPage(mallaCurrentPage).then(page => {
+        const vp = page.getViewport({ scale: 1 });
+        mallaScale = (wrapper.clientWidth - 40) / vp.width;
+        const label = document.getElementById('mallaZoomLevel');
+        if (label) label.textContent = Math.round(mallaScale * 100) + '%';
+        renderMallaPage(mallaCurrentPage);
+    });
+}
+
+// ---- Herramienta activa ----
+let mallaCurrentTool = 'completed';
+
+function setMallaTool(tool) {
+    mallaCurrentTool = tool;
+    updateMallaToolbar();
+    const overlay = document.getElementById('mallaOverlay');
+    if (overlay) overlay.style.cursor = tool === 'erase' ? 'not-allowed' : 'crosshair';
+}
+
+function updateMallaToolbar() {
+    ['completed', 'current', 'erase'].forEach(t => {
+        const btn = document.getElementById(`mallaTool_${t}`);
+        if (btn) btn.classList.toggle('active', t === mallaCurrentTool);
+    });
+}
+
+// ---- Persistencia de marcas ----
+function saveMallaMarks() {
+    localStorage.setItem('mallaMarks', JSON.stringify(mallaMarks));
+    if (currentUser) {
+        db.collection('users').doc(currentUser.uid)
+            .set({ mallaMarks }, { merge: true })
+            .catch(console.error);
+    }
+}
+
+function loadMallaMarks() {
+    const local = localStorage.getItem('mallaMarks');
+    if (local) {
+        try { mallaMarks = JSON.parse(local); } catch { mallaMarks = {}; }
+    }
+}
+
+function clearAllMallaMarks() {
+    if (!confirm('¿Borrar todas las marcas de la malla?')) return;
+    mallaMarks = {};
+    saveMallaMarks();
+    redrawOverlay();
+    updateMallaStats();
+}
+
+// ---- Estadísticas rápidas ----
+function updateMallaStats() {
+    const completed = Object.values(mallaMarks).filter(m => m && m.state === 'completed').length;
+    const current   = Object.values(mallaMarks).filter(m => m && m.state === 'current').length;
+    const el = document.getElementById('mallaStatsText');
+    if (el) el.textContent = `✅ ${completed} completadas  •  ▶ ${current} en curso`;
+}
