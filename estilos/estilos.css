@@ -1,0 +1,1563 @@
+/* ============================================
+   VARIABLES CSS - TEMAS Y COLORES
+   ============================================ */
+
+:root {
+  /* Colores UNAL */
+  --unal-green: #2e7d32;
+  --unal-dark-green: #1b5e20;
+  --unal-light-green: #66bb6a;
+  --unal-yellow: #ffa000;
+  --unal-red: #d32f2f;
+  --unal-blue: #1976d2;
+  
+  /* Tema Claro */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-sidebar: #fafafa;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Tema Oscuro */
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-sidebar: #242424;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --border-color: #404040;
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+
+/* ============================================
+   ESTILOS GENERALES Y RESET
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+
+/* ============================================
+   SIDEBAR - BARRA LATERAL
+   ============================================ */
+
+.sidebar {
+  width: 320px;
+  background: var(--bg-sidebar);
+  border-right: 2px solid var(--unal-green);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  background: linear-gradient(135deg, var(--unal-green), var(--unal-dark-green));
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.sidebar-header h1 {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+
+.sidebar-header p {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+}
+
+.nav-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background: var(--bg-secondary);
+  border-left-color: var(--unal-light-green);
+}
+
+.nav-item.active {
+  background: var(--bg-secondary);
+  border-left-color: var(--unal-green);
+  color: var(--unal-green);
+}
+
+.sidebar-section {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--unal-green);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Overlay y toggle móvil para sidebar */
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 200;
+  background: var(--unal-green);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+
+/* ============================================
+   CONTENIDO PRINCIPAL
+   ============================================ */
+
+.main-content {
+  margin-left: 320px;
+  flex: 1;
+  padding: 24px;
+  transition: margin-left 0.3s ease;
+}
+
+.header-bar {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+}
+
+.no-data h3 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+
+/* ============================================
+   TARJETAS DE ESTADÍSTICAS
+   ============================================ */
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-color);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-number.completed {
+  color: var(--unal-green);
+}
+
+.stat-number.current {
+  color: var(--unal-yellow);
+}
+
+.stat-number.pending {
+  color: var(--unal-red);
+}
+
+.stat-number.total {
+  color: var(--unal-blue);
+}
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+
+/* ============================================
+   TARJETAS DE SEMESTRES
+   ============================================ */
+
+.semesters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 24px;
+}
+
+.semester-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.semester-card.completed {
+  border-left: 4px solid var(--unal-green);
+}
+
+.semester-card.current {
+  border-left: 4px solid var(--unal-yellow);
+}
+
+.semester-card.pending {
+  border-left: 4px solid var(--unal-red);
+}
+
+.semester-header {
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.semester-header:hover {
+  background: var(--unal-light-green);
+  color: white;
+}
+
+.semester-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.semester-summary {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.semester-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.semester-toggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.3s ease;
+}
+
+.semester-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.semester-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.status-completed {
+  background: #e8f5e8;
+  color: var(--unal-dark-green);
+}
+
+.status-current {
+  background: #fff8e1;
+  color: #f57c00;
+}
+
+.status-pending {
+  background: #ffebee;
+  color: var(--unal-red);
+}
+
+.semester-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.semester-content.expanded {
+  max-height: 2000px;
+}
+
+.semester-body {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+/* Zona de drop para mover materias */
+.semester-drop-zone {
+  min-height: 40px;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  margin: 10px 0;
+  transition: all 0.3s ease;
+}
+
+.semester-drop-zone.drag-over {
+  border-color: var(--unal-green);
+  background: var(--bg-secondary);
+}
+
+
+/* ============================================
+   TABLA DE MATERIAS
+   ============================================ */
+
+.subjects-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.subjects-table th,
+.subjects-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subjects-table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.subjects-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+
+/* ============================================
+   BADGES DE TIPO DE MATERIA
+   ============================================ */
+
+.type-badge {
+  padding: 3px 8px;
+  border-radius: 15px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Tipos genéricos */
+.type-obligatoria {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.type-optativa {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.type-libre {
+  background: #bbdefb;
+  color: #0d47a1;
+}
+
+.type-grado {
+  background: #e1bee7;
+  color: #4a148c;
+}
+
+.type-nivelacion {
+  background: #ffe0b2;
+  color: #e65100;
+}
+
+/* Tipos específicos de tipologías */
+.type-disciplinar-obligatoria {
+  background: #ffcdd2;
+  color: #b71c1c;
+}
+
+.type-disciplinar-optativa {
+  background: #c8e6c9;
+  color: #2e7d32;
+}
+
+.type-fundamentacion-obligatoria {
+  background: #e1f5fe;
+  color: #01579b;
+}
+
+.type-fundamentacion-optativa {
+  background: #f3e5f5;
+  color: #4a148c;
+}
+
+.type-libre-eleccion {
+  background: #bbdefb;
+  color: #0d47a1;
+}
+
+.type-trabajo-grado {
+  background: #e1bee7;
+  color: #4a148c;
+}
+
+/* Badges en tema oscuro */
+[data-theme="dark"] .type-obligatoria,
+[data-theme="dark"] .type-disciplinar-obligatoria {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .type-optativa,
+[data-theme="dark"] .type-disciplinar-optativa {
+  background: #14532d;
+  color: #86efac;
+}
+
+[data-theme="dark"] .type-libre,
+[data-theme="dark"] .type-libre-eleccion {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .type-grado,
+[data-theme="dark"] .type-trabajo-grado {
+  background: #581c87;
+  color: #c4b5fd;
+}
+
+[data-theme="dark"] .type-nivelacion {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .type-fundamentacion-obligatoria {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .type-fundamentacion-optativa {
+  background: #581c87;
+  color: #c4b5fd;
+}
+
+/* Status badges en tema oscuro */
+[data-theme="dark"] .status-completed {
+  background: #14532d;
+  color: #86efac;
+}
+
+[data-theme="dark"] .status-current {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .status-pending {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+
+/* ============================================
+   TARJETAS DE TIPOLOGÍAS
+   ============================================ */
+
+.typologies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.typology-card {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.typology-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-light);
+}
+
+.typology-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.typology-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.typology-credits {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--unal-green);
+}
+
+.typology-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+
+/* ============================================
+   BOTONES Y CONTROLES
+   ============================================ */
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.btn-primary {
+  background: var(--unal-green);
+  color: white;
+}
+
+.btn-success {
+  background: var(--unal-green);
+  color: white;
+}
+
+.btn-warning {
+  background: var(--unal-yellow);
+  color: white;
+}
+
+.btn-danger {
+  background: var(--unal-red);
+  color: white;
+}
+
+.btn-secondary {
+  background: var(--text-secondary);
+  color: white;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
+.btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+
+/* ============================================
+   FORMULARIOS
+   ============================================ */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--unal-green);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.editable-field {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.editable-field:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.editable-field:focus {
+  background: var(--bg-primary);
+  border-color: var(--unal-green);
+  outline: none;
+}
+
+
+/* ============================================
+   MODALES
+   ============================================ */
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: var(--bg-primary);
+  margin: 2vh auto;
+  padding: 16px;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 1400px;
+  border: 1px solid var(--border-color);
+  height: 96vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--unal-green);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.close-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Modal específico para horario actual */
+#currentScheduleModal .modal-content {
+  overflow: hidden !important;
+  height: 96vh;
+  margin: 2vh auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+}
+
+#currentScheduleContent {
+  flex: 1;
+  overflow: auto; /* Cambiar de hidden a auto */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+}
+
+/* AGREGAR esta nueva regla */
+.schedule-grid-viewer {
+  overflow: auto; /* Permitir scroll dentro del grid */
+  max-height: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal para construcción de horario */
+#scheduleModal .modal-content {
+  overflow-y: scroll !important;
+}
+
+
+/* ============================================
+   BANCO DE MATERIAS
+   ============================================ */
+
+.subjects-bank {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subject-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
+}
+
+.subject-info h4 {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.subject-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+
+/* ============================================
+   MODO MOVER MATERIAS
+   ============================================ */
+
+.move-mode .subject-item,
+.move-mode .subjects-table tr {
+  cursor: move;
+  border: 2px dashed var(--unal-blue);
+}
+
+.move-mode .subjects-table tr:hover {
+  background: var(--unal-light-green);
+  color: white;
+}
+
+.move-instructions {
+  background: var(--unal-yellow);
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+
+/* ============================================
+   BARRA DE PROGRESO
+   ============================================ */
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--unal-green), var(--unal-light-green));
+  transition: width 0.5s ease;
+}
+
+
+/* ============================================
+   PLANIFICADOR DE HORARIOS
+   ============================================ */
+
+.schedule-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
+}
+
+.schedule-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.schedule-filters input {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Grid de construcción de horario */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  margin-top: 16px;
+}
+
+.schedule-cell {
+  background: var(--bg-primary);
+  padding: 8px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.schedule-cell.header {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--unal-green);
+}
+
+.schedule-cell.time {
+  background: var(--bg-secondary);
+  font-weight: 500;
+}
+
+.schedule-cell.class {
+  background: var(--unal-light-green);
+  color: white;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.schedule-cell.class:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.class-name {
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.class-group {
+  font-size: 0.7rem;
+  opacity: 0.9;
+}
+
+
+/* ============================================
+   SELECTOR DE MATERIAS Y GRUPOS
+   ============================================ */
+
+.subject-select-card {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.subject-select-card:hover {
+  border-color: var(--unal-green);
+}
+
+.subject-select-card.expanded {
+  border-color: var(--unal-green);
+}
+
+.subject-select-card.selected {
+  border-color: var(--unal-green);
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.subject-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.expand-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.group-selector {
+  display: none;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+}
+
+.group-selector.visible {
+  display: flex;
+}
+
+.group-option {
+  padding: 8px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-primary);
+}
+
+.group-option:hover {
+  border-color: var(--unal-green);
+}
+
+.group-option.selected {
+  background: var(--unal-green);
+  color: white;
+  border-color: var(--unal-green);
+}
+
+.conflict-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+
+/* ============================================
+   VISUALIZADOR DE HORARIO
+   ============================================ */
+
+.schedule-grid-viewer {
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+  border: 2px solid var(--border-color);
+  margin-top: 12px;
+  border-radius: 8px;
+  overflow: auto; /* Permitir scroll horizontal y vertical */
+  max-height: calc(96vh - 180px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-cell-viewer {
+  background: var(--bg-primary);
+  padding: 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  position: relative;
+  min-height: 40px;
+}
+
+.schedule-cell-viewer.header {
+  background: var(--bg-secondary);
+  font-weight: 700;
+  color: var(--unal-green);
+  padding: 10px 4px;
+  font-size: 0.75rem;
+}
+
+.schedule-cell-viewer.time {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.7rem;
+}
+
+.schedule-cell-viewer.class-block {
+  background: linear-gradient(135deg, var(--unal-green), var(--unal-light-green));
+  color: white;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 6px;
+  border-left: 4px solid var(--unal-dark-green);
+}
+
+.schedule-cell-viewer.class-block:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.class-block-name {
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  line-height: 1.1;
+}
+
+.class-block-info {
+  font-size: 0.6rem;
+  opacity: 0.95;
+  line-height: 1.2;
+}
+
+/* Estilos para bloques de clase de 1-2 horas */
+.schedule-cell-viewer.class-block[data-duration="1"] .class-block-name {
+  font-size: 0.65rem;
+  margin-bottom: 2px;
+}
+
+.schedule-cell-viewer.class-block[data-duration="1"] .class-block-info,
+.schedule-cell-viewer.class-block[data-duration="2"] .class-block-info {
+  font-size: 0.55rem;
+  line-height: 1.1;
+}
+
+
+/* ============================================
+   INDICADORES DE TIEMPO ACTUAL
+   ============================================ */
+
+.schedule-cell-viewer.current-class {
+  background: linear-gradient(135deg, var(--unal-yellow), #ff6f00);
+  animation: pulse 2s infinite;
+  border-left: 4px solid #e65100;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.schedule-cell-viewer.current-time {
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid var(--unal-yellow);
+}
+
+.current-day-indicator {
+  background: var(--unal-yellow);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+}
+
+
+/* ============================================
+   TARJETAS MÓVILES PARA MATERIAS
+   ============================================ */
+
+.subjects-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-card-mobile {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.subject-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.subject-card-header h4 {
+  font-size: 0.95rem;
+  margin: 0;
+  flex: 1;
+}
+
+.subject-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-card-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.info-item strong {
+  font-size: 1.1rem;
+  color: var(--unal-green);
+}
+
+.info-item .form-control {
+  font-size: 0.85rem;
+  padding: 6px 8px;
+}
+
+.subject-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.subject-card-actions .btn {
+  flex: 1;
+  min-width: calc(33.333% - 4px);
+  justify-content: center;
+}
+
+
+/* ============================================
+   RESPONSIVE - TABLETS (768px - 1024px)
+   ============================================ */
+
+@media (max-width: 1200px) {
+  .semesters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .subjects-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+
+/* ============================================
+   RESPONSIVE - MÓVIL (max-width: 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Sidebar y navegación móvil */
+  .mobile-toggle {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  /* Contenido principal */
+  .main-content {
+    margin-left: 0;
+    padding: 60px 16px 16px;
+  }
+
+  /* Header y controles */
+  .header-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  /* Estadísticas */
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Formularios */
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Modales */
+  .modal-content {
+    width: 100%;
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    border-radius: 0;
+    padding: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* AGREGAR estas reglas específicas para el modal de horario */
+  #currentScheduleModal .modal-content {
+    height: 100vh;
+    max-height: 100vh;
+    margin: 0;
+    padding: 10px;
+    overflow: hidden; /* El modal no hace scroll */
+  }
+
+  #currentScheduleContent {
+    overflow: auto; /* El contenido sí hace scroll */
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .schedule-grid-viewer {
+    overflow: auto; /* Grid con scroll horizontal y vertical */
+    max-height: 100%;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+    /* IMPORTANTE: Permitir scroll en ambas direcciones */
+  }
+  @media (max-width: 768px) {
+  /* ... otras reglas ... */
+
+  /* AGREGAR/REEMPLAZAR estas reglas para el grid en móvil */
+  .schedule-grid-viewer {
+    /* Ancho mínimo fijo para forzar scroll horizontal */
+    min-width: 600px; /* Esto fuerza el scroll horizontal */
+    width: max-content; /* Se adapta al contenido */
+    max-width: none; /* Sin límite máximo */
+    
+    /* Grid con columnas de ancho fijo */
+    grid-template-columns: 50px repeat(6, 90px);
+    gap: 1px;
+    
+    /* Scroll suave */
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Altura máxima */
+    max-height: calc(100vh - 120px);
+    
+    /* Evitar que se corte */
+    margin-right: 0;
+    padding-right: 0;
+  }
+
+  #currentScheduleContent {
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+    /* IMPORTANTE: Contenedor con scroll */
+    width: 100%;
+    height: 100%;
+  }
+
+  .schedule-cell-viewer {
+    padding: 4px 2px;
+    font-size: 0.65rem;
+    min-height: 35px;
+    /* Ancho mínimo para cada celda */
+    min-width: 85px;
+  }
+
+  .schedule-cell-viewer.header {
+    padding: 8px 2px;
+    font-size: 0.7rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--bg-secondary);
+  }
+
+  .schedule-cell-viewer.time {
+    position: sticky;
+    left: 0;
+    z-index: 9;
+    background: var(--bg-secondary);
+    min-width: 45px;
+  }
+
+  /* Esquina superior izquierda sticky */
+  .schedule-cell-viewer.header:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 11;
+    background: var(--bg-secondary);
+  }
+}
+
+  .modal-header {
+    flex-shrink: 0; /* Header fijo, no se comprime */
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+  }
+
+  #currentScheduleTitle {
+    font-size: 1rem;
+  }
+
+  #currentDayTime {
+    font-size: 0.7rem !important;
+  }
+}
+
+
+  .modal-title {
+    font-size: 1.1rem;
+  }
+
+  #currentDayTime {
+    font-size: 0.75rem !important;
+  }
+
+  #currentScheduleModal .modal-content {
+    height: 100vh;
+    margin: 0;
+    padding: 10px;
+  }
+
+  #scheduleBuilder {
+    overflow-y: visible;
+  }
+
+  /* Horarios en móvil */
+  .schedule-grid-viewer {
+    grid-template-columns: 50px repeat(6, 1fr);
+    font-size: 0.65rem;
+    margin-top: 8px;
+  }
+
+  .schedule-cell-viewer {
+    padding: 4px 2px;
+    font-size: 0.65rem;
+    min-height: 35px;
+  }
+
+  .schedule-cell-viewer.header {
+    padding: 8px 2px;
+    font-size: 0.7rem;
+  }
+
+  .class-block-name {
+    font-size: 0.65rem;
+  }
+
+  .class-block-info {
+    font-size: 0.55rem;
+  }
+
+  .modal-header {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+  }
+
+
+
+/* ============================================
+   RESPONSIVE - MÓVIL PEQUEÑO (max-width: 480px)
+   ============================================ */
+
+@media (max-width: 480px) {
+  /* Estadísticas en una columna */
+  .stats-summary {
+    grid-template-columns: 1fr;
+  }
+
+  /* Semestres más compactos */
+  .semester-header {
+    padding: 12px 16px;
+  }
+
+  .semester-body {
+    padding: 16px;
+  }
+
+  /* Tabla de materias más pequeña */
+  .subjects-table {
+    font-size: 0.8rem;
+  }
+
+  .subjects-table th,
+  .subjects-table td {
+    padding: 8px;
+  }
+}
+/* AGREGAR al final del archivo, después de max-width: 768px */
+@media (max-width: 480px) {
+  .schedule-grid-viewer {
+    grid-template-columns: 40px repeat(6, minmax(70px, 1fr));
+    font-size: 0.6rem;
+  }
+
+  .schedule-cell-viewer {
+    padding: 3px 2px;
+    font-size: 0.6rem;
+    min-height: 30px;
+  }
+
+  .class-block-name {
+    font-size: 0.6rem;
+    line-height: 1;
+  }
+
+  .class-block-info {
+    font-size: 0.5rem;
+  }
+}
+@media (max-width: 480px) {
+  .schedule-grid-viewer {
+    /* Columnas más estrechas pero con mínimo */
+    grid-template-columns: 40px repeat(6, 75px);
+    min-width: 490px; /* 40 + (75*6) + gaps */
+    font-size: 0.6rem;
+  }
+
+  .schedule-cell-viewer {
+    min-width: 70px;
+    padding: 3px 2px;
+    font-size: 0.6rem;
+    min-height: 30px;
+  }
+
+  .schedule-cell-viewer.time {
+    min-width: 35px;
+  }
+
+  .class-block-name {
+    font-size: 0.6rem;
+    line-height: 1;
+  }
+
+  .class-block-info {
+    font-size: 0.5rem;
+  }
+}
