@@ -1858,6 +1858,7 @@ async function initMallaView() {
     if (!mallaPdfDoc) {
         await loadMallaPDF();
     } else {
+        await mallaZoomFitAsync();
         renderMallaPage(mallaCurrentPage);
     }
     updateMallaToolbar();
@@ -1934,8 +1935,20 @@ mallaPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
                 </div>`;
         }
     }
+    // Calcular zoom fit automático antes de renderizar
+await mallaZoomFitAsync();
+renderMallaPage(mallaCurrentPage);
 }
 
+async function mallaZoomFitAsync() {
+    const wrapper = document.getElementById('mallaCanvasWrapper');
+    if (!mallaPdfDoc || !wrapper) return;
+    const page = await mallaPdfDoc.getPage(mallaCurrentPage);
+    const vp   = page.getViewport({ scale: 1 });
+    mallaScale = (wrapper.clientWidth - 32) / vp.width;
+    const label = document.getElementById('mallaZoomLevel');
+    if (label) label.textContent = Math.round(mallaScale * 100) + '%';
+}
 // ---- Subida de PDF a Cloudinary ----
 function setupMallaPdfInput() {
     const input = document.getElementById('mallaPdfInput');
@@ -1955,6 +1968,10 @@ function setupMallaPdfInput() {
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
             formData.append('resource_type', 'raw');
+            formData.append('access_mode', 'public');
+            // Usar el UID del usuario como public_id fijo → siempre sobreescribe
+formData.append('public_id', `mallas/${currentUser.uid}`);
+formData.append('overwrite', 'true');
 
             const res = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
@@ -1979,6 +1996,7 @@ function setupMallaPdfInput() {
             updateMallaPdfUI(file.name);
             mallaPdfDoc = null; // forzar recarga
             await loadMallaPDF();
+            
 
         } catch (err) {
             console.error('Error subiendo PDF:', err);
@@ -2051,32 +2069,40 @@ function redrawOverlay() {
     const ctx = overlay.getContext('2d');
     ctx.clearRect(0, 0, overlay.width, overlay.height);
 
+    const w = overlay.width;
+    const h = overlay.height;
+    // Radio del círculo escalado con el zoom (fijo en ~24px a escala 1.5)
+    const radius = Math.max(16, w * 0.018);
+
     Object.entries(mallaMarks).forEach(([key, mark]) => {
         if (!mark || mark.state === 'none') return;
-        const [x, y] = key.split('_').map(Number);
+
+        const [rx, ry] = key.split('_').map(Number);
+        // Convertir coordenadas relativas a píxeles del canvas actual
+        const x = rx * w;
+        const y = ry * h;
 
         const isCompleted = mark.state === 'completed';
-        const fillColor  = isCompleted ? 'rgba(46,125,50,0.5)'   : 'rgba(255,160,0,0.5)';
-        const strokeColor = isCompleted ? '#1b5e20'               : '#e65100';
-        const icon        = isCompleted ? '✓'                     : '▶';
+        const fillColor   = isCompleted ? 'rgba(46,125,50,0.5)' : 'rgba(255,160,0,0.5)';
+        const strokeColor = isCompleted ? '#1b5e20'             : '#e65100';
+        const icon        = isCompleted ? '✓'                   : '▶';
 
-        // Sombra suave
         ctx.shadowColor = 'rgba(0,0,0,0.25)';
-        ctx.shadowBlur = 6;
+        ctx.shadowBlur  = 6;
 
         ctx.beginPath();
-        ctx.arc(x, y, 24, 0, Math.PI * 2);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fillStyle = fillColor;
         ctx.fill();
 
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur  = 0;
         ctx.strokeStyle = strokeColor;
-        ctx.lineWidth = 3;
+        ctx.lineWidth   = Math.max(2, radius * 0.12);
         ctx.stroke();
 
-        ctx.fillStyle = strokeColor;
-        ctx.font = 'bold 15px Segoe UI, sans-serif';
-        ctx.textAlign = 'center';
+        ctx.fillStyle    = strokeColor;
+        ctx.font         = `bold ${Math.max(11, radius * 0.65)}px Segoe UI, sans-serif`;
+        ctx.textAlign    = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(icon, x, y);
     });
@@ -2094,35 +2120,39 @@ function setupMallaOverlayEvents() {
 
     // Clic → marcar/desmarcar
     overlay.addEventListener('click', (e) => {
-        if (mallaIsDragging) return;
+    if (mallaIsDragging) return;
 
-        const rect = overlay.getBoundingClientRect();
-        const scaleX = overlay.width / rect.width;
-        const scaleY = overlay.height / rect.height;
-        const x = Math.round((e.clientX - rect.left) * scaleX);
-        const y = Math.round((e.clientY - rect.top) * scaleY);
+    const rect = overlay.getBoundingClientRect();
+    // Coordenadas relativas (0 a 1) respecto al tamaño del canvas
+    const rx = (e.clientX - rect.left) / rect.width;
+    const ry = (e.clientY - rect.top)  / rect.height;
 
-        const nearKey = findNearbyMark(x, y, 32);
+    // Radio de detección también en fracción (equivale a ~32px a escala 1.5)
+    const radiusFraction = 32 / (overlay.width);
 
-        if (nearKey) {
-            const states = ['completed', 'current', 'none'];
-            const cur = mallaMarks[nearKey].state;
-            const next = states[(states.indexOf(cur) + 1) % states.length];
-            if (next === 'none') {
-                delete mallaMarks[nearKey];
-            } else {
-                mallaMarks[nearKey].state = next;
-            }
+    const nearKey = findNearbyMark(rx, ry, radiusFraction);
+
+    if (nearKey) {
+        const states = ['completed', 'current', 'none'];
+        const cur = mallaMarks[nearKey].state;
+        const next = states[(states.indexOf(cur) + 1) % states.length];
+        if (next === 'none') {
+            delete mallaMarks[nearKey];
         } else {
-            if (mallaCurrentTool !== 'erase') {
-                mallaMarks[`${x}_${y}`] = { state: mallaCurrentTool };
-            }
+            mallaMarks[nearKey].state = next;
         }
+    } else {
+        if (mallaCurrentTool !== 'erase') {
+            // Guardar en coordenadas relativas
+            const key = `${rx.toFixed(5)}_${ry.toFixed(5)}`;
+            mallaMarks[key] = { state: mallaCurrentTool };
+        }
+    }
 
-        saveMallaMarks();
-        redrawOverlay();
-        updateMallaStats();
-    });
+    saveMallaMarks();
+    redrawOverlay();
+    updateMallaStats();
+});
 
     // ---- Drag para hacer scroll ----
     let dragStartX, dragStartY, scrollLeft, scrollTop, hasDragged;
@@ -2194,10 +2224,10 @@ function setupMallaOverlayEvents() {
     }, { passive: false });
 }
 
-function findNearbyMark(x, y, radius) {
+function findNearbyMark(rx, ry, radiusFraction) {
     for (const key of Object.keys(mallaMarks)) {
         const [mx, my] = key.split('_').map(Number);
-        if (Math.hypot(x - mx, y - my) <= radius) return key;
+        if (Math.hypot(rx - mx, ry - my) <= radiusFraction) return key;
     }
     return null;
 }
@@ -2214,15 +2244,7 @@ function mallaZoomIn()  { mallaZoom(0.25); }
 function mallaZoomOut() { mallaZoom(-0.25); }
 
 function mallaZoomFit() {
-    const wrapper = document.getElementById('mallaCanvasWrapper');
-    if (!mallaPdfDoc || !wrapper) return;
-    mallaPdfDoc.getPage(mallaCurrentPage).then(page => {
-        const vp = page.getViewport({ scale: 1 });
-        mallaScale = (wrapper.clientWidth - 40) / vp.width;
-        const label = document.getElementById('mallaZoomLevel');
-        if (label) label.textContent = Math.round(mallaScale * 100) + '%';
-        renderMallaPage(mallaCurrentPage);
-    });
+    mallaZoomFitAsync().then(() => renderMallaPage(mallaCurrentPage));
 }
 
 // ---- Herramienta activa ----
