@@ -1652,8 +1652,24 @@ body {
 .gn-sem-avg   { font-size: 0.85rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
 .gn-chevron   { font-size: 0.85rem; color: var(--text-secondary); }
 
-.gn-sem-body  { display: none; flex-direction: column; gap: 10px; padding: 0 14px 14px; }
-.gn-sem-body.open { display: flex; }
+.gn-sem-body  { display: none; padding: 0 10px 10px; }
+.gn-sem-body.open { display: block; }
+
+/* 2 columnas de tarjetas */
+.gn-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Advertencia en banner */
+.gn-banner-warn {
+  font-size: 0.75rem;
+  color: var(--unal-yellow);
+  font-weight: 600;
+  margin-top: 4px;
+}
 
 /* ── Tarjeta de materia ── */
 .gn-card {
@@ -1664,30 +1680,30 @@ body {
 }
 .gn-card-top {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 14px 16px; gap: 12px;
+  padding: 7px 12px; gap: 10px;
 }
 .gn-card-toggle { cursor: pointer; }
 .gn-card-toggle:hover { background: var(--bg-primary); border-radius: 10px 10px 0 0; }
 .gn-card-top-left  { flex: 1; min-width: 0; }
 .gn-card-top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
 
-.gn-sub-name  { font-weight: 600; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
-.gn-sub-meta  { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+.gn-sub-name  { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+.gn-sub-meta  { font-size: 0.73rem; color: var(--text-secondary); margin-top: 1px; }
 
-.gn-avg-big    { font-size: 1.8rem; font-weight: 800; line-height: 1; }
-.gn-avg-label  { font-size: 0.72rem; color: var(--text-secondary); text-align: right; }
-.gn-expand-icon { font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px; }
+.gn-avg-big    { font-size: 1.35rem; font-weight: 800; line-height: 1; }
+.gn-avg-label  { font-size: 0.68rem; color: var(--text-secondary); text-align: right; }
+.gn-expand-icon { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
 
 /* ── Cuerpo expandible ── */
-.gn-card-body { display: none; padding: 0 16px 14px; flex-direction: column; gap: 0; }
+.gn-card-body { display: none; padding: 0 10px 8px; flex-direction: column; gap: 0; }
 .gn-card-body.open { display: flex; }
 
 /* ── Cabecera de columnas ── */
 .gn-comps-header {
   display: grid;
-  grid-template-columns: 1fr 80px 100px 70px 32px;
-  gap: 8px; padding: 6px 8px;
-  font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; padding: 4px 4px;
+  font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
   color: var(--text-secondary); letter-spacing: .04em;
   border-bottom: 1px solid var(--border-color);
 }
@@ -1695,29 +1711,29 @@ body {
 /* ── Fila de componente ── */
 .gn-comp-row {
   display: grid;
-  grid-template-columns: 1fr 80px 100px 70px 32px;
-  gap: 8px; align-items: center;
-  padding: 7px 8px;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; align-items: center;
+  padding: 4px 4px;
   border-bottom: 1px solid var(--border-color);
 }
 .gn-comp-row:last-child { border-bottom: none; }
 
 /* Inputs genéricos */
 .gn-in {
-  width: 100%; padding: 5px 8px;
+  width: 100%; padding: 3px 6px;
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: 5px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   transition: border-color .15s;
 }
 .gn-in:focus { outline: none; border-color: var(--unal-green); }
 
 .gn-in-name   { min-width: 0; }
-.gn-weight-wrap { display: flex; align-items: center; gap: 3px; }
-.gn-in-weight { width: 52px; text-align: center; padding: 5px 4px; }
-.gn-pct       { font-size: 0.82rem; color: var(--text-secondary); flex-shrink: 0; }
+.gn-weight-wrap { display: flex; align-items: center; gap: 2px; }
+.gn-in-weight { width: 44px; text-align: center; padding: 3px 3px; }
+.gn-pct       { font-size: 0.78rem; color: var(--text-secondary); flex-shrink: 0; }
 .gn-in-grade  { text-align: center; font-weight: 700; }
 
 .gn-contrib {
@@ -1737,22 +1753,22 @@ body {
 /* ── Fila de totales ── */
 .gn-totals-row {
   display: grid;
-  grid-template-columns: 1fr 80px 100px 70px 32px;
-  gap: 8px; align-items: center;
-  padding: 7px 8px;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; align-items: center;
+  padding: 5px 4px;
   background: var(--bg-primary);
   border-top: 2px solid var(--border-color);
   border-radius: 0 0 6px 6px;
-  font-weight: 700; font-size: 0.85rem;
-  margin-bottom: 12px;
+  font-weight: 700; font-size: 0.82rem;
+  margin-bottom: 8px;
 }
-.gn-totals-label  { color: var(--text-secondary); font-size: 0.78rem; text-transform: uppercase; }
+.gn-totals-label  { color: var(--text-secondary); font-size: 0.72rem; text-transform: uppercase; }
 .gn-totals-weight { }
 .gn-totals-avg    { text-align: center; }
 
 /* ── Acciones y chips ── */
 .gn-card-actions {
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
 }
 .gn-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .gn-chips-label { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
@@ -1797,14 +1813,17 @@ body {
 .gn-in-grade.gn-fail  { border-color: #d32f2f; background: #ffebee; }
 
 /* ── Responsive ── */
+@media (max-width: 760px) {
+  .gn-cards-grid { grid-template-columns: 1fr; }
+}
 @media (max-width: 600px) {
   .gn-comps-header,
   .gn-comp-row,
   .gn-totals-row {
-    grid-template-columns: 1fr 64px 84px 54px 28px;
-    font-size: 0.78rem;
+    grid-template-columns: 1fr 58px 78px 50px 24px;
+    font-size: 0.75rem;
   }
-  .gn-in-weight { width: 40px; }
+  .gn-in-weight { width: 36px; }
   .gn-banner { flex-direction: column; gap: 16px; }
-  .gn-sub-name { max-width: 220px; }
+  .gn-sub-name { max-width: 200px; }
 }

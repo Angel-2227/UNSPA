@@ -5,9 +5,8 @@
 // Materias que solo llevan Aprobado / Reprobado
 // (se compara por subcadena, sin importar mayúsculas):
 const PASS_FAIL_SUBJECTS = [
-    'inglés',
-    'cátedra de inducción',
-    'cátedra universidad nacional',
+    'ingles',
+    'catedra',
     'trabajo de grado',
 ];
 
@@ -55,9 +54,15 @@ function ensureGradesStructure() {
     });
 }
 
+function normalize(s) {
+    return s.toLowerCase()
+        .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
+        .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ü/g,'u');
+}
+
 function defaultEntry(subject) {
-    const isPF = PASS_FAIL_SUBJECTS.some(k =>
-        subject.name.toLowerCase().includes(k)
+    const nameLower = normalize(subject.name);
+    const isPF = PASS_FAIL_SUBJECTS.some(k => nameLower.includes(normalize(k))
     ) || subject.type === 'TRABAJO DE GRADO';
     if (isPF) return { type: 'pass_fail', passFail: null };
     return {
@@ -96,9 +101,12 @@ function calcSemAvg(semNum) {
 }
 
 function calcOverallAvg() {
+    // Solo semestres COMPLETADOS cuentan para el promedio acumulado oficial.
+    // Si un semestre completado no tiene notas ingresadas, se omite de la ponderación
+    // pero el banner mostrará advertencia de datos incompletos.
     let wSum = 0, cSum = 0;
     Object.keys(studyPlan).forEach(sem => {
-        if (!['completed','current'].includes(studyPlan[sem].status)) return;
+        if (studyPlan[sem].status !== 'completed') return;
         studyPlan[sem].subjects.forEach(sub => {
             const e = (gradesData[sem] || {})[sub.id];
             const avg = calcSubjectAvg(e);
@@ -106,6 +114,18 @@ function calcOverallAvg() {
         });
     });
     return cSum ? wSum / cSum : null;
+}
+
+// Cuántos semestres completados tienen al menos una nota incompleta
+function completedSemsWithMissingData() {
+    return Object.keys(studyPlan).filter(sem => {
+        if (studyPlan[sem].status !== 'completed') return false;
+        return studyPlan[sem].subjects.some(sub => {
+            const e = (gradesData[sem] || {})[sub.id];
+            if (!e || e.type === 'pass_fail') return false;
+            return calcSubjectAvg(e) === null;
+        });
+    }).length;
 }
 
 function neededFor(entry, target) {
@@ -166,6 +186,7 @@ function renderGradesView() {
                     ${overall !== null ? overall.toFixed(2) : '—'}
                 </div>
                 <div class="gn-banner-sub">ponderado por créditos ${gradeEmoji(overall)}</div>
+                ${completedSemsWithMissingData() > 0 ? `<div class="gn-banner-warn">⚠️ ${completedSemsWithMissingData()} semestre(s) completado(s) sin notas completas</div>` : ''}
             </div>
             <div class="gn-banner-bar-wrap">
                 <div class="gn-banner-bar-labels">
@@ -211,7 +232,9 @@ function buildSemesterBlock(semNum) {
             </div>
         </div>
         <div class="gn-sem-body ${open ? 'open' : ''}" id="gn-body-${semNum}">
-            ${sem.subjects.map(sub => buildSubjectCard(semNum, sub)).join('')}
+            <div class="gn-cards-grid">
+                ${sem.subjects.map(sub => buildSubjectCard(semNum, sub)).join('')}
+            </div>
         </div>
     </div>`;
 }
@@ -275,7 +298,7 @@ function buildGradedCard(semNum, sub, entry) {
                 <span class="gn-expand-icon" id="gn-exp-${sub.id}">▼</span>
             </div>
         </div>
-        <div class="gn-card-body open" id="gn-cbody-${sub.id}">
+        <div class="gn-card-body" id="gn-cbody-${sub.id}">
             <div class="gn-comps-header">
                 <span>Corte</span><span>Peso</span><span>Nota</span><span>Aporte</span><span></span>
             </div>
