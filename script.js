@@ -1956,6 +1956,9 @@ function setupMallaPdfInput() {
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
             formData.append('resource_type', 'raw');
             formData.append('access_mode', 'public');
+            // Usar el UID del usuario como public_id fijo → siempre sobreescribe
+formData.append('public_id', `mallas/${currentUser.uid}`);
+formData.append('overwrite', 'true');
 
             const res = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
@@ -1980,6 +1983,7 @@ function setupMallaPdfInput() {
             updateMallaPdfUI(file.name);
             mallaPdfDoc = null; // forzar recarga
             await loadMallaPDF();
+            
 
         } catch (err) {
             console.error('Error subiendo PDF:', err);
