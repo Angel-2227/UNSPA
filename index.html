@@ -157,6 +157,9 @@
                     <div class="nav-item" onclick="showView('malla', this)">
                         🗺️ Malla Curricular
                     </div>
+                    <div class="nav-item" onclick="showView('grades', this)">
+    📝 Notas
+</div>
 
                     <div class="nav-item" onclick="showView('config', this)">
                         ⚙️ Configuración
@@ -504,7 +507,19 @@
         </div>
     </div>
 </div>
-
+<div id="gradesView" class="view-content" style="display: none;">
+    <div class="header-bar">
+        <div class="header-controls">
+            <div>
+                <h2 style="margin-bottom: 4px;">Notas por Semestre</h2>
+                <p class="text-secondary" style="font-size:0.85rem;">
+                    Registra tus notas · Calcula promedios · Simula resultados
+                </p>
+            </div>
+        </div>
+    </div>
+    <div id="gradesViewContainer"></div>
+</div>
             </main>
         </div>
 
@@ -583,6 +598,7 @@
 
     <script src="scripts/script.js"></script>
     <script src="scripts/chat.js"></script>
+    <script src="scripts/grades.js"></script>
 
     <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
     <script>

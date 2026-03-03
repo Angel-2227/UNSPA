@@ -874,6 +874,9 @@ function showView(viewName, clickedEl) {
             setupMallaOverlayEvents();
         }, 100);
     }
+    else if (viewName === 'grades') {
+    renderGradesView();
+}
 }
 
 function scrollToSemester(semesterNum) {
@@ -1731,6 +1734,10 @@ async function loadUserDataFromFirestore() {
                 mallaMarks = data.mallaMarks;
                 localStorage.setItem('mallaMarks', JSON.stringify(mallaMarks));
             }
+            // Cargar notas desde Firestore
+            if (typeof loadGradesFromFirestore === 'function') {
+                loadGradesFromFirestore(data);
+            }
             console.log('✅ Datos cargados desde Firestore');
         } else {
             console.log('⚠️ Primera vez del usuario, intentando migrar desde localStorage...');
@@ -1759,6 +1766,7 @@ async function saveToFirestore() {
             schedules,
             currentPeriodConfig,
             mallaMarks,
+            gradesData: (typeof gradesData !== 'undefined') ? gradesData : {},
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         console.log('✅ Datos guardados en Firestore');

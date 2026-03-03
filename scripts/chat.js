@@ -32,6 +32,9 @@ function buildAcademicContext() {
     const pending = Math.max(0, total - completedCredits - currentCredits);
     const progress = Math.round((completedCredits / total) * 100);
 
+    // ---- INCLUIR NOTAS si el módulo de grades está disponible ----
+    const gradesContext = (typeof buildGradesContext === 'function') ? buildGradesContext() : null;
+
     return {
         programName: config.programName || 'No especificado',
         university: config.university || 'No especificada',
@@ -48,7 +51,8 @@ function buildAcademicContext() {
         schedules: schedules.map(s => ({
             name: s.name, period: s.period, subjects: s.subjects
         })),
-        mallaMarks
+        mallaMarks,
+        grades: gradesContext   // ← NUEVO: notas del estudiante
     };
 }
 
@@ -282,7 +286,7 @@ function initChatWidget() {
                     <span style="font-size:1.4rem;">🤖</span>
                     <div>
                         <div style="font-weight:700;font-size:0.95rem;">Asistente Académico</div>
-                        <div style="font-size:0.72rem;opacity:0.85;">Powered by Gemini · Conoce tu plan de estudios</div>
+                        <div style="font-size:0.72rem;opacity:0.85;">Powered by Groq · Plan de estudios y notas</div>
                     </div>
                 </div>
                 <button onclick="toggleChat()" id="chatCloseBtn">✕</button>
@@ -292,9 +296,10 @@ function initChatWidget() {
                 <div class="chat-msg ai">
                     <div class="chat-bubble">
                         👋 ¡Hola! Soy tu asistente académico.<br><br>
-                        Tengo acceso a tu plan de estudios, horarios y progreso. Puedo ayudarte con:<br>
+                        Tengo acceso a tu plan de estudios, notas y progreso. Puedo ayudarte con:<br>
+                        • ¿Cuánto necesito sacarme en X para aprobar?<br>
+                        • ¿Cuál es mi promedio acumulado?<br>
                         • ¿Qué materias ver el próximo semestre?<br>
-                        • ¿Con qué profe está X materia?<br>
                         • ¿Cuántos créditos me faltan?<br><br>
                         ¿En qué te ayudo?
                     </div>
@@ -302,15 +307,15 @@ function initChatWidget() {
             </div>
 
             <div id="chatSuggestions">
-                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Qué materias tomar este semestre?</button>
-                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Cuánto me falta para graduarme?</button>
+                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Cuánto necesito para aprobar?</button>
+                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Cuál es mi promedio?</button>
                 <button class="chat-suggestion" onclick="useSuggestion(this)">Analiza mi progreso</button>
-                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Qué horarios hay disponibles?</button>
+                <button class="chat-suggestion" onclick="useSuggestion(this)">¿Qué materias tomar?</button>
             </div>
 
             <div id="chatInputArea">
                 <textarea id="chatInput"
-                    placeholder="Pregúntame sobre tu plan de estudios..."
+                    placeholder="Pregúntame sobre tus notas o plan de estudios..."
                     rows="1"
                     onkeydown="handleChatKey(event)"
                     oninput="autoResizeTextarea(this)"></textarea>
@@ -426,7 +431,6 @@ function removeLoadingMessage(id) {
 
 // ---- Auto-inicializar cuando el usuario esté autenticado ----
 (function waitForAuth() {
-    // Intentar con intervalo por si ya cargó
     const interval = setInterval(() => {
         if (typeof currentUser !== 'undefined' && currentUser && typeof studyPlan !== 'undefined') {
             initChatWidget();
@@ -434,12 +438,10 @@ function removeLoadingMessage(id) {
         }
     }, 600);
 
-    // También escuchar directamente a Firebase Auth
     if (typeof firebase !== 'undefined') {
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 clearInterval(interval);
-                // Esperar un momento a que studyPlan cargue desde Firestore
                 setTimeout(() => initChatWidget(), 1500);
             }
         });

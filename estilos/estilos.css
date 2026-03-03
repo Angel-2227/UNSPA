@@ -1589,3 +1589,102 @@ body {
         font-size: 0.75rem;
     }
 }
+/* ============================================
+   SISTEMA DE NOTAS
+   ============================================ */
+
+/* Banner de promedio global */
+.grades-overall-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--bg-primary); border: 1px solid var(--border-color);
+  border-radius: 12px; padding: 20px 24px; margin-bottom: 24px;
+  box-shadow: var(--shadow-light); gap: 24px; flex-wrap: wrap;
+}
+.grades-overall-left { display: flex; flex-direction: column; gap: 4px; }
+.grades-overall-label { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; }
+.grades-overall-value { font-size: 2.8rem; font-weight: 800; line-height: 1; }
+.grades-overall-sub { font-size: 0.75rem; color: var(--text-secondary); }
+.grades-overall-right { flex: 1; min-width: 200px; }
+.grades-scale-bar { width: 100%; height: 10px; background: var(--border-color); border-radius: 99px; overflow: hidden; margin-top: 4px; }
+.grades-scale-fill { height: 100%; border-radius: 99px; transition: width 0.4s ease, background 0.3s; }
+
+/* Semestres */
+.grades-semester-card { background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 12px; margin-bottom: 16px; overflow: hidden; box-shadow: var(--shadow-light); }
+.grades-semester-card.completed { border-left: 4px solid var(--unal-green); }
+.grades-semester-card.current   { border-left: 4px solid var(--unal-blue); }
+.grades-semester-card.pending   { border-left: 4px solid var(--border-color); }
+
+.grades-semester-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap; }
+.grades-semester-header:hover { background: var(--bg-secondary); }
+.grades-semester-title-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.grades-semester-title { font-weight: 700; font-size: 1rem; }
+.grades-semester-count { font-size: 0.8rem; color: var(--text-secondary); }
+.grades-semester-avg-group { display: flex; align-items: center; gap: 10px; }
+.grades-sem-avg-badge { font-size: 0.85rem; font-weight: 700; padding: 4px 12px; border-radius: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
+.grades-sem-avg-badge.empty { color: var(--text-secondary); font-weight: 400; }
+
+.grades-semester-content { display: none; padding: 0 16px 16px; flex-direction: column; gap: 14px; }
+.grades-semester-content.expanded { display: flex; }
+
+/* Filas de materias */
+.grades-subject-row { background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.grades-subject-header-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.grades-subject-name { font-weight: 600; font-size: 0.95rem; }
+.grades-subject-meta { font-size: 0.78rem; color: var(--text-secondary); margin-top: 2px; }
+.grades-subject-summary { text-align: right; }
+.grades-final-avg { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+.grades-final-avg.empty { color: var(--text-secondary); font-size: 1.2rem; }
+.grades-final-label { font-size: 0.72rem; color: var(--text-secondary); }
+
+/* Pass/Fail */
+.pass-fail-row { flex-direction: row; align-items: center; justify-content: space-between; }
+.grades-pf-select { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); font-size: 0.875rem; cursor: pointer; }
+.grades-pf-select.pf-approved { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; font-weight: 600; }
+.grades-pf-select.pf-failed   { background: #ffebee; border-color: #d32f2f; color: #d32f2f; font-weight: 600; }
+
+/* Tabla de componentes */
+.grades-components-table { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; }
+.grades-comp-header { display: grid; grid-template-columns: 1fr 90px 110px 80px 32px; gap: 8px; padding: 8px 12px; background: var(--bg-primary); border-bottom: 1px solid var(--border-color); font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+.grades-comp-row { display: grid; grid-template-columns: 1fr 90px 110px 80px 32px; gap: 8px; padding: 8px 12px; align-items: center; border-bottom: 1px solid var(--border-color); }
+.grades-comp-row:last-child { border-bottom: none; }
+.grades-comp-totals { display: grid; grid-template-columns: 1fr 90px 110px 80px 32px; gap: 8px; padding: 8px 12px; background: var(--bg-primary); font-weight: 700; font-size: 0.85rem; border-top: 2px solid var(--border-color); }
+.grades-comp-name { font-size: 0.85rem; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; background: var(--bg-primary); color: var(--text-primary); width: 100%; }
+.grades-comp-name:focus { outline: none; border-color: var(--unal-green); }
+.grades-weight-cell { display: flex; align-items: center; gap: 4px; font-size: 0.85rem; }
+.grades-comp-weight { width: 55px; border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 6px; background: var(--bg-primary); color: var(--text-primary); text-align: center; font-size: 0.85rem; }
+.grades-comp-grade { border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 8px; background: var(--bg-primary); color: var(--text-primary); text-align: center; font-size: 0.9rem; font-weight: 600; width: 100%; }
+.grades-comp-grade:focus { outline: none; border-color: var(--unal-green); }
+.grades-comp-contrib { font-size: 0.82rem; font-weight: 600; text-align: center; color: var(--text-secondary); }
+.grades-remove-comp { background: none; border: none; color: #d32f2f; cursor: pointer; font-size: 1.1rem; padding: 0 4px; border-radius: 4px; line-height: 1; }
+.grades-remove-comp:hover { background: #ffebee; }
+.weight-ok   { color: var(--unal-green); }
+.weight-warn { color: var(--unal-yellow); }
+
+/* Acciones y chips de nota necesaria */
+.grades-subject-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.grades-needed-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.grades-needed-label { font-size: 0.75rem; color: var(--text-secondary); }
+.grades-needed-chip { font-size: 0.75rem; padding: 3px 10px; border-radius: 20px; background: var(--bg-primary); border: 1px solid var(--border-color); color: var(--text-primary); }
+.grades-needed-chip.impossible { background: #ffebee; border-color: #d32f2f; color: #d32f2f; }
+
+/* Colores de nota */
+.grade-excellent { color: #2e7d32; }
+.grade-good      { color: #388e3c; }
+.grade-ok        { color: #f9a825; }
+.grade-pass      { color: #ffa000; }
+.grade-fail      { color: #d32f2f; }
+
+/* Input con color dinámico */
+.grades-comp-grade.grade-excellent { border-color: #2e7d32; background: #f1f8e9; }
+.grades-comp-grade.grade-good      { border-color: #388e3c; background: #f1f8e9; }
+.grades-comp-grade.grade-ok        { border-color: #f9a825; background: #fffde7; }
+.grades-comp-grade.grade-pass      { border-color: #ffa000; background: #fff8e1; }
+.grades-comp-grade.grade-fail      { border-color: #d32f2f; background: #ffebee; }
+
+@media (max-width: 600px) {
+  .grades-comp-header, .grades-comp-row, .grades-comp-totals {
+    grid-template-columns: 1fr 70px 90px 60px 28px;
+    font-size: 0.78rem;
+  }
+  .grades-overall-banner { flex-direction: column; }
+}
