@@ -7,6 +7,7 @@
 const PASS_FAIL_SUBJECTS = [
     'ingles',
     'catedra',
+    'nacional de inducci',
     'trabajo de grado',
 ];
 
