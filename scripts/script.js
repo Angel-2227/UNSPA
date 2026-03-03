@@ -1913,7 +1913,10 @@ async function loadMallaPDF() {
         pdfjsLib.GlobalWorkerOptions.workerSrc =
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        mallaPdfDoc = await pdfjsLib.getDocument(pdfURL).promise;
+        // Descargar el PDF como binario primero para evitar problemas CORS
+const response = await fetch(pdfURL);
+const arrayBuffer = await response.arrayBuffer();
+mallaPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
         if (loadingEl) loadingEl.style.display = 'none';
         if (stackEl)   stackEl.style.display   = 'block';
