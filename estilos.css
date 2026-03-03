@@ -1,0 +1,1829 @@
+/* ============================================
+   VARIABLES CSS - TEMAS Y COLORES
+   ============================================ */
+
+:root {
+  /* Colores UNAL */
+  --unal-green: #2e7d32;
+  --unal-dark-green: #1b5e20;
+  --unal-light-green: #66bb6a;
+  --unal-yellow: #ffa000;
+  --unal-red: #d32f2f;
+  --unal-blue: #1976d2;
+
+  /* Tema Claro */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --bg-sidebar: #fafafa;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.1);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Tema Oscuro */
+[data-theme="dark"] {
+  --bg-primary: #1a1a1a;
+  --bg-secondary: #2d2d2d;
+  --bg-sidebar: #242424;
+  --text-primary: #ffffff;
+  --text-secondary: #b3b3b3;
+  --border-color: #404040;
+  --shadow-light: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-medium: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+
+/* ============================================
+   ESTILOS GENERALES Y RESET
+   ============================================ */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+.app-container {
+  display: flex;
+  min-height: 100vh;
+}
+
+
+/* ============================================
+   SIDEBAR - BARRA LATERAL
+   ============================================ */
+
+.sidebar {
+  width: 320px;
+  background: var(--bg-sidebar);
+  border-right: 2px solid var(--unal-green);
+  display: flex;
+  flex-direction: column;
+  position: fixed;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 100;
+  transition: transform 0.3s ease;
+}
+
+.sidebar-header {
+  background: linear-gradient(135deg, var(--unal-green), var(--unal-dark-green));
+  color: white;
+  padding: 20px;
+  text-align: center;
+}
+
+.sidebar-header h1 {
+  font-size: 1.3rem;
+  margin-bottom: 8px;
+}
+
+.sidebar-header p {
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+
+.sidebar-nav {
+  padding: 20px 0;
+}
+
+.nav-item {
+  padding: 12px 20px;
+  cursor: pointer;
+  border-left: 4px solid transparent;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.nav-item:hover {
+  background: var(--bg-secondary);
+  border-left-color: var(--unal-light-green);
+}
+
+.nav-item.active {
+  background: var(--bg-secondary);
+  border-left-color: var(--unal-green);
+  color: var(--unal-green);
+}
+
+.sidebar-section {
+  padding: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+.section-title {
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--unal-green);
+  font-size: 0.95rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Overlay y toggle móvil para sidebar */
+.mobile-toggle {
+  display: none;
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  z-index: 200;
+  background: var(--unal-green);
+  color: white;
+  border: none;
+  padding: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99;
+}
+
+
+/* ============================================
+   CONTENIDO PRINCIPAL
+   ============================================ */
+
+.main-content {
+  margin-left: 320px;
+  flex: 1;
+  padding: 24px;
+  transition: margin-left 0.3s ease;
+}
+
+.header-bar {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  margin-bottom: 24px;
+  border: 1px solid var(--border-color);
+}
+
+.header-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  border-radius: 12px;
+}
+
+.no-data h3 {
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+
+/* ============================================
+   TARJETAS DE ESTADÍSTICAS
+   ============================================ */
+
+.stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: var(--bg-primary);
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-color);
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+}
+
+.stat-number {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.stat-number.completed { color: var(--unal-green); }
+.stat-number.current   { color: var(--unal-yellow); }
+.stat-number.pending   { color: var(--unal-red); }
+.stat-number.total     { color: var(--unal-blue); }
+
+.stat-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+
+/* ============================================
+   TARJETAS DE SEMESTRES
+   ============================================ */
+
+.semesters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 24px;
+}
+
+.semester-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: var(--shadow-light);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.semester-card.completed { border-left: 4px solid var(--unal-green); }
+.semester-card.current   { border-left: 4px solid var(--unal-yellow); }
+.semester-card.pending   { border-left: 4px solid var(--unal-red); }
+
+.semester-header {
+  padding: 16px 20px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  user-select: none;
+}
+
+.semester-header:hover {
+  background: var(--unal-light-green);
+  color: white;
+}
+
+.semester-title {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.semester-summary {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.semester-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.semester-toggle {
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  color: inherit;
+  transition: transform 0.3s ease;
+}
+
+.semester-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.semester-status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.status-completed { background: #e8f5e8; color: var(--unal-dark-green); }
+.status-current   { background: #fff8e1; color: #f57c00; }
+.status-pending   { background: #ffebee; color: var(--unal-red); }
+
+.semester-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.semester-content.expanded {
+  max-height: 2000px;
+}
+
+.semester-body {
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.semester-drop-zone {
+  min-height: 40px;
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  margin: 10px 0;
+  transition: all 0.3s ease;
+}
+
+.semester-drop-zone.drag-over {
+  border-color: var(--unal-green);
+  background: var(--bg-secondary);
+}
+
+
+/* ============================================
+   TABLA DE MATERIAS
+   ============================================ */
+
+.subjects-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 800px;
+}
+
+.subjects-table th,
+.subjects-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.subjects-table th {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+}
+
+.subjects-table tbody tr:hover {
+  background: var(--bg-secondary);
+}
+
+
+/* ============================================
+   BADGES DE TIPO DE MATERIA
+   ============================================ */
+
+.type-badge {
+  padding: 3px 8px;
+  border-radius: 15px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.type-obligatoria                { background: #ffcdd2; color: #b71c1c; }
+.type-optativa                   { background: #c8e6c9; color: #2e7d32; }
+.type-libre                      { background: #bbdefb; color: #0d47a1; }
+.type-grado                      { background: #e1bee7; color: #4a148c; }
+.type-nivelacion                 { background: #ffe0b2; color: #e65100; }
+.type-disciplinar-obligatoria    { background: #ffcdd2; color: #b71c1c; }
+.type-disciplinar-optativa       { background: #c8e6c9; color: #2e7d32; }
+.type-fundamentacion-obligatoria { background: #e1f5fe; color: #01579b; }
+.type-fundamentacion-optativa    { background: #f3e5f5; color: #4a148c; }
+.type-libre-eleccion             { background: #bbdefb; color: #0d47a1; }
+.type-trabajo-grado              { background: #e1bee7; color: #4a148c; }
+
+/* Badges en tema oscuro */
+[data-theme="dark"] .type-obligatoria,
+[data-theme="dark"] .type-disciplinar-obligatoria    { background: #7f1d1d; color: #fca5a5; }
+
+[data-theme="dark"] .type-optativa,
+[data-theme="dark"] .type-disciplinar-optativa       { background: #14532d; color: #86efac; }
+
+[data-theme="dark"] .type-libre,
+[data-theme="dark"] .type-libre-eleccion             { background: #1e3a8a; color: #93c5fd; }
+
+[data-theme="dark"] .type-grado,
+[data-theme="dark"] .type-trabajo-grado              { background: #581c87; color: #c4b5fd; }
+
+[data-theme="dark"] .type-nivelacion                 { background: #78350f; color: #fcd34d; }
+[data-theme="dark"] .type-fundamentacion-obligatoria { background: #1e3a8a; color: #93c5fd; }
+[data-theme="dark"] .type-fundamentacion-optativa    { background: #581c87; color: #c4b5fd; }
+
+[data-theme="dark"] .status-completed { background: #14532d; color: #86efac; }
+[data-theme="dark"] .status-current   { background: #78350f; color: #fcd34d; }
+[data-theme="dark"] .status-pending   { background: #7f1d1d; color: #fca5a5; }
+
+
+/* ============================================
+   TARJETAS DE TIPOLOGÍAS
+   ============================================ */
+
+.typologies-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.typology-card {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  text-align: center;
+  transition: transform 0.2s ease;
+  cursor: pointer;
+}
+
+.typology-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-light);
+}
+
+.typology-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.typology-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.typology-credits {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--unal-green);
+}
+
+.typology-count {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+
+/* ============================================
+   BOTONES Y CONTROLES
+   ============================================ */
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.btn-primary   { background: var(--unal-green);    color: white; }
+.btn-success   { background: var(--unal-green);    color: white; }
+.btn-warning   { background: var(--unal-yellow);   color: white; }
+.btn-danger    { background: var(--unal-red);      color: white; }
+.btn-secondary { background: var(--text-secondary); color: white; }
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 0.75rem;
+}
+
+.btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+
+/* ============================================
+   FORMULARIOS
+   ============================================ */
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.form-control {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--unal-green);
+  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.2);
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.editable-field {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  width: 100%;
+}
+
+.editable-field:hover {
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
+}
+
+.editable-field:focus {
+  background: var(--bg-primary);
+  border-color: var(--unal-green);
+  outline: none;
+}
+
+
+/* ============================================
+   MODALES
+   FIX: El .modal tiene overflow-y: auto para que el click
+   fuera del contenido cierre el modal. El scroll se maneja
+   dentro de cada modal según su tipo.
+   ============================================ */
+
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  /* overflow-y permite que el click en el fondo funcione correctamente */
+  overflow-y: auto;
+  /* Centrado vertical */
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Cuando el modal está abierto se muestra como flex */
+.modal[style*="display: block"] {
+  display: flex !important;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 2vh 0;
+}
+
+/* Contenido base de todos los modales */
+.modal-content {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  width: 95%;
+  max-width: 600px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-medium);
+  /* El scroll va aquí adentro */
+  max-height: 94vh;
+  overflow-y: auto;
+  padding: 24px;
+  /* Impide que el click dentro cierre el modal */
+  position: relative;
+  flex-shrink: 0;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color);
+  /* Header sticky dentro del modal */
+  position: sticky;
+  top: -24px; /* compensa el padding */
+  background: var(--bg-primary);
+  z-index: 2;
+  margin-top: -24px;
+  padding-top: 24px;
+}
+
+.modal-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: var(--unal-green);
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.close-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+/* Modal de horario actual - más ancho y con grid con scroll propio */
+#currentScheduleModal .modal-content {
+  max-width: 1200px;
+  height: 94vh;
+  overflow: hidden; /* El modal en sí no hace scroll */
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+#currentScheduleModal .modal-header {
+  position: static; /* No sticky en este modal, es flex */
+  margin-top: 0;
+  padding-top: 0;
+  top: auto;
+  flex-shrink: 0;
+}
+
+#currentScheduleContent {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Modal de construcción/edición de horario - scroll libre */
+#scheduleModal .modal-content {
+  max-width: 900px;
+  height: 94vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+#scheduleModal .modal-header {
+  position: static;
+  margin-top: 0;
+  padding-top: 0;
+  top: auto;
+  flex-shrink: 0;
+}
+
+/* Filtros pegados bajo el header */
+#scheduleModal .schedule-filters {
+  flex-shrink: 0;
+}
+
+#scheduleBuilder {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-right: 4px;
+}
+
+
+/* ============================================
+   BANCO DE MATERIAS
+   ============================================ */
+
+.subjects-bank {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 16px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.subject-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.subject-item:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-light);
+}
+
+.subject-info h4 {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.subject-info p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+
+/* ============================================
+   MODO MOVER MATERIAS
+   ============================================ */
+
+.move-mode .subject-item,
+.move-mode .subjects-table tr {
+  cursor: move;
+  border: 2px dashed var(--unal-blue);
+}
+
+.move-mode .subjects-table tr:hover {
+  background: var(--unal-light-green);
+  color: white;
+}
+
+.move-instructions {
+  background: var(--unal-yellow);
+  color: white;
+  padding: 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  text-align: center;
+  font-weight: bold;
+}
+
+
+/* ============================================
+   BARRA DE PROGRESO
+   ============================================ */
+
+.progress-bar {
+  width: 100%;
+  height: 8px;
+  background: var(--bg-secondary);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--unal-green), var(--unal-light-green));
+  transition: width 0.5s ease;
+}
+
+
+/* ============================================
+   PLANIFICADOR DE HORARIOS
+   ============================================ */
+
+.schedule-card {
+  background: var(--bg-primary);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
+}
+
+.schedule-filters {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.schedule-filters input {
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Grid de construcción de horario (preview) */
+.schedule-grid {
+  display: grid;
+  grid-template-columns: 80px repeat(6, 1fr);
+  gap: 1px;
+  background: var(--border-color);
+  border: 1px solid var(--border-color);
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.schedule-cell {
+  background: var(--bg-primary);
+  padding: 8px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+}
+
+.schedule-cell.header {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--unal-green);
+}
+
+.schedule-cell.time {
+  background: var(--bg-secondary);
+  font-weight: 500;
+}
+
+.schedule-cell.class {
+  background: var(--unal-light-green);
+  color: white;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.schedule-cell.class:hover {
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.class-name {
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 4px;
+}
+
+.class-group {
+  font-size: 0.7rem;
+  opacity: 0.9;
+}
+
+
+/* ============================================
+   SELECTOR DE MATERIAS Y GRUPOS
+   ============================================ */
+
+.subject-select-card {
+  background: var(--bg-secondary);
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  border: 2px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.subject-select-card:hover   { border-color: var(--unal-green); }
+.subject-select-card.expanded { border-color: var(--unal-green); }
+.subject-select-card.selected {
+  border-color: var(--unal-green);
+  background: rgba(46, 125, 50, 0.1);
+}
+
+.subject-header-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.expand-icon {
+  font-size: 1.2rem;
+  transition: transform 0.3s ease;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.group-selector {
+  display: none;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: var(--bg-primary);
+  border-radius: 8px;
+}
+
+.group-selector.visible {
+  display: flex;
+}
+
+.group-option {
+  padding: 8px 16px;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-primary);
+}
+
+.group-option:hover { border-color: var(--unal-green); }
+
+.group-option.selected {
+  background: var(--unal-green);
+  color: white;
+  border-color: var(--unal-green);
+}
+
+.conflict-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+
+/* ============================================
+   VISUALIZADOR DE HORARIO (schedule-grid-viewer)
+   FIX: El contenedor padre (#currentScheduleContent) 
+   maneja el scroll. El grid define su tamaño mínimo.
+   ============================================ */
+
+/* Wrapper para el scroll horizontal en desktop */
+.schedule-grid-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+}
+
+.schedule-grid-viewer {
+  display: grid;
+  /* Desktop: columnas proporcionales */
+  grid-template-columns: 80px repeat(6, minmax(100px, 1fr));
+  gap: 1px;
+  background: var(--border-color);
+  border: 2px solid var(--border-color);
+  margin-top: 12px;
+  border-radius: 8px;
+  /* Ancho mínimo para garantizar que caben los 6 días */
+  min-width: 700px;
+}
+
+.schedule-cell-viewer {
+  background: var(--bg-primary);
+  padding: 6px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  position: relative;
+  min-height: 40px;
+  text-align: center;
+}
+
+.schedule-cell-viewer.header {
+  background: var(--bg-secondary);
+  font-weight: 700;
+  color: var(--unal-green);
+  padding: 10px 4px;
+  font-size: 0.75rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.schedule-cell-viewer.time {
+  background: var(--bg-secondary);
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.7rem;
+  position: sticky;
+  left: 0;
+  z-index: 9;
+}
+
+/* Celda esquina (header + time) */
+.schedule-cell-viewer.header:first-child {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 11;
+}
+
+.schedule-cell-viewer.class-block {
+  background: linear-gradient(135deg, var(--unal-green), var(--unal-light-green));
+  color: white;
+  flex-direction: column;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 6px;
+  border-left: 4px solid var(--unal-dark-green);
+}
+
+.schedule-cell-viewer.class-block:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+}
+
+.class-block-name {
+  font-weight: 700;
+  font-size: 0.7rem;
+  margin-bottom: 2px;
+  line-height: 1.1;
+}
+
+.class-block-info {
+  font-size: 0.6rem;
+  opacity: 0.95;
+  line-height: 1.2;
+}
+
+.schedule-cell-viewer.class-block[data-duration="1"] .class-block-name,
+.schedule-cell-viewer.class-block[data-duration="2"] .class-block-name {
+  font-size: 0.65rem;
+}
+
+.schedule-cell-viewer.class-block[data-duration="1"] .class-block-info,
+.schedule-cell-viewer.class-block[data-duration="2"] .class-block-info {
+  font-size: 0.55rem;
+  line-height: 1.1;
+}
+
+
+/* ============================================
+   INDICADORES DE TIEMPO ACTUAL
+   ============================================ */
+
+.schedule-cell-viewer.current-class {
+  background: linear-gradient(135deg, var(--unal-yellow), #ff6f00);
+  animation: pulse 2s infinite;
+  border-left: 4px solid #e65100;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.85; }
+}
+
+.schedule-cell-viewer.current-time {
+  background: rgba(255, 193, 7, 0.1);
+  border: 2px solid var(--unal-yellow);
+}
+
+.current-day-indicator {
+  background: var(--unal-yellow);
+  color: white;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.65rem;
+  position: absolute;
+  top: 2px;
+  right: 2px;
+}
+
+
+/* ============================================
+   TARJETAS MÓVILES PARA MATERIAS
+   ============================================ */
+
+.subjects-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-card-mobile {
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--border-color);
+}
+
+.subject-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.subject-card-header h4 {
+  font-size: 0.95rem;
+  margin: 0;
+  flex: 1;
+}
+
+.subject-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.subject-card-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.info-item label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.info-item strong {
+  font-size: 1.1rem;
+  color: var(--unal-green);
+}
+
+.info-item .form-control {
+  font-size: 0.85rem;
+  padding: 6px 8px;
+}
+
+.subject-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.subject-card-actions .btn {
+  flex: 1;
+  min-width: calc(33.333% - 4px);
+  justify-content: center;
+}
+
+
+/* ============================================
+   RESPONSIVE - TABLETS (max-width: 1200px)
+   ============================================ */
+
+@media (max-width: 1200px) {
+  .semesters-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .subjects-table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+}
+
+
+/* ============================================
+   RESPONSIVE - MÓVIL (max-width: 768px)
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Sidebar y navegación */
+  .mobile-toggle {
+    display: block;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-overlay.open {
+    display: block;
+  }
+
+  /* Contenido principal */
+  .main-content {
+    margin-left: 0;
+    padding: 60px 16px 16px;
+  }
+
+  .header-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* ---- MODALES EN MÓVIL ---- */
+  /* Modal genérico: pantalla completa con scroll */
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh; /* dvh para evitar problemas con barra del navegador */
+    max-height: 100dvh;
+    margin: 0;
+    border-radius: 0;
+    padding: 12px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-header {
+    position: sticky;
+    top: -12px; /* compensa el padding en móvil */
+    padding-top: 12px;
+    margin-top: -12px;
+    z-index: 2;
+  }
+
+  /* Modal de horario actual en móvil: flex column, grid con scroll */
+  #currentScheduleModal .modal-content {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden; /* el grid scroll internamente */
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #currentScheduleModal .modal-header {
+    position: static;
+    margin-top: 0;
+    padding-top: 0;
+    flex-shrink: 0;
+  }
+
+  #currentScheduleContent {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal de construcción de horario en móvil */
+  #scheduleModal .modal-content {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #scheduleModal .modal-header {
+    position: static;
+    margin-top: 0;
+    padding-top: 0;
+    flex-shrink: 0;
+  }
+
+  #scheduleModal .schedule-filters {
+    flex-shrink: 0;
+  }
+
+  #scheduleBuilder {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---- HORARIO VIEWER EN MÓVIL ---- */
+  /* FIX principal: forzar orientación horizontal con scroll */
+  .schedule-grid-viewer {
+    /* Columnas fijas para garantizar que todos los días son visibles */
+    grid-template-columns: 48px repeat(6, 90px);
+    min-width: 588px; /* 48 + (90*6) + gaps */
+    margin-top: 8px;
+    border-radius: 4px;
+  }
+
+  .schedule-cell-viewer {
+    padding: 4px 3px;
+    font-size: 0.65rem;
+    min-height: 36px;
+  }
+
+  .schedule-cell-viewer.header {
+    padding: 8px 3px;
+    font-size: 0.68rem;
+  }
+
+  .schedule-cell-viewer.time {
+    font-size: 0.65rem;
+    padding: 4px 2px;
+    min-width: 44px;
+  }
+
+  .class-block-name {
+    font-size: 0.62rem;
+    line-height: 1.1;
+  }
+
+  .class-block-info {
+    font-size: 0.52rem;
+  }
+
+  .modal-title {
+    font-size: 1rem;
+  }
+
+  #currentDayTime {
+    font-size: 0.7rem !important;
+  }
+}
+
+
+/* ============================================
+   RESPONSIVE - MÓVIL PEQUEÑO (max-width: 480px)
+   ============================================ */
+
+@media (max-width: 480px) {
+  .stats-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .semester-header {
+    padding: 12px 16px;
+  }
+
+  .semester-body {
+    padding: 16px;
+  }
+
+  .subjects-table {
+    font-size: 0.8rem;
+  }
+
+  .subjects-table th,
+  .subjects-table td {
+    padding: 8px;
+  }
+
+  /* Horario en pantallas muy pequeñas */
+  .schedule-grid-viewer {
+    grid-template-columns: 40px repeat(6, 78px);
+    min-width: 508px; /* 40 + (78*6) + gaps */
+  }
+
+  .schedule-cell-viewer {
+    padding: 3px 2px;
+    font-size: 0.6rem;
+    min-height: 32px;
+  }
+
+  .schedule-cell-viewer.time {
+    min-width: 36px;
+  }
+
+  .class-block-name {
+    font-size: 0.58rem;
+    line-height: 1;
+  }
+
+  .class-block-info {
+    font-size: 0.5rem;
+  }
+}
+/* ============================================
+   MALLA CURRICULAR — añadir al FINAL de estilos.css
+   ============================================ */
+
+/* Barra de herramientas */
+.malla-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 16px;
+}
+
+.malla-toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding-right: 12px;
+    border-right: 1px solid var(--border-color);
+}
+
+.malla-toolbar-group:last-child {
+    border-right: none;
+}
+
+.malla-tool-btn {
+    padding: 6px 14px;
+    border: 2px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.malla-tool-btn:hover {
+    border-color: var(--unal-green);
+}
+
+.malla-tool-btn.active {
+    background: var(--unal-green);
+    color: white;
+    border-color: var(--unal-green);
+}
+
+.malla-tool-btn.completed.active { background: var(--unal-green);  border-color: var(--unal-green); }
+.malla-tool-btn.current.active   { background: var(--unal-yellow); border-color: var(--unal-yellow); color: white; }
+.malla-tool-btn.erase.active     { background: var(--unal-red);    border-color: var(--unal-red); }
+
+.malla-zoom-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    min-width: 44px;
+    text-align: center;
+}
+
+/* Contenedor principal del canvas */
+.malla-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    overflow: auto;
+    background: #e8e8e8;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    /* Altura calculada: pantalla menos toolbar y header */
+    height: calc(100vh - 260px);
+    min-height: 400px;
+    cursor: crosshair;
+    -webkit-overflow-scrolling: touch;
+}
+
+.malla-canvas-stack {
+    position: relative;
+    display: inline-block;
+    /* Centrar el canvas si es más pequeño que el wrapper */
+    margin: 16px;
+}
+
+#mallaCanvas {
+    display: block;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.18);
+    border-radius: 4px;
+}
+
+#mallaOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+}
+
+/* Loading / error */
+.malla-loading,
+.malla-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 300px;
+    flex-direction: column;
+    gap: 16px;
+    color: var(--text-secondary);
+}
+
+.malla-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--border-color);
+    border-top-color: var(--unal-green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* Leyenda */
+.malla-legend {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    flex-wrap: wrap;
+}
+
+.malla-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.malla-legend-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 2px solid;
+    flex-shrink: 0;
+}
+
+.malla-legend-dot.completed { background: rgba(46,125,50,0.45);  border-color: #2e7d32; }
+.malla-legend-dot.current   { background: rgba(255,160,0,0.45);  border-color: #ffa000; }
+
+.malla-stats-bar {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--unal-green);
+    padding: 6px 12px;
+    background: rgba(46,125,50,0.08);
+    border-radius: 6px;
+}
+
+/* Responsive móvil */
+@media (max-width: 768px) {
+    .malla-canvas-wrapper {
+        height: calc(100vh - 320px);
+    }
+    .malla-toolbar {
+        gap: 6px;
+        padding: 8px;
+    }
+    .malla-tool-btn {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+    }
+}
+/* ============================================================
+   SISTEMA DE NOTAS — estilos (añadir al final de estilos.css)
+   ============================================================ */
+
+/* ── Banner promedio global ── */
+.gn-banner {
+  display: flex; align-items: center; gap: 28px; flex-wrap: wrap;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: var(--shadow-light);
+}
+.gn-banner-left { min-width: 120px; }
+.gn-banner-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); letter-spacing: .05em; }
+.gn-banner-value { font-size: 3rem; font-weight: 800; line-height: 1; margin: 4px 0; }
+.gn-banner-sub   { font-size: 0.78rem; color: var(--text-secondary); }
+.gn-banner-bar-wrap { flex: 1; min-width: 200px; }
+.gn-banner-bar-labels {
+  display: flex; justify-content: space-between;
+  font-size: 0.72rem; color: var(--text-secondary); margin-bottom: 4px;
+}
+.gn-min-mark { color: var(--unal-yellow); font-weight: 700; }
+.gn-banner-track {
+  position: relative; height: 14px;
+  background: var(--bg-secondary); border-radius: 99px; overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+.gn-min-line {
+  position: absolute; left: 60%; top: 0; bottom: 0;
+  width: 2px; background: var(--unal-yellow); z-index: 1;
+}
+.gn-banner-fill {
+  height: 100%; border-radius: 99px;
+  transition: width .5s ease, background .3s;
+}
+
+/* ── Bloque de semestre ── */
+.gn-sem-block {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: var(--shadow-light);
+}
+.gn-sem-block.completed { border-left: 4px solid var(--unal-green); }
+.gn-sem-block.current   { border-left: 4px solid var(--unal-blue);  }
+.gn-sem-block.pending   { border-left: 4px solid var(--border-color); }
+
+.gn-sem-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 18px; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap;
+}
+.gn-sem-header:hover { background: var(--bg-secondary); }
+.gn-sem-left  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.gn-sem-right { display: flex; align-items: center; gap: 10px; }
+.gn-sem-title { font-weight: 700; font-size: 1rem; }
+.gn-sem-count { font-size: 0.8rem; color: var(--text-secondary); }
+.gn-sem-avg   { font-size: 0.85rem; font-weight: 700; padding: 3px 12px; border-radius: 20px; background: var(--bg-secondary); border: 1px solid var(--border-color); }
+.gn-chevron   { font-size: 0.85rem; color: var(--text-secondary); }
+
+.gn-sem-body  { display: none; padding: 0 10px 10px; }
+.gn-sem-body.open { display: block; }
+
+/* 2 columnas de tarjetas */
+.gn-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Advertencia en banner */
+.gn-banner-warn {
+  font-size: 0.75rem;
+  color: var(--unal-yellow);
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+/* ── Tarjeta de materia ── */
+.gn-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.gn-card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 12px; gap: 10px;
+}
+.gn-card-toggle { cursor: pointer; }
+.gn-card-toggle:hover { background: var(--bg-primary); border-radius: 10px 10px 0 0; }
+.gn-card-top-left  { flex: 1; min-width: 0; }
+.gn-card-top-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+
+.gn-sub-name  { font-weight: 600; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 360px; }
+.gn-sub-meta  { font-size: 0.73rem; color: var(--text-secondary); margin-top: 1px; }
+
+.gn-avg-big    { font-size: 1.35rem; font-weight: 800; line-height: 1; }
+.gn-avg-label  { font-size: 0.68rem; color: var(--text-secondary); text-align: right; }
+.gn-expand-icon { font-size: 0.75rem; color: var(--text-secondary); margin-top: 2px; }
+
+/* ── Cuerpo expandible ── */
+.gn-card-body { display: none; padding: 0 10px 8px; flex-direction: column; gap: 0; }
+.gn-card-body.open { display: flex; }
+
+/* ── Cabecera de columnas ── */
+.gn-comps-header {
+  display: grid;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; padding: 4px 4px;
+  font-size: 0.67rem; font-weight: 700; text-transform: uppercase;
+  color: var(--text-secondary); letter-spacing: .04em;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ── Fila de componente ── */
+.gn-comp-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; align-items: center;
+  padding: 4px 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+.gn-comp-row:last-child { border-bottom: none; }
+
+/* Inputs genéricos */
+.gn-in {
+  width: 100%; padding: 3px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  transition: border-color .15s;
+}
+.gn-in:focus { outline: none; border-color: var(--unal-green); }
+
+.gn-in-name   { min-width: 0; }
+.gn-weight-wrap { display: flex; align-items: center; gap: 2px; }
+.gn-in-weight { width: 44px; text-align: center; padding: 3px 3px; }
+.gn-pct       { font-size: 0.78rem; color: var(--text-secondary); flex-shrink: 0; }
+.gn-in-grade  { text-align: center; font-weight: 700; }
+
+.gn-contrib {
+  font-size: 0.82rem; font-weight: 600;
+  text-align: center; color: var(--text-secondary);
+}
+
+/* Botón eliminar componente */
+.gn-del-comp {
+  background: none; border: none; cursor: pointer;
+  color: var(--unal-red); font-size: 1.1rem; line-height: 1;
+  border-radius: 4px; padding: 2px 5px;
+  transition: background .15s;
+}
+.gn-del-comp:hover { background: #ffebee; }
+
+/* ── Fila de totales ── */
+.gn-totals-row {
+  display: grid;
+  grid-template-columns: 1fr 72px 92px 62px 28px;
+  gap: 6px; align-items: center;
+  padding: 5px 4px;
+  background: var(--bg-primary);
+  border-top: 2px solid var(--border-color);
+  border-radius: 0 0 6px 6px;
+  font-weight: 700; font-size: 0.82rem;
+  margin-bottom: 8px;
+}
+.gn-totals-label  { color: var(--text-secondary); font-size: 0.72rem; text-transform: uppercase; }
+.gn-totals-weight { }
+.gn-totals-avg    { text-align: center; }
+
+/* ── Acciones y chips ── */
+.gn-card-actions {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.gn-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gn-chips-label { font-size: 0.75rem; color: var(--text-secondary); white-space: nowrap; }
+.gn-chip {
+  font-size: 0.75rem; padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+.gn-chip-impossible { background: #ffebee; border-color: #d32f2f; color: #d32f2f; }
+.gn-chip-done       { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; }
+
+/* ── Pass/Fail card ── */
+.pf-card .gn-card-top { flex-wrap: wrap; }
+.gn-pf-select {
+  padding: 7px 12px; border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary); color: var(--text-primary);
+  font-size: 0.875rem; cursor: pointer; min-width: 160px;
+}
+.gn-pf-select.pf-yes { background: #e8f5e9; border-color: #2e7d32; color: #2e7d32; font-weight: 600; }
+.gn-pf-select.pf-no  { background: #ffebee; border-color: #d32f2f; color: #d32f2f; font-weight: 600; }
+
+/* ── Colores de nota ── */
+.gn-excel { color: #2e7d32; }
+.gn-good  { color: #388e3c; }
+.gn-ok    { color: #f9a825; }
+.gn-pass  { color: #ffa000; }
+.gn-fail  { color: #d32f2f; }
+
+.gn-ok-txt  { color: var(--unal-green); }
+.gn-ok    { color: var(--unal-green); }
+.gn-warn  { color: var(--unal-yellow); }
+
+/* Inputs con color según nota */
+.gn-in-grade.gn-excel { border-color: #2e7d32; background: #f1f8e9; }
+.gn-in-grade.gn-good  { border-color: #388e3c; background: #f1f8e9; }
+.gn-in-grade.gn-ok    { border-color: #f9a825; background: #fffde7; }
+.gn-in-grade.gn-pass  { border-color: #ffa000; background: #fff8e1; }
+.gn-in-grade.gn-fail  { border-color: #d32f2f; background: #ffebee; }
+
+/* ── Responsive ── */
+@media (max-width: 760px) {
+  .gn-cards-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .gn-comps-header,
+  .gn-comp-row,
+  .gn-totals-row {
+    grid-template-columns: 1fr 58px 78px 50px 24px;
+    font-size: 0.75rem;
+  }
+  .gn-in-weight { width: 36px; }
+  .gn-banner { flex-direction: column; gap: 16px; }
+  .gn-sub-name { max-width: 200px; }
+}
