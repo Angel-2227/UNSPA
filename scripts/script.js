@@ -1734,6 +1734,10 @@ async function loadUserDataFromFirestore() {
                 mallaMarks = data.mallaMarks;
                 localStorage.setItem('mallaMarks', JSON.stringify(mallaMarks));
             }
+            if (data.mallaPdfURL) {
+    localStorage.setItem('mallaPdfURL', data.mallaPdfURL);
+    localStorage.setItem('mallaPdfFileName', data.mallaPdfFileName || 'malla.pdf');
+}
             // Cargar notas desde Firestore
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
@@ -1843,12 +1847,14 @@ let mallaCurrentPage = 1;
 let mallaScale = 1.5;
 let mallaIsDragging = false;
 let mallaOverlayEventsReady = false;
-const MALLA_PDF_URL = 'Malla_no_electivas.pdf';
+const CLOUDINARY_CLOUD_NAME = 'dlzdelkc2';   // ← pon el tuyo
+const CLOUDINARY_UPLOAD_PRESET = 'malla_pdf';     // ← el que creaste
 
 // ---- Inicializar vista ----
 async function initMallaView() {
     loadMallaMarks();
     updateMallaStats();
+    setupMallaPdfInput();
     if (!mallaPdfDoc) {
         await loadMallaPDF();
     } else {
@@ -1859,41 +1865,158 @@ async function initMallaView() {
 
 async function loadMallaPDF() {
     const loadingEl = document.getElementById('mallaLoading');
-    const errorEl = document.getElementById('mallaError');
-    const stackEl = document.getElementById('mallaCanvasStack');
+    const errorEl   = document.getElementById('mallaError');
+    const stackEl   = document.getElementById('mallaCanvasStack');
 
     if (loadingEl) loadingEl.style.display = 'flex';
-    if (errorEl) errorEl.style.display = 'none';
-    if (stackEl) stackEl.style.display = 'none';
+    if (errorEl)   errorEl.style.display   = 'none';
+    if (stackEl)   stackEl.style.display   = 'none';
 
-    try {
-        const pdfjsLib = window['pdfjs-dist/build/pdf'];
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    // Buscar URL guardada: primero localStorage, luego Firestore
+    let pdfURL = localStorage.getItem('mallaPdfURL');
 
-        mallaPdfDoc = await pdfjsLib.getDocument(MALLA_PDF_URL).promise;
+    if (!pdfURL && typeof currentUser !== 'undefined' && currentUser) {
+        try {
+            const doc = await db.collection('users').doc(currentUser.uid).get();
+            if (doc.exists && doc.data().mallaPdfURL) {
+                pdfURL = doc.data().mallaPdfURL;
+                localStorage.setItem('mallaPdfURL', pdfURL);
+                localStorage.setItem('mallaPdfFileName', doc.data().mallaPdfFileName || 'malla.pdf');
+            }
+        } catch(e) { console.warn('No se pudo leer URL de Firestore', e); }
+    }
 
+    // Actualizar nombre visible si ya había uno
+    const savedName = localStorage.getItem('mallaPdfFileName');
+    if (savedName) updateMallaPdfUI(savedName);
+
+    if (!pdfURL) {
         if (loadingEl) loadingEl.style.display = 'none';
-        if (stackEl) stackEl.style.display = 'block';
-
-        renderMallaPage(mallaCurrentPage);
-    } catch (err) {
-        console.error('Error cargando PDF de malla:', err);
-        if (loadingEl) loadingEl.style.display = 'none';
-        if (stackEl) stackEl.style.display = 'none';
         if (errorEl) {
             errorEl.style.display = 'flex';
             errorEl.innerHTML = `
                 <div style="text-align:center; padding:40px;">
                     <div style="font-size:3rem; margin-bottom:16px;">📄</div>
                     <p style="color:var(--text-secondary); margin-bottom:16px;">
-                        No se encontró <strong>Malla_no_electivas.pdf</strong> en la raíz del proyecto.
+                        Aún no has cargado tu malla curricular.
                     </p>
                     <p style="font-size:0.85rem; color:var(--text-secondary);">
-                        Asegúrate de que el PDF esté junto a <code>index.html</code>
+                        Usa el botón <strong>📂 Cargar mi malla (PDF)</strong> para subir el PDF de tu carrera.
                     </p>
                 </div>`;
         }
+        return;
+    }
+
+    try {
+        const pdfjsLib = window['pdfjs-dist/build/pdf'];
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        mallaPdfDoc = await pdfjsLib.getDocument(pdfURL).promise;
+
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (stackEl)   stackEl.style.display   = 'block';
+
+        renderMallaPage(mallaCurrentPage);
+    } catch (err) {
+        console.error('Error cargando PDF:', err);
+        if (loadingEl) loadingEl.style.display = 'none';
+        if (errorEl) {
+            errorEl.style.display = 'flex';
+            errorEl.innerHTML = `
+                <div style="text-align:center; padding:40px;">
+                    <div style="font-size:3rem;">⚠️</div>
+                    <p style="color:var(--text-secondary);">Error al leer el PDF. Intenta cargarlo de nuevo.</p>
+                </div>`;
+        }
+    }
+}
+
+// ---- Subida de PDF a Cloudinary ----
+function setupMallaPdfInput() {
+    const input = document.getElementById('mallaPdfInput');
+    if (!input || input._ready) return;
+    input._ready = true;
+
+    input.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Mostrar estado de carga
+        const nameEl = document.getElementById('mallaPdfName');
+        if (nameEl) nameEl.textContent = '⏳ Subiendo...';
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+            formData.append('resource_type', 'raw');
+
+            const res = await fetch(
+                `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
+                { method: 'POST', body: formData }
+            );
+
+            if (!res.ok) throw new Error('Error al subir a Cloudinary');
+
+            const data = await res.json();
+            const pdfURL = data.secure_url;
+
+            // Guardar URL en localStorage y Firestore
+            localStorage.setItem('mallaPdfURL', pdfURL);
+            localStorage.setItem('mallaPdfFileName', file.name);
+
+            if (typeof currentUser !== 'undefined' && currentUser) {
+                db.collection('users').doc(currentUser.uid)
+                    .set({ mallaPdfURL: pdfURL, mallaPdfFileName: file.name }, { merge: true })
+                    .catch(console.error);
+            }
+
+            updateMallaPdfUI(file.name);
+            mallaPdfDoc = null; // forzar recarga
+            await loadMallaPDF();
+
+        } catch (err) {
+            console.error('Error subiendo PDF:', err);
+            if (nameEl) nameEl.textContent = '❌ Error al subir';
+            alert('Error al subir el PDF. Revisa tu conexión e intenta de nuevo.');
+        }
+    });
+}
+
+function updateMallaPdfUI(name) {
+    const nameEl   = document.getElementById('mallaPdfName');
+    const clearBtn = document.getElementById('mallaPdfClearBtn');
+    if (nameEl)   nameEl.textContent       = name ? `📄 ${name}` : '';
+    if (clearBtn) clearBtn.style.display   = name ? 'inline-block' : 'none';
+}
+
+function clearMallaPDF() {
+    if (!confirm('¿Quitar la malla cargada? Las marcas se conservarán.')) return;
+
+    localStorage.removeItem('mallaPdfURL');
+    localStorage.removeItem('mallaPdfFileName');
+
+    if (typeof currentUser !== 'undefined' && currentUser) {
+        db.collection('users').doc(currentUser.uid)
+            .set({ mallaPdfURL: null, mallaPdfFileName: null }, { merge: true })
+            .catch(console.error);
+    }
+
+    mallaPdfDoc = null;
+    updateMallaPdfUI('');
+
+    const stackEl = document.getElementById('mallaCanvasStack');
+    const errorEl = document.getElementById('mallaError');
+    if (stackEl) stackEl.style.display = 'none';
+    if (errorEl) {
+        errorEl.style.display = 'flex';
+        errorEl.innerHTML = `
+            <div style="text-align:center; padding:40px;">
+                <div style="font-size:3rem; margin-bottom:16px;">📄</div>
+                <p style="color:var(--text-secondary);">Carga tu malla usando el botón de arriba.</p>
+            </div>`;
     }
 }
 
