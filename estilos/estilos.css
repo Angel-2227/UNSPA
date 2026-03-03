@@ -1491,8 +1491,9 @@ body {
     background: #e8e8e8;
     border-radius: 8px;
     border: 1px solid var(--border-color);
-    flex: 1;           /* ← ocupa el espacio restante */
-    min-height: 300px;
+    /* Altura calculada: pantalla menos toolbar y header */
+    height: calc(100vh - 260px);
+    min-height: 400px;
     cursor: crosshair;
     -webkit-overflow-scrolling: touch;
 }
@@ -1574,29 +1575,10 @@ body {
     border-radius: 6px;
 }
 
-#mallaView {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 60px); /* 60px = altura del nav top */
-    overflow: hidden;
-}
-
-#mallaView .header-bar {
-    flex-shrink: 0;
-}
-
-#mallaView .malla-toolbar {
-    flex-shrink: 0;
-    margin-bottom: 12px;
-}
-
 /* Responsive móvil */
 @media (max-width: 768px) {
-    #mallaView {
-        height: calc(100vh - 56px);
-    }
     .malla-canvas-wrapper {
-        min-height: 250px;
+        height: calc(100vh - 320px);
     }
     .malla-toolbar {
         gap: 6px;
@@ -1607,8 +1589,6 @@ body {
         font-size: 0.75rem;
     }
 }
-
-
 /* ============================================================
    SISTEMA DE NOTAS — estilos (añadir al final de estilos.css)
    ============================================================ */
