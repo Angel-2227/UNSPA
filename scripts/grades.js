@@ -49,8 +49,19 @@ function ensureGradesStructure() {
     Object.entries(studyPlan).forEach(([sem, s]) => {
         if (!gradesData[sem]) gradesData[sem] = {};
         s.subjects.forEach(sub => {
-            if (!gradesData[sem][sub.id])
-                gradesData[sem][sub.id] = defaultEntry(sub);
+            const expected = defaultEntry(sub);
+            const existing = gradesData[sem][sub.id];
+
+            // Si no existe, créala
+            if (!existing) {
+                gradesData[sem][sub.id] = expected;
+                return;
+            }
+
+            // Si el tipo esperado no coincide con el guardado, corregirlo
+            if (existing.type !== expected.type) {
+                gradesData[sem][sub.id] = expected;
+            }
         });
     });
 }
