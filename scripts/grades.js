@@ -1,37 +1,20 @@
 // ============================================
-// SISTEMA DE NOTAS — grades.js
-// Archivo independiente: scripts/grades.js
+// SISTEMA DE NOTAS — grades.js  (v2 — rediseño)
 // ============================================
 //
-// MATERIAS SIN NOTAS (solo aprobado/reprobado):
-// Añade sus nombres exactos a esta lista:
+// Materias que solo llevan Aprobado / Reprobado
+// (se compara por subcadena, sin importar mayúsculas):
 const PASS_FAIL_SUBJECTS = [
-    'Inglés',
-    'Inglés I',
-    'Inglés II',
-    'Cátedra de Inducción',
-    'Cátedra Universidad Nacional de Colombia',
-    'Trabajo de Grado',
-    'Trabajo de Grado I',
-    'Trabajo de Grado II',
+    'inglés',
+    'cátedra de inducción',
+    'cátedra universidad nacional',
+    'trabajo de grado',
 ];
 
-// ============================================
-// ESTADO GLOBAL DE NOTAS
-// ============================================
-
-// Estructura: gradesData[semesterNum][subjectId] = {
-//   type: 'graded' | 'pass_fail',
-//   passFail: 'approved' | 'failed' | null,  (solo si type === 'pass_fail')
-//   components: [                              (solo si type === 'graded')
-//     { id, name, weight, grade }
-//   ]
-// }
+// ── Estado global ─────────────────────────────
 let gradesData = {};
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
+// ── Inicialización ────────────────────────────
 
 function initGrades() {
     loadGradesFromStorage();
@@ -39,565 +22,526 @@ function initGrades() {
 }
 
 function loadGradesFromStorage() {
-    const saved = localStorage.getItem('academicGradesData');
-    if (saved) {
-        try { gradesData = JSON.parse(saved); } catch (e) { gradesData = {}; }
-    }
+    try {
+        const s = localStorage.getItem('academicGradesData');
+        if (s) gradesData = JSON.parse(s);
+    } catch { gradesData = {}; }
 }
 
 function saveGradesToStorage() {
     localStorage.setItem('academicGradesData', JSON.stringify(gradesData));
-    // También sincronizar con Firestore si hay usuario
     if (typeof currentUser !== 'undefined' && currentUser) {
-        db.collection('users').doc(currentUser.uid).update({ gradesData })
-            .catch(() => db.collection('users').doc(currentUser.uid).set({ gradesData }, { merge: true }));
+        db.collection('users').doc(currentUser.uid)
+          .set({ gradesData }, { merge: true })
+          .catch(console.error);
     }
 }
 
-function loadGradesFromFirestore(firestoreData) {
-    if (firestoreData && firestoreData.gradesData) {
-        gradesData = firestoreData.gradesData;
+function loadGradesFromFirestore(data) {
+    if (data && data.gradesData) {
+        gradesData = data.gradesData;
         localStorage.setItem('academicGradesData', JSON.stringify(gradesData));
     }
 }
 
-// Asegurar que exista entrada para cada materia del plan
 function ensureGradesStructure() {
     if (typeof studyPlan === 'undefined') return;
-    Object.entries(studyPlan).forEach(([semNum, sem]) => {
-        if (!gradesData[semNum]) gradesData[semNum] = {};
-        sem.subjects.forEach(subject => {
-            if (!gradesData[semNum][subject.id]) {
-                gradesData[semNum][subject.id] = createDefaultGradeEntry(subject);
-            }
+    Object.entries(studyPlan).forEach(([sem, s]) => {
+        if (!gradesData[sem]) gradesData[sem] = {};
+        s.subjects.forEach(sub => {
+            if (!gradesData[sem][sub.id])
+                gradesData[sem][sub.id] = defaultEntry(sub);
         });
     });
 }
 
-function createDefaultGradeEntry(subject) {
-    const isPassFail = PASS_FAIL_SUBJECTS.some(pf =>
-        subject.name.toLowerCase().includes(pf.toLowerCase())
+function defaultEntry(subject) {
+    const isPF = PASS_FAIL_SUBJECTS.some(k =>
+        subject.name.toLowerCase().includes(k)
     ) || subject.type === 'TRABAJO DE GRADO';
-
-    if (isPassFail) {
-        return { type: 'pass_fail', passFail: null };
-    }
+    if (isPF) return { type: 'pass_fail', passFail: null };
     return {
         type: 'graded',
         components: [
-            { id: generateId(), name: 'Nota 1', weight: 33, grade: null },
-            { id: generateId(), name: 'Nota 2', weight: 33, grade: null },
-            { id: generateId(), name: 'Nota 3', weight: 34, grade: null }
+            { id: gid(), name: 'Corte 1', weight: 33, grade: null },
+            { id: gid(), name: 'Corte 2', weight: 33, grade: null },
+            { id: gid(), name: 'Corte 3', weight: 34, grade: null },
         ]
     };
 }
 
-// ============================================
-// CÁLCULOS
-// ============================================
+function gid() { return '_' + Math.random().toString(36).slice(2, 9); }
 
-function calcSubjectAverage(entry) {
+// ── Cálculos ──────────────────────────────────
+
+function calcSubjectAvg(entry) {
     if (!entry || entry.type === 'pass_fail') return null;
-    const comps = entry.components || [];
-    const filled = comps.filter(c => c.grade !== null && c.grade !== '');
-    if (filled.length === 0) return null;
-
-    const totalWeight = filled.reduce((s, c) => s + parseFloat(c.weight || 0), 0);
-    if (totalWeight === 0) return null;
-
-    const weighted = filled.reduce((s, c) => s + parseFloat(c.grade) * parseFloat(c.weight || 0), 0);
-    return weighted / totalWeight;
+    const filled = (entry.components || []).filter(c => c.grade !== null && c.grade !== '');
+    if (!filled.length) return null;
+    const wSum = filled.reduce((s, c) => s + +c.weight, 0);
+    if (!wSum) return null;
+    return filled.reduce((s, c) => s + +c.grade * +c.weight, 0) / wSum;
 }
 
-function calcSemesterAverage(semNum) {
+function calcSemAvg(semNum) {
     const sem = studyPlan[semNum];
     if (!sem) return null;
-    const semGrades = gradesData[semNum] || {};
-
-    let totalWeightedSum = 0;
-    let totalCredits = 0;
-
-    sem.subjects.forEach(subject => {
-        const entry = semGrades[subject.id];
-        if (!entry) return;
-
-        if (entry.type === 'pass_fail') {
-            // Las materias pass/fail no cuentan para promedio numérico
-            return;
-        }
-
-        const avg = calcSubjectAverage(entry);
-        if (avg !== null) {
-            totalWeightedSum += avg * subject.credits;
-            totalCredits += subject.credits;
-        }
+    let wSum = 0, cSum = 0;
+    sem.subjects.forEach(sub => {
+        const e = (gradesData[semNum] || {})[sub.id];
+        const avg = calcSubjectAvg(e);
+        if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
     });
-
-    if (totalCredits === 0) return null;
-    return totalWeightedSum / totalCredits;
+    return cSum ? wSum / cSum : null;
 }
 
-function calcOverallAverage() {
-    let totalWeightedSum = 0;
-    let totalCredits = 0;
-
-    Object.keys(studyPlan).forEach(semNum => {
-        const sem = studyPlan[semNum];
-        if (sem.status !== 'completed' && sem.status !== 'current') return;
-        const semGrades = gradesData[semNum] || {};
-
-        sem.subjects.forEach(subject => {
-            const entry = semGrades[subject.id];
-            if (!entry || entry.type === 'pass_fail') return;
-            const avg = calcSubjectAverage(entry);
-            if (avg !== null) {
-                totalWeightedSum += avg * subject.credits;
-                totalCredits += subject.credits;
-            }
+function calcOverallAvg() {
+    let wSum = 0, cSum = 0;
+    Object.keys(studyPlan).forEach(sem => {
+        if (!['completed','current'].includes(studyPlan[sem].status)) return;
+        studyPlan[sem].subjects.forEach(sub => {
+            const e = (gradesData[sem] || {})[sub.id];
+            const avg = calcSubjectAvg(e);
+            if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
         });
     });
-
-    if (totalCredits === 0) return null;
-    return totalWeightedSum / totalCredits;
+    return cSum ? wSum / cSum : null;
 }
 
-function calcNeededGrade(entry, targetFinal) {
-    // Calcula cuánto necesitas en los componentes sin nota para llegar al objetivo
+function neededFor(entry, target) {
     if (!entry || entry.type === 'pass_fail') return null;
     const comps = entry.components || [];
-
-    const filledWeight = comps
-        .filter(c => c.grade !== null && c.grade !== '')
-        .reduce((s, c) => s + parseFloat(c.weight), 0);
-    const filledContrib = comps
-        .filter(c => c.grade !== null && c.grade !== '')
-        .reduce((s, c) => s + parseFloat(c.grade) * parseFloat(c.weight), 0);
-
-    const pendingWeight = 100 - filledWeight;
-    if (pendingWeight <= 0) return null;
-
-    const needed = (targetFinal * 100 - filledContrib) / pendingWeight;
-    return needed;
+    const donePct = comps.filter(c => c.grade !== null && c.grade !== '').reduce((s,c) => s + +c.weight, 0);
+    const doneVal = comps.filter(c => c.grade !== null && c.grade !== '').reduce((s,c) => s + +c.grade * +c.weight, 0);
+    const pending = comps.filter(c => c.grade === null || c.grade === '').reduce((s,c) => s + +c.weight, 0);
+    if (pending <= 0) return null;
+    const totalW = donePct + pending;
+    return (target * totalW - doneVal) / pending;
 }
 
-// ============================================
-// RENDER PRINCIPAL — Vista de Notas
-// ============================================
+// ── Colores ───────────────────────────────────
+
+function gradeClass(g) {
+    if (g === null || g === undefined) return '';
+    if (g >= 4.5) return 'gn-excel';
+    if (g >= 4.0) return 'gn-good';
+    if (g >= 3.5) return 'gn-ok';
+    if (g >= 3.0) return 'gn-pass';
+    return 'gn-fail';
+}
+function gradeColor(g) {
+    if (g === null) return '#adb5bd';
+    if (g >= 4.5) return '#2e7d32';
+    if (g >= 4.0) return '#388e3c';
+    if (g >= 3.5) return '#f9a825';
+    if (g >= 3.0) return '#ffa000';
+    return '#d32f2f';
+}
+function gradeEmoji(g) {
+    if (g === null) return '';
+    if (g >= 4.5) return '🏆';
+    if (g >= 4.0) return '⭐';
+    if (g >= 3.5) return '✅';
+    if (g >= 3.0) return '⚠️';
+    return '❌';
+}
+
+// ── Render principal ──────────────────────────
 
 function renderGradesView() {
     ensureGradesStructure();
     const container = document.getElementById('gradesViewContainer');
     if (!container) return;
 
-    const overallAvg = calcOverallAverage();
+    const overall = calcOverallAvg();
     const semNums = Object.keys(studyPlan)
-        .filter(n => studyPlan[n].subjects && studyPlan[n].subjects.length > 0)
-        .sort((a, b) => parseInt(a) - parseInt(b));
+        .filter(n => studyPlan[n].subjects && studyPlan[n].subjects.length)
+        .sort((a,b) => +a - +b);
 
-    // Header con promedio global
     container.innerHTML = `
-        <div class="grades-overall-banner">
-            <div class="grades-overall-left">
-                <div class="grades-overall-label">Promedio Acumulado</div>
-                <div class="grades-overall-value ${getGradeColorClass(overallAvg)}">
-                    ${overallAvg !== null ? overallAvg.toFixed(2) : '—'}
+        <div class="gn-banner" id="gn-banner">
+            <div class="gn-banner-left">
+                <div class="gn-banner-label">Promedio acumulado</div>
+                <div class="gn-banner-value ${gradeClass(overall)}" id="gn-overall-val">
+                    ${overall !== null ? overall.toFixed(2) : '—'}
                 </div>
-                <div class="grades-overall-sub">Ponderado por créditos (materias calificadas)</div>
+                <div class="gn-banner-sub">ponderado por créditos ${gradeEmoji(overall)}</div>
             </div>
-            <div class="grades-overall-right">
-                <div style="font-size:0.8rem; color: var(--text-secondary); margin-bottom:6px;">
-                    ESCALA: 0.0 – 5.0 &nbsp;|&nbsp; Mínimo aprobatorio: <strong>3.0</strong>
+            <div class="gn-banner-bar-wrap">
+                <div class="gn-banner-bar-labels">
+                    <span>0</span><span>1</span><span>2</span>
+                    <span class="gn-min-mark">3 mín</span><span>4</span><span>5</span>
                 </div>
-                <div class="grades-scale-bar">
-                    <div class="grades-scale-fill" style="width:${overallAvg !== null ? (overallAvg/5)*100 : 0}%;
-                         background:${getGradeColor(overallAvg)}"></div>
+                <div class="gn-banner-track">
+                    <div class="gn-min-line"></div>
+                    <div class="gn-banner-fill" id="gn-overall-fill"
+                         style="width:${overall !== null ? (overall/5)*100 : 0}%;background:${gradeColor(overall)}">
+                    </div>
                 </div>
-                ${overallAvg !== null ? `
-                <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:4px;">
-                    ${overallAvg >= 4.5 ? '🏆 Excelente' : overallAvg >= 4.0 ? '⭐ Muy bien' : overallAvg >= 3.5 ? '✅ Bien' : overallAvg >= 3.0 ? '⚠️ Aprobando' : '❌ En riesgo'}
-                </div>` : ''}
             </div>
         </div>
+        <div id="gn-semesters">
+            ${semNums.map(n => buildSemesterBlock(n)).join('')}
+        </div>`;
 
-        <div id="gradesSemestersContainer">
-            ${semNums.map(n => renderGradesSemesterCard(n)).join('')}
-        </div>
-    `;
+    attachAllListeners();
 }
 
-function renderGradesSemesterCard(semNum) {
-    const sem = studyPlan[semNum];
-    const semGrades = gradesData[semNum] || {};
-    const semAvg = calcSemesterAverage(semNum);
-    const statusLabel = { completed: 'Completado', current: 'Cursando', pending: 'Pendiente' }[sem.status] || 'Pendiente';
-    const isExpanded = sem.status === 'current' || sem.status === 'completed';
+// ── Semestre ──────────────────────────────────
+
+function buildSemesterBlock(semNum) {
+    const sem   = studyPlan[semNum];
+    const avg   = calcSemAvg(semNum);
+    const label = { completed:'Completado', current:'Cursando', pending:'Pendiente' }[sem.status] || 'Pendiente';
+    const open  = sem.status !== 'pending';
 
     return `
-        <div class="grades-semester-card ${sem.status}" id="grades-sem-${semNum}">
-            <div class="grades-semester-header" onclick="toggleGradesSemester(${semNum})">
-                <div class="grades-semester-title-group">
-                    <span class="semester-status status-${sem.status}">${statusLabel}</span>
-                    <span class="grades-semester-title">Semestre ${semNum}</span>
-                    <span class="grades-semester-count">${sem.subjects.length} materias</span>
-                </div>
-                <div class="grades-semester-avg-group">
-                    ${semAvg !== null ? `
-                        <div class="grades-sem-avg-badge ${getGradeColorClass(semAvg)}">
-                            Promedio: ${semAvg.toFixed(2)}
-                        </div>` : `<div class="grades-sem-avg-badge empty">Sin notas</div>`
-                    }
-                    <span class="semester-toggle" id="grades-toggle-${semNum}">${isExpanded ? '▼' : '▶'}</span>
-                </div>
+    <div class="gn-sem-block ${sem.status}" id="gn-sem-${semNum}">
+        <div class="gn-sem-header" data-sem="${semNum}">
+            <div class="gn-sem-left">
+                <span class="semester-status status-${sem.status}">${label}</span>
+                <span class="gn-sem-title">Semestre ${semNum}</span>
+                <span class="gn-sem-count">${sem.subjects.length} materias</span>
             </div>
-            <div class="grades-semester-content ${isExpanded ? 'expanded' : ''}" id="grades-content-${semNum}">
-                ${sem.subjects.map(subject => renderGradesSubjectRow(semNum, subject)).join('')}
+            <div class="gn-sem-right">
+                <span class="gn-sem-avg ${gradeClass(avg)}" id="gn-sem-avg-${semNum}">
+                    ${avg !== null ? 'Promedio ' + avg.toFixed(2) : 'Sin notas'}
+                </span>
+                <span class="gn-chevron" id="gn-chev-${semNum}">${open ? '▼' : '▶'}</span>
             </div>
-        </div>`;
+        </div>
+        <div class="gn-sem-body ${open ? 'open' : ''}" id="gn-body-${semNum}">
+            ${sem.subjects.map(sub => buildSubjectCard(semNum, sub)).join('')}
+        </div>
+    </div>`;
 }
 
-function renderGradesSubjectRow(semNum, subject) {
-    const entry = (gradesData[semNum] || {})[subject.id];
+// ── Tarjeta de materia ────────────────────────
+
+function buildSubjectCard(semNum, sub) {
+    const entry = (gradesData[semNum] || {})[sub.id];
     if (!entry) return '';
-
-    if (entry.type === 'pass_fail') {
-        return renderPassFailRow(semNum, subject, entry);
-    }
-    return renderGradedRow(semNum, subject, entry);
+    if (entry.type === 'pass_fail') return buildPassFailCard(semNum, sub, entry);
+    return buildGradedCard(semNum, sub, entry);
 }
 
-function renderPassFailRow(semNum, subject, entry) {
+function buildPassFailCard(semNum, sub, entry) {
+    const pf = entry.passFail;
     return `
-        <div class="grades-subject-row pass-fail-row" id="grades-row-${subject.id}">
-            <div class="grades-subject-info">
-                <div class="grades-subject-name">${subject.name}</div>
-                <div class="grades-subject-meta">${subject.credits} cr · Solo aprobado/reprobado</div>
+    <div class="gn-card pf-card" id="gn-card-${sub.id}">
+        <div class="gn-card-top">
+            <div>
+                <div class="gn-sub-name">${sub.name}</div>
+                <div class="gn-sub-meta">${sub.credits} cr · Solo aprobado/reprobado</div>
             </div>
-            <div class="grades-subject-controls">
-                <select class="grades-pf-select ${entry.passFail === 'approved' ? 'pf-approved' : entry.passFail === 'failed' ? 'pf-failed' : ''}"
-                        onchange="updatePassFail('${semNum}', '${subject.id}', this.value)">
-                    <option value="" ${!entry.passFail ? 'selected' : ''}>— Sin registrar —</option>
-                    <option value="approved" ${entry.passFail === 'approved' ? 'selected' : ''}>✅ Aprobado</option>
-                    <option value="failed" ${entry.passFail === 'failed' ? 'selected' : ''}>❌ Reprobado</option>
-                </select>
-            </div>
-        </div>`;
+            <select class="gn-pf-select ${pf === 'approved' ? 'pf-yes' : pf === 'failed' ? 'pf-no' : ''}"
+                    data-sem="${semNum}" data-subid="${sub.id}">
+                <option value=""         ${!pf              ? 'selected':''}>— Sin registrar —</option>
+                <option value="approved" ${pf==='approved'  ? 'selected':''}>✅ Aprobado</option>
+                <option value="failed"   ${pf==='failed'    ? 'selected':''}>❌ Reprobado</option>
+            </select>
+        </div>
+    </div>`;
 }
 
-function renderGradedRow(semNum, subject, entry) {
-    const avg = calcSubjectAverage(entry);
-    const comps = entry.components || [];
-    const totalWeight = comps.reduce((s, c) => s + parseFloat(c.weight || 0), 0);
-    const weightOk = Math.abs(totalWeight - 100) < 0.5;
+function buildGradedCard(semNum, sub, entry) {
+    const comps  = entry.components || [];
+    const avg    = calcSubjectAvg(entry);
+    const totalW = comps.reduce((s,c) => s + +c.weight, 0);
+    const warnW  = Math.abs(totalW - 100) > 0.5;
+    const n3  = neededFor(entry, 3.0);
+    const n35 = neededFor(entry, 3.5);
+    const n4  = neededFor(entry, 4.0);
 
-    // Calcular qué necesito para aprobar con 3.0
-    const neededFor3 = calcNeededGrade(entry, 3.0);
-    const neededFor35 = calcNeededGrade(entry, 3.5);
-    const neededFor4 = calcNeededGrade(entry, 4.0);
+    const chipHtml = (val, label) => {
+        if (val === null) return '';
+        if (val > 5)  return `<span class="gn-chip gn-chip-impossible">${label} → imposible 😞</span>`;
+        if (val < 0)  return `<span class="gn-chip gn-chip-done">${label} → ya está ✓</span>`;
+        return `<span class="gn-chip">${label} → <strong>${val.toFixed(2)}</strong></span>`;
+    };
 
     return `
-        <div class="grades-subject-row" id="grades-row-${subject.id}">
-            <div class="grades-subject-header-row">
-                <div class="grades-subject-info">
-                    <div class="grades-subject-name">${subject.name}</div>
-                    <div class="grades-subject-meta">${subject.credits} cr · ${subject.type}</div>
+    <div class="gn-card" id="gn-card-${sub.id}" data-sem="${semNum}" data-subid="${sub.id}">
+        <div class="gn-card-top gn-card-toggle" data-subid="${sub.id}">
+            <div class="gn-card-top-left">
+                <div class="gn-sub-name">${sub.name}</div>
+                <div class="gn-sub-meta">${sub.credits} cr · ${sub.type}</div>
+            </div>
+            <div class="gn-card-top-right">
+                <div class="gn-avg-big ${gradeClass(avg)}" id="gn-avg-${sub.id}">
+                    ${avg !== null ? avg.toFixed(2) : '—'}
                 </div>
-                <div class="grades-subject-summary">
-                    ${avg !== null ? `
-                        <div class="grades-final-avg ${getGradeColorClass(avg)}">${avg.toFixed(2)}</div>
-                        <div class="grades-final-label">Promedio actual</div>
-                    ` : `<div class="grades-final-avg empty">—</div><div class="grades-final-label">Sin notas</div>`}
+                <div class="gn-avg-label">${avg !== null ? gradeEmoji(avg) + ' promedio' : 'sin notas'}</div>
+                <span class="gn-expand-icon" id="gn-exp-${sub.id}">▼</span>
+            </div>
+        </div>
+        <div class="gn-card-body open" id="gn-cbody-${sub.id}">
+            <div class="gn-comps-header">
+                <span>Corte</span><span>Peso</span><span>Nota</span><span>Aporte</span><span></span>
+            </div>
+            <div class="gn-comps" id="gn-comps-${sub.id}">
+                ${comps.map(c => buildCompRow(semNum, sub.id, c)).join('')}
+            </div>
+            <div class="gn-totals-row" id="gn-totals-${sub.id}">
+                <span class="gn-totals-label">Total</span>
+                <span class="gn-totals-weight ${warnW ? 'gn-warn':'gn-ok'}" id="gn-tw-${sub.id}">
+                    ${totalW.toFixed(0)}%${warnW ? ' ⚠️':' ✓'}
+                </span>
+                <span></span>
+                <span class="gn-totals-avg ${gradeClass(avg)}" id="gn-ta-${sub.id}">
+                    ${avg !== null ? avg.toFixed(3) : '—'}
+                </span>
+                <span></span>
+            </div>
+            <div class="gn-card-actions">
+                <button class="btn btn-sm btn-secondary gn-add-comp"
+                        data-sem="${semNum}" data-subid="${sub.id}">＋ Agregar corte</button>
+                <div class="gn-chips" id="gn-chips-${sub.id}">
+                    ${(n3 !== null || avg !== null) ? `
+                        <span class="gn-chips-label">Para llegar a:</span>
+                        ${chipHtml(n3,  '3.0')}
+                        ${chipHtml(n35, '3.5')}
+                        ${chipHtml(n4,  '4.0')}` : ''}
                 </div>
             </div>
-
-            <!-- Tabla de componentes -->
-            <div class="grades-components-table">
-                <div class="grades-comp-header">
-                    <span>Componente</span>
-                    <span>% Peso</span>
-                    <span>Nota (0–5)</span>
-                    <span>Aporte</span>
-                    <span></span>
-                </div>
-                ${comps.map((comp, idx) => `
-                    <div class="grades-comp-row">
-                        <input class="grades-comp-name" type="text" value="${comp.name}"
-                               onchange="updateComponent('${semNum}', '${subject.id}', '${comp.id}', 'name', this.value)"
-                               placeholder="Nombre">
-                        <div class="grades-weight-cell">
-                            <input class="grades-comp-weight" type="number" min="0" max="100" step="1"
-                                   value="${comp.weight}"
-                                   onchange="updateComponent('${semNum}', '${subject.id}', '${comp.id}', 'weight', this.value)">
-                            <span>%</span>
-                        </div>
-                        <input class="grades-comp-grade ${comp.grade !== null && comp.grade !== '' ? getGradeColorClass(parseFloat(comp.grade)) : ''}"
-                               type="number" min="0" max="5" step="0.01"
-                               value="${comp.grade !== null && comp.grade !== '' ? comp.grade : ''}"
-                               placeholder="—"
-                               onchange="updateComponent('${semNum}', '${subject.id}', '${comp.id}', 'grade', this.value)"
-                               oninput="liveUpdateComponent('${semNum}', '${subject.id}', '${comp.id}', 'grade', this.value)">
-                        <span class="grades-comp-contrib">
-                            ${comp.grade !== null && comp.grade !== '' ? ((parseFloat(comp.grade) * parseFloat(comp.weight)) / 100).toFixed(3) : '—'}
-                        </span>
-                        <button class="grades-remove-comp" onclick="removeComponent('${semNum}', '${subject.id}', '${comp.id}')"
-                                title="Eliminar componente">×</button>
-                    </div>`).join('')}
-
-                <!-- Fila de totales -->
-                <div class="grades-comp-totals">
-                    <span>Total</span>
-                    <span class="${weightOk ? 'weight-ok' : 'weight-warn'}">${totalWeight.toFixed(0)}%${!weightOk ? ' ⚠️' : ' ✓'}</span>
-                    <span></span>
-                    <span class="${avg !== null ? getGradeColorClass(avg) : ''}">${avg !== null ? avg.toFixed(3) : '—'}</span>
-                    <span></span>
-                </div>
-            </div>
-
-            <!-- Acciones -->
-            <div class="grades-subject-actions">
-                <button class="btn btn-sm btn-secondary" onclick="addComponent('${semNum}', '${subject.id}')">
-                    ＋ Agregar componente
-                </button>
-                ${neededFor3 !== null ? `
-                <div class="grades-needed-group">
-                    <span class="grades-needed-label">Para llegar a:</span>
-                    ${neededFor3 <= 5 && neededFor3 >= 0 ? `<span class="grades-needed-chip ${neededFor3 > 5 ? 'impossible' : ''}">3.0 → necesitas <strong>${neededFor3.toFixed(2)}</strong></span>` : '<span class="grades-needed-chip impossible">3.0 → imposible</span>'}
-                    ${neededFor35 !== null && neededFor35 <= 5 && neededFor35 >= 0 ? `<span class="grades-needed-chip">3.5 → <strong>${neededFor35.toFixed(2)}</strong></span>` : ''}
-                    ${neededFor4 !== null && neededFor4 <= 5 && neededFor4 >= 0 ? `<span class="grades-needed-chip">4.0 → <strong>${neededFor4.toFixed(2)}</strong></span>` : ''}
-                </div>` : ''}
-            </div>
-        </div>`;
+        </div>
+    </div>`;
 }
 
-// ============================================
-// ACTUALIZACIÓN EN TIEMPO REAL
-// ============================================
+function buildCompRow(semNum, subId, comp) {
+    const contrib = (comp.grade !== null && comp.grade !== '')
+        ? ((+comp.grade * +comp.weight) / 100).toFixed(3) : '—';
+    return `
+    <div class="gn-comp-row" id="gn-comp-${comp.id}"
+         data-sem="${semNum}" data-subid="${subId}" data-compid="${comp.id}">
+        <input class="gn-in gn-in-name" type="text"
+               value="${comp.name}" placeholder="Nombre" data-field="name">
+        <div class="gn-weight-wrap">
+            <input class="gn-in gn-in-weight" type="number"
+                   min="0" max="100" step="1" value="${comp.weight}" data-field="weight">
+            <span class="gn-pct">%</span>
+        </div>
+        <input class="gn-in gn-in-grade ${comp.grade !== null && comp.grade !== '' ? gradeClass(+comp.grade) : ''}"
+               type="number" min="0" max="5" step="0.01"
+               value="${comp.grade !== null && comp.grade !== '' ? comp.grade : ''}"
+               placeholder="—" data-field="grade">
+        <span class="gn-contrib" id="gn-ctb-${comp.id}">${contrib}</span>
+        <button class="gn-del-comp" data-compid="${comp.id}"
+                data-sem="${semNum}" data-subid="${subId}" title="Eliminar corte">×</button>
+    </div>`;
+}
 
-function updateComponent(semNum, subjectId, compId, field, value) {
-    if (!gradesData[semNum]) gradesData[semNum] = {};
-    const entry = gradesData[semNum][subjectId];
-    if (!entry || !entry.components) return;
+// ── Event listeners ───────────────────────────
 
-    const comp = entry.components.find(c => c.id === compId);
+function attachAllListeners() {
+    const root = document.getElementById('gradesViewContainer');
+    if (!root) return;
+
+    root.querySelectorAll('.gn-sem-header').forEach(h =>
+        h.addEventListener('click', () => toggleSemBlock(h.dataset.sem))
+    );
+
+    root.querySelectorAll('.gn-card-toggle').forEach(t =>
+        t.addEventListener('click', () => toggleCard(t.dataset.subid))
+    );
+
+    root.querySelectorAll('.gn-pf-select').forEach(sel =>
+        sel.addEventListener('change', () => {
+            const { sem, subid } = sel.dataset;
+            gradesData[sem][subid].passFail = sel.value || null;
+            sel.className = `gn-pf-select ${sel.value === 'approved' ? 'pf-yes' : sel.value === 'failed' ? 'pf-no' : ''}`;
+            saveGradesToStorage();
+        })
+    );
+
+    // Delegación en cada contenedor de componentes
+    root.querySelectorAll('.gn-comps').forEach(compsEl => {
+        compsEl.addEventListener('input', e => {
+            const row = e.target.closest('.gn-comp-row');
+            if (!row) return;
+            handleCompInput(row.dataset.sem, row.dataset.subid, row.dataset.compid,
+                            e.target.dataset.field, e.target.value, e.target);
+        });
+        compsEl.addEventListener('change', e => {
+            const row = e.target.closest('.gn-comp-row');
+            if (!row) return;
+            handleCompChange(row.dataset.sem, row.dataset.subid);
+        });
+    });
+
+    root.querySelectorAll('.gn-del-comp').forEach(btn =>
+        btn.addEventListener('click', () =>
+            deleteComp(btn.dataset.sem, btn.dataset.subid, btn.dataset.compid))
+    );
+
+    root.querySelectorAll('.gn-add-comp').forEach(btn =>
+        btn.addEventListener('click', () => addComp(btn.dataset.sem, btn.dataset.subid))
+    );
+}
+
+// ── Lógica de edición ─────────────────────────
+
+function handleCompInput(sem, subId, compId, field, rawVal, inputEl) {
+    const entry = gradesData[sem] && gradesData[sem][subId];
+    const comp  = entry && entry.components && entry.components.find(c => c.id === compId);
     if (!comp) return;
 
     if (field === 'grade') {
-        comp.grade = value === '' ? null : Math.min(5, Math.max(0, parseFloat(value)));
+        const val = rawVal === '' ? null : Math.min(5, Math.max(0, +rawVal));
+        comp.grade = val;
+        inputEl.className = `gn-in gn-in-grade ${val !== null ? gradeClass(val) : ''}`;
+        const ctb = document.getElementById(`gn-ctb-${compId}`);
+        if (ctb) ctb.textContent = val !== null ? ((val * +comp.weight) / 100).toFixed(3) : '—';
     } else if (field === 'weight') {
-        comp.weight = Math.min(100, Math.max(0, parseFloat(value) || 0));
-    } else {
-        comp[field] = value;
+        comp.weight = Math.min(100, Math.max(0, +rawVal || 0));
+    } else if (field === 'name') {
+        comp.name = rawVal;
     }
 
+    refreshCardSummary(sem, subId);
+}
+
+function handleCompChange(sem, subId) {
     saveGradesToStorage();
-    refreshGradesSubjectRow(semNum, subjectId);
-    refreshSemesterAvgBadge(semNum);
+    refreshSemAvgBadge(sem);
     refreshOverallBanner();
 }
 
-function liveUpdateComponent(semNum, subjectId, compId, field, value) {
-    // Actualización visual instantánea sin guardar (guarda el onchange)
-    updateComponent(semNum, subjectId, compId, field, value);
-}
-
-function addComponent(semNum, subjectId) {
-    if (!gradesData[semNum]) gradesData[semNum] = {};
-    const entry = gradesData[semNum][subjectId];
+function addComp(sem, subId) {
+    const entry = gradesData[sem] && gradesData[sem][subId];
     if (!entry || !entry.components) return;
 
-    const usedWeight = entry.components.reduce((s, c) => s + parseFloat(c.weight || 0), 0);
-    const remaining = Math.max(0, 100 - usedWeight);
+    const used = entry.components.reduce((s,c) => s + +c.weight, 0);
+    const rem  = Math.max(0, Math.round(100 - used));
+    const num  = entry.components.length + 1;
+    const newC = { id: gid(), name: `Corte ${num}`, weight: rem, grade: null };
+    entry.components.push(newC);
 
-    entry.components.push({
-        id: generateId(),
-        name: `Nota ${entry.components.length + 1}`,
-        weight: remaining,
-        grade: null
-    });
+    const compsEl = document.getElementById(`gn-comps-${subId}`);
+    if (compsEl) {
+        compsEl.insertAdjacentHTML('beforeend', buildCompRow(sem, subId, newC));
+        const newRow = document.getElementById(`gn-comp-${newC.id}`);
+        if (newRow) {
+            newRow.querySelector('.gn-del-comp').addEventListener('click', () =>
+                deleteComp(sem, subId, newC.id));
+        }
+        // listeners de input/change ya en el padre por delegación ✓
+    }
 
     saveGradesToStorage();
-    refreshGradesSubjectRow(semNum, subjectId);
+    refreshCardSummary(sem, subId);
 }
 
-function removeComponent(semNum, subjectId, compId) {
-    if (!gradesData[semNum]) return;
-    const entry = gradesData[semNum][subjectId];
+function deleteComp(sem, subId, compId) {
+    const entry = gradesData[sem] && gradesData[sem][subId];
     if (!entry || !entry.components) return;
-    if (entry.components.length <= 1) { alert('Debe haber al menos 1 componente.'); return; }
-
+    if (entry.components.length <= 1) { alert('Debe haber al menos 1 corte.'); return; }
     entry.components = entry.components.filter(c => c.id !== compId);
+    const rowEl = document.getElementById(`gn-comp-${compId}`);
+    if (rowEl) rowEl.remove();
     saveGradesToStorage();
-    refreshGradesSubjectRow(semNum, subjectId);
-    refreshSemesterAvgBadge(semNum);
+    refreshCardSummary(sem, subId);
+    refreshSemAvgBadge(sem);
     refreshOverallBanner();
 }
 
-function updatePassFail(semNum, subjectId, value) {
-    if (!gradesData[semNum]) gradesData[semNum] = {};
-    const entry = gradesData[semNum][subjectId];
+// ── Refrescos parciales ───────────────────────
+
+function refreshCardSummary(sem, subId) {
+    const entry  = gradesData[sem] && gradesData[sem][subId];
     if (!entry) return;
-    entry.passFail = value || null;
-    saveGradesToStorage();
-    // Actualizar clase visual del select
-    const sel = document.querySelector(`#grades-row-${subjectId} .grades-pf-select`);
-    if (sel) {
-        sel.className = `grades-pf-select ${value === 'approved' ? 'pf-approved' : value === 'failed' ? 'pf-failed' : ''}`;
+    const comps  = entry.components || [];
+    const avg    = calcSubjectAvg(entry);
+    const totalW = comps.reduce((s,c) => s + +c.weight, 0);
+    const warnW  = Math.abs(totalW - 100) > 0.5;
+
+    const avgEl = document.getElementById(`gn-avg-${subId}`);
+    if (avgEl) { avgEl.className = `gn-avg-big ${gradeClass(avg)}`; avgEl.textContent = avg !== null ? avg.toFixed(2) : '—'; }
+
+    const twEl = document.getElementById(`gn-tw-${subId}`);
+    if (twEl) { twEl.className = `gn-totals-weight ${warnW ? 'gn-warn':'gn-ok'}`; twEl.textContent = `${totalW.toFixed(0)}%${warnW ? ' ⚠️':' ✓'}`; }
+
+    const taEl = document.getElementById(`gn-ta-${subId}`);
+    if (taEl) { taEl.className = `gn-totals-avg ${gradeClass(avg)}`; taEl.textContent = avg !== null ? avg.toFixed(3) : '—'; }
+
+    const chipsEl = document.getElementById(`gn-chips-${subId}`);
+    if (chipsEl) {
+        const n3 = neededFor(entry,3.0), n35 = neededFor(entry,3.5), n4 = neededFor(entry,4.0);
+        const chipHtml = (val, label) => {
+            if (val === null) return '';
+            if (val > 5)  return `<span class="gn-chip gn-chip-impossible">${label} → imposible 😞</span>`;
+            if (val < 0)  return `<span class="gn-chip gn-chip-done">${label} → ya está ✓</span>`;
+            return `<span class="gn-chip">${label} → <strong>${val.toFixed(2)}</strong></span>`;
+        };
+        chipsEl.innerHTML = (n3 !== null || avg !== null) ? `
+            <span class="gn-chips-label">Para llegar a:</span>
+            ${chipHtml(n3,'3.0')}${chipHtml(n35,'3.5')}${chipHtml(n4,'4.0')}` : '';
     }
 }
 
-// ============================================
-// REFRESH PARCIAL (sin re-render completo)
-// ============================================
-
-function refreshGradesSubjectRow(semNum, subjectId) {
-    const rowEl = document.getElementById(`grades-row-${subjectId}`);
-    if (!rowEl) return;
-    const subject = findSubjectById(semNum, subjectId);
-    if (!subject) return;
-    const newHtml = renderGradesSubjectRow(semNum, subject);
-    const temp = document.createElement('div');
-    temp.innerHTML = newHtml;
-    rowEl.replaceWith(temp.firstChild);
-}
-
-function refreshSemesterAvgBadge(semNum) {
-    const semAvg = calcSemesterAverage(semNum);
-    const badge = document.querySelector(`#grades-sem-${semNum} .grades-sem-avg-badge`);
-    if (!badge) return;
-    if (semAvg !== null) {
-        badge.className = `grades-sem-avg-badge ${getGradeColorClass(semAvg)}`;
-        badge.textContent = `Promedio: ${semAvg.toFixed(2)}`;
-    } else {
-        badge.className = 'grades-sem-avg-badge empty';
-        badge.textContent = 'Sin notas';
-    }
+function refreshSemAvgBadge(semNum) {
+    const avg = calcSemAvg(semNum);
+    const el  = document.getElementById(`gn-sem-avg-${semNum}`);
+    if (el) { el.className = `gn-sem-avg ${gradeClass(avg)}`; el.textContent = avg !== null ? `Promedio ${avg.toFixed(2)}` : 'Sin notas'; }
 }
 
 function refreshOverallBanner() {
-    const overallAvg = calcOverallAverage();
-    const valEl = document.querySelector('.grades-overall-value');
-    const fillEl = document.querySelector('.grades-scale-fill');
-    if (valEl) {
-        valEl.className = `grades-overall-value ${getGradeColorClass(overallAvg)}`;
-        valEl.textContent = overallAvg !== null ? overallAvg.toFixed(2) : '—';
-    }
-    if (fillEl) {
-        fillEl.style.width = overallAvg !== null ? `${(overallAvg / 5) * 100}%` : '0%';
-        fillEl.style.background = getGradeColor(overallAvg);
-    }
+    const avg = calcOverallAvg();
+    const v = document.getElementById('gn-overall-val');
+    const f = document.getElementById('gn-overall-fill');
+    if (v) { v.className = `gn-banner-value ${gradeClass(avg)}`; v.textContent = avg !== null ? avg.toFixed(2) : '—'; }
+    if (f) { f.style.width = avg !== null ? `${(avg/5)*100}%` : '0%'; f.style.background = gradeColor(avg); }
 }
 
-function findSubjectById(semNum, subjectId) {
-    return (studyPlan[semNum]?.subjects || []).find(s => s.id === subjectId);
+// ── Acordeón ──────────────────────────────────
+
+function toggleSemBlock(semNum) {
+    const body = document.getElementById(`gn-body-${semNum}`);
+    const chev = document.getElementById(`gn-chev-${semNum}`);
+    if (!body) return;
+    const open = body.classList.toggle('open');
+    if (chev) chev.textContent = open ? '▼' : '▶';
 }
 
-// ============================================
-// ACORDEÓN DE SEMESTRES
-// ============================================
-
-function toggleGradesSemester(semNum) {
-    const content = document.getElementById(`grades-content-${semNum}`);
-    const toggle = document.getElementById(`grades-toggle-${semNum}`);
-    if (!content) return;
-    const expanded = content.classList.contains('expanded');
-    content.classList.toggle('expanded', !expanded);
-    if (toggle) toggle.textContent = expanded ? '▶' : '▼';
+function toggleCard(subId) {
+    const body = document.getElementById(`gn-cbody-${subId}`);
+    const icon = document.getElementById(`gn-exp-${subId}`);
+    if (!body) return;
+    const open = body.classList.toggle('open');
+    if (icon) icon.textContent = open ? '▼' : '▶';
 }
 
-// ============================================
-// HELPERS DE COLOR
-// ============================================
+// ── Contexto IA ───────────────────────────────
 
-function getGradeColorClass(grade) {
-    if (grade === null || grade === undefined) return '';
-    if (grade >= 4.5) return 'grade-excellent';
-    if (grade >= 4.0) return 'grade-good';
-    if (grade >= 3.5) return 'grade-ok';
-    if (grade >= 3.0) return 'grade-pass';
-    return 'grade-fail';
-}
-
-function getGradeColor(grade) {
-    if (grade === null || grade === undefined) return '#adb5bd';
-    if (grade >= 4.5) return '#2e7d32';
-    if (grade >= 4.0) return '#388e3c';
-    if (grade >= 3.5) return '#f9a825';
-    if (grade >= 3.0) return '#ffa000';
-    return '#d32f2f';
-}
-
-// ============================================
-// EXPORTAR NOTAS A CONTEXTO DEL CHAT IA
-// ============================================
-
-// Esta función es llamada desde chat.js en buildAcademicContext()
 function buildGradesContext() {
-    if (!gradesData || Object.keys(gradesData).length === 0) return null;
+    if (!gradesData || !Object.keys(gradesData).length) return null;
     ensureGradesStructure();
-
-    const semestersSummary = [];
-
-    Object.keys(studyPlan)
-        .sort((a, b) => parseInt(a) - parseInt(b))
-        .forEach(semNum => {
-            const sem = studyPlan[semNum];
-            if (!sem || !sem.subjects) return;
-
-            const semGrades = gradesData[semNum] || {};
-            const semAvg = calcSemesterAverage(semNum);
-            const subjectsSummary = [];
-
-            sem.subjects.forEach(subject => {
-                const entry = semGrades[subject.id];
-                if (!entry) return;
-
-                if (entry.type === 'pass_fail') {
-                    subjectsSummary.push({
-                        name: subject.name,
-                        credits: subject.credits,
-                        type: 'pass_fail',
-                        status: entry.passFail || 'no registrado'
-                    });
-                } else {
-                    const avg = calcSubjectAverage(entry);
-                    const components = (entry.components || []).map(c => ({
-                        name: c.name,
-                        weight: c.weight,
-                        grade: c.grade
-                    }));
-                    subjectsSummary.push({
-                        name: subject.name,
-                        credits: subject.credits,
-                        type: 'graded',
-                        average: avg !== null ? parseFloat(avg.toFixed(3)) : null,
-                        components,
-                        approved: avg !== null ? avg >= 3.0 : null
-                    });
-                }
-            });
-
-            semestersSummary.push({
-                semester: semNum,
-                status: sem.status,
-                semesterAverage: semAvg !== null ? parseFloat(semAvg.toFixed(3)) : null,
-                subjects: subjectsSummary
-            });
-        });
-
-    return {
-        overallAverage: (() => { const o = calcOverallAverage(); return o !== null ? parseFloat(o.toFixed(3)) : null; })(),
-        semestersSummary
-    };
+    const overall = calcOverallAvg();
+    const semList = Object.keys(studyPlan).sort((a,b) => +a - +b).map(sem => {
+        const semAvg = calcSemAvg(sem);
+        const subjects = studyPlan[sem].subjects.map(sub => {
+            const e = (gradesData[sem] || {})[sub.id];
+            if (!e) return null;
+            if (e.type === 'pass_fail')
+                return { name:sub.name, credits:sub.credits, type:'pass_fail', status:e.passFail||'sin registrar' };
+            const avg = calcSubjectAvg(e);
+            return { name:sub.name, credits:sub.credits, type:'graded',
+                     average: avg !== null ? +avg.toFixed(3) : null,
+                     approved: avg !== null ? avg >= 3.0 : null,
+                     components: e.components.map(c => ({ name:c.name, weight:c.weight, grade:c.grade })) };
+        }).filter(Boolean);
+        return { semester:sem, status:studyPlan[sem].status,
+                 semesterAverage: semAvg !== null ? +semAvg.toFixed(3) : null, subjects };
+    });
+    return { overallAverage: overall !== null ? +overall.toFixed(3) : null, semestersSummary: semList };
 }
 
-// ============================================
-// AUTO-INIT
-// ============================================
+// ── Auto-init ─────────────────────────────────
 
-(function waitForGradesInit() {
-    const interval = setInterval(() => {
+(function waitForInit() {
+    const t = setInterval(() => {
         if (typeof studyPlan !== 'undefined' && typeof currentUser !== 'undefined') {
-            initGrades();
-            clearInterval(interval);
+            initGrades(); clearInterval(t);
         }
     }, 500);
 })();
