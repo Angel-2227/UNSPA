@@ -115,13 +115,13 @@ function buildSemColumn(semNum, colIdx, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADE
 
     const cards = sem.subjects.map((sub, i) => {
         const top = PAD + HEADER_H + i * (CARD_H + CARD_GAP);
-        return buildSubjectCard(sub, semNum, left, top, CARD_W, CARD_H);
+        return buildMallaCard(sub, semNum, left, top, CARD_W, CARD_H);
     }).join('');
 
     return header + cards;
 }
 
-function buildSubjectCard(sub, semNum, left, top, w, h) {
+function buildMallaCard(sub, semNum, left, top, w, h) {
     const sem = studyPlan[semNum];
     const tc  = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
 

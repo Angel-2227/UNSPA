@@ -878,6 +878,9 @@ function showView(viewName, clickedEl) {
     else if (viewName === 'grades') {
     renderGradesView();
 }
+else if (viewName === 'contenido') {
+    initContenidoView();
+}
 }
 
 function scrollToSemester(semesterNum) {

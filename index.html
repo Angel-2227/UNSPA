@@ -157,9 +157,12 @@
                     <div class="nav-item" onclick="showView('malla', this)">
                         🗺️ Malla Curricular
                     </div>
+                    <div class="nav-item" onclick="showView('contenido', this)">
+                        📖 Contenido Programático
+                    </div>
                     <div class="nav-item" onclick="showView('grades', this)">
-    📝 Notas
-</div>
+                        📝 Notas
+                    </div>
 
                     <div class="nav-item" onclick="showView('config', this)">
                         ⚙️ Configuración
@@ -428,106 +431,120 @@
                         <div id="currentScheduleContent"></div>
                     </div>
                 </div>
-                
-<div id="mallaView" class="view-content" style="display: none;">
-    <div class="header-bar">
-        <div class="header-controls">
-            <div>
-                <h2 style="margin-bottom: 4px;">Malla Curricular</h2>
-                <p class="text-secondary" style="font-size:0.85rem;">
-                    El estado se toma automáticamente de tu plan · Asigna prerrequisitos con clic derecho
-                </p>
-            </div>
-            <span class="malla-stats-bar" id="mallaStatsText">—</span>
-        </div>
-    </div>
 
-    <!-- Pestañas -->
-    <div class="malla-tabs">
-        <button class="malla-tab active" id="mallaTabGen" onclick="switchMallaTab('gen')">🗺️ Malla Generada</button>
-        <button class="malla-tab" id="mallaTabPdf" onclick="switchMallaTab('pdf')">📄 Mi PDF (referencia)</button>
-    </div>
+                <div id="mallaView" class="view-content" style="display: none;">
+                    <div class="header-bar">
+                        <div class="header-controls">
+                            <div>
+                                <h2 style="margin-bottom: 4px;">Malla Curricular</h2>
+                                <p class="text-secondary" style="font-size:0.85rem;">
+                                    El estado se toma automáticamente de tu plan · Asigna prerrequisitos con clic
+                                    derecho
+                                </p>
+                            </div>
+                            <span class="malla-stats-bar" id="mallaStatsText">—</span>
+                        </div>
+                    </div>
 
-    <!-- ══ PESTAÑA: MALLA GENERADA ══ -->
-    <div id="mallaPanelGen">
-        <!-- Leyenda compacta + prereqs -->
-        <div class="malla-toolbar">
-            <div class="malla-toolbar-group">
-                <div class="malla-legend">
-                    <div class="malla-legend-item"><div class="malla-legend-dot completed"></div><span>Completada</span></div>
-                    <div class="malla-legend-item"><div class="malla-legend-dot current"></div><span>En curso</span></div>
-                    <div class="malla-legend-item">
-                        <div class="malla-legend-dot" style="background:rgba(144,164,174,0.35);border-color:#90a4ae;"></div>
-                        <span>Pendiente</span>
+                    <!-- Pestañas -->
+                    <div class="malla-tabs">
+                        <button class="malla-tab active" id="mallaTabGen" onclick="switchMallaTab('gen')">🗺️ Malla
+                            Generada</button>
+                        <button class="malla-tab" id="mallaTabPdf" onclick="switchMallaTab('pdf')">📄 Mi PDF
+                            (referencia)</button>
+                    </div>
+
+                    <!-- ══ PESTAÑA: MALLA GENERADA ══ -->
+                    <div id="mallaPanelGen">
+                        <!-- Leyenda compacta + prereqs -->
+                        <div class="malla-toolbar">
+                            <div class="malla-toolbar-group">
+                                <div class="malla-legend">
+                                    <div class="malla-legend-item">
+                                        <div class="malla-legend-dot completed"></div><span>Completada</span>
+                                    </div>
+                                    <div class="malla-legend-item">
+                                        <div class="malla-legend-dot current"></div><span>En curso</span>
+                                    </div>
+                                    <div class="malla-legend-item">
+                                        <div class="malla-legend-dot"
+                                            style="background:rgba(144,164,174,0.35);border-color:#90a4ae;"></div>
+                                        <span>Pendiente</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="malla-toolbar-group" style="border-right:none;">
+                                <span style="font-size:0.75rem;color:var(--text-secondary);">
+                                    Clic en una materia para ver detalles y asignar prerrequisitos
+                                </span>
+                                <button class="btn btn-sm btn-danger" onclick="clearAllPrereqs()"
+                                    style="font-size:0.72rem;">🗑 Borrar prereqs</button>
+                            </div>
+                        </div>
+
+                        <!-- Scroll container — altura fija, nunca expande la página -->
+                        <div class="mgc-scroll-container" id="mgcScrollContainer">
+                            <div id="mallaGeneradaContainer"></div>
+                        </div>
+                    </div>
+
+                    <!-- ══ PESTAÑA: PDF (solo lectura) ══ -->
+                    <div id="mallaPanelPdf" style="display:none;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('mallaPdfInput').click()"
+                                style="font-size:0.82rem;padding:6px 14px;">
+                                📂 Cargar PDF de mi malla
+                            </button>
+                            <span id="mallaPdfName" style="font-size:0.8rem;color:var(--text-secondary);"></span>
+                            <button id="mallaPdfClearBtn" class="btn btn-danger" onclick="clearMallaPDF()"
+                                style="font-size:0.75rem;padding:4px 10px;display:none;">
+                                🗑 Quitar
+                            </button>
+                            <input type="file" id="mallaPdfInput" accept=".pdf" style="display:none">
+                        </div>
+                        <!-- Controles de zoom únicamente — sin marcado -->
+                        <div class="malla-toolbar">
+                            <div class="malla-toolbar-group">
+                                <span
+                                    style="font-size:0.75rem;color:var(--text-secondary);font-weight:600;">ZOOM:</span>
+                                <button class="malla-tool-btn" onclick="mallaZoomOut()">−</button>
+                                <span class="malla-zoom-label" id="mallaZoomLevel">100%</span>
+                                <button class="malla-tool-btn" onclick="mallaZoomIn()">+</button>
+                                <button class="malla-tool-btn" onclick="mallaZoomFit()">⊡ Ajustar</button>
+                            </div>
+                            <div class="malla-toolbar-group"
+                                style="border-right:none;color:var(--text-secondary);font-size:0.78rem;">
+                                📖 Solo visualización — las marcas están en la Malla Generada
+                            </div>
+                        </div>
+                        <!-- Canvas PDF — solo lectura, sin overlay interactivo -->
+                        <div class="malla-canvas-wrapper" id="mallaCanvasWrapper">
+                            <div class="malla-loading" id="mallaLoading">
+                                <div class="malla-spinner"></div>
+                                <span>Cargando PDF...</span>
+                            </div>
+                            <div class="malla-error" id="mallaError" style="display:none;"></div>
+                            <div class="malla-canvas-stack" id="mallaCanvasStack">
+                                <canvas id="mallaCanvas"></canvas>
+                                <canvas id="mallaOverlay"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div class="malla-toolbar-group" style="border-right:none;">
-                <span style="font-size:0.75rem;color:var(--text-secondary);">
-                    Clic en una materia para ver detalles y asignar prerrequisitos
-                </span>
-                <button class="btn btn-sm btn-danger" onclick="clearAllPrereqs()" style="font-size:0.72rem;">🗑 Borrar prereqs</button>
-            </div>
-        </div>
-
-        <!-- Scroll container — altura fija, nunca expande la página -->
-        <div class="mgc-scroll-container" id="mgcScrollContainer">
-            <div id="mallaGeneradaContainer"></div>
-        </div>
-    </div>
-
-    <!-- ══ PESTAÑA: PDF (solo lectura) ══ -->
-    <div id="mallaPanelPdf" style="display:none;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-            <button class="btn btn-secondary" onclick="document.getElementById('mallaPdfInput').click()" style="font-size:0.82rem;padding:6px 14px;">
-                📂 Cargar PDF de mi malla
-            </button>
-            <span id="mallaPdfName" style="font-size:0.8rem;color:var(--text-secondary);"></span>
-            <button id="mallaPdfClearBtn" class="btn btn-danger" onclick="clearMallaPDF()" style="font-size:0.75rem;padding:4px 10px;display:none;">
-                🗑 Quitar
-            </button>
-            <input type="file" id="mallaPdfInput" accept=".pdf" style="display:none">
-        </div>
-        <!-- Controles de zoom únicamente — sin marcado -->
-        <div class="malla-toolbar">
-            <div class="malla-toolbar-group">
-                <span style="font-size:0.75rem;color:var(--text-secondary);font-weight:600;">ZOOM:</span>
-                <button class="malla-tool-btn" onclick="mallaZoomOut()">−</button>
-                <span class="malla-zoom-label" id="mallaZoomLevel">100%</span>
-                <button class="malla-tool-btn" onclick="mallaZoomIn()">+</button>
-                <button class="malla-tool-btn" onclick="mallaZoomFit()">⊡ Ajustar</button>
-            </div>
-            <div class="malla-toolbar-group" style="border-right:none;color:var(--text-secondary);font-size:0.78rem;">
-                📖 Solo visualización — las marcas están en la Malla Generada
-            </div>
-        </div>
-        <!-- Canvas PDF — solo lectura, sin overlay interactivo -->
-        <div class="malla-canvas-wrapper" id="mallaCanvasWrapper">
-            <div class="malla-loading" id="mallaLoading">
-                <div class="malla-spinner"></div>
-                <span>Cargando PDF...</span>
-            </div>
-            <div class="malla-error" id="mallaError" style="display:none;"></div>
-            <div class="malla-canvas-stack" id="mallaCanvasStack">
-                <canvas id="mallaCanvas"></canvas>
-                <canvas id="mallaOverlay"></canvas>
-            </div>
-        </div>
-    </div>
-</div>
-<div id="gradesView" class="view-content" style="display: none;">
-    <div class="header-bar">
-        <div class="header-controls">
-            <div>
-                <h2 style="margin-bottom: 4px;">Notas por Semestre</h2>
-                <p class="text-secondary" style="font-size:0.85rem;">
-                    Registra tus notas · Calcula promedios · Simula resultados
-                </p>
-            </div>
-        </div>
-    </div>
-    <div id="gradesViewContainer"></div>
-</div>
+                <div id="gradesView" class="view-content" style="display: none;">
+                    <div class="header-bar">
+                        <div class="header-controls">
+                            <div>
+                                <h2 style="margin-bottom: 4px;">Notas por Semestre</h2>
+                                <p class="text-secondary" style="font-size:0.85rem;">
+                                    Registra tus notas · Calcula promedios · Simula resultados
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="gradesViewContainer"></div>
+                </div>
+                <div id="contenidoView" class="view-content" style="display: none;"></div>
             </main>
         </div>
 
@@ -608,6 +625,7 @@
     <script src="scripts/script.js"></script>
     <script src="scripts/chat.js"></script>
     <script src="scripts/grades.js"></script>
+    <script src="scripts/contenido_programatico.js"></script>
 
     <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
     <script>

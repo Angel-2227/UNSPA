@@ -24,7 +24,10 @@ function buildAcademicContext() {
             subjects: sem.subjects.map(s => ({
                 name: s.name, credits: s.credits, type: s.type,
                 code: s.code || '', professor: s.professor || '', group: s.group || ''
-            }))
+                
+            })),
+            // Dentro del return de buildAcademicContext, añade esta línea:
+contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildContenidoContext() : null,
         };
     }).sort((a, b) => parseInt(a.number) - parseInt(b.number));
 
