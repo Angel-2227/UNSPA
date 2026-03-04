@@ -2003,3 +2003,11 @@ body {
     .mgc-scroll-container { height: calc(100vh - 400px); min-height: 260px; }
     .malla-canvas-wrapper { height: calc(100vh - 460px); min-height: 240px; max-height: calc(100vh - 460px); }
 }
+.cp-card-desc {
+    font-size: 0.78rem; color: var(--text-secondary);
+    line-height: 1.5; flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
