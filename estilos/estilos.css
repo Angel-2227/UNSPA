@@ -1873,7 +1873,7 @@ body {
     position: relative;
     -webkit-overflow-scrolling: touch;
     /* Aísla el contenedor del flujo normal */
-    contain: strict;
+    
 }
 
 /* El div generado dinámicamente dentro del scroll */
@@ -2002,4 +2002,5 @@ body {
 @media (max-width: 480px) {
     .mgc-scroll-container { height: calc(100vh - 400px); min-height: 260px; }
     .malla-canvas-wrapper { height: calc(100vh - 460px); min-height: 240px; max-height: calc(100vh - 460px); }
+
 }
