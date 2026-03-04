@@ -242,10 +242,6 @@ function renderContenidoView() {
                 <h3>Aún no has cargado tu contenido programático</h3>
                 <p>Sube un archivo CSV con las columnas:<br>
                 <strong>Código, Nombre, Créditos, Tipología, Descripción, Contenido, Semestre, UAB</strong></p>
-                <p style="margin-top:8px;font-size:0.82rem;color:var(--text-secondary);">
-                    Las columnas se detectan automáticamente por su nombre.<br>
-                    El orden no importa.
-                </p>
                 <button class="btn btn-primary" style="margin-top:16px;"
                     onclick="document.getElementById('cpCsvInput').click()">
                     📁 Cargar CSV de contenido programático
@@ -258,28 +254,108 @@ function renderContenidoView() {
     const semFilter  = (document.getElementById('cpSemFilter')  || {}).value || 'all';
     const typeFilter = (document.getElementById('cpTypeFilter') || {}).value || 'all';
 
-    let filtered = contenidoProgramaticoData;
-    if (searchVal.trim())     filtered = cpSearchSubjects(searchVal.trim());
-    if (semFilter  !== 'all') filtered = filtered.filter(s => s.semester === semFilter);
-    if (typeFilter !== 'all') filtered = filtered.filter(s => s.type === typeFilter);
+    // ── Construir grupos desde studyPlan (igual que la malla) ──────────────
+    // Índice rápido del CSV por código y por nombre normalizado
+    const cpByCode = {};
+    const cpByName = {};
+    contenidoProgramaticoData.forEach(s => {
+        if (s.code)  cpByCode[s.code.trim()] = s;
+        if (s.name)  cpByName[cpNorm(s.name)] = s;
+    });
 
-    if (filtered.length === 0) {
+    // Si studyPlan existe y tiene materias, agrupar por sus semestres
+    const hasPlan = typeof studyPlan !== 'undefined' &&
+                    Object.keys(studyPlan).some(k => studyPlan[k].subjects && studyPlan[k].subjects.length);
+
+    let groups = {};   // { 'Semestre 1': [cpEntry, ...], ... }
+
+    if (hasPlan) {
+        const semNums = Object.keys(studyPlan)
+            .filter(n => studyPlan[n].subjects && studyPlan[n].subjects.length > 0)
+            .sort((a, b) => +a - +b);
+
+        semNums.forEach(semNum => {
+            const key = `Semestre ${semNum}`;
+            studyPlan[semNum].subjects.forEach(subj => {
+                // Buscar la entrada en el CSV: primero por código, luego por nombre
+                let cpEntry = (subj.code && cpByCode[subj.code.trim()])
+                           || cpByName[cpNorm(subj.name)]
+                           || null;
+
+                // Si no hay entrada en el CSV, crear una mínima con los datos del plan
+                if (!cpEntry) {
+                    cpEntry = {
+                        code: subj.code || '',
+                        name: subj.name,
+                        credits: subj.credits || '',
+                        type: subj.type || '',
+                        description: '',
+                        content: '',
+                        semester: semNum,
+                        uab: ''
+                    };
+                }
+
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(cpEntry);
+            });
+        });
+
+        // Materias del CSV sin semestre en studyPlan → "Sin asignar"
+        contenidoProgramaticoData.forEach(s => {
+            const enPlan = Object.values(studyPlan).some(sem =>
+                sem.subjects && sem.subjects.some(subj =>
+                    (subj.code && s.code && subj.code.trim() === s.code.trim()) ||
+                    cpNorm(subj.name) === cpNorm(s.name)
+                )
+            );
+            if (!enPlan) {
+                const key = 'Sin asignar en malla';
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(s);
+            }
+        });
+    } else {
+        // Fallback: agrupar por campo semester del CSV
+        contenidoProgramaticoData.forEach(s => {
+            const key = (s.semester && s.semester !== 'N/A' && s.semester.trim() !== '')
+                ? `Semestre ${s.semester}`
+                : 'Electivas / Sin semestre';
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(s);
+        });
+    }
+
+    // ── Aplicar filtros de búsqueda/semestre/tipo ──────────────────────────
+    if (semFilter !== 'all') {
+        const keep = `Semestre ${semFilter}`;
+        groups = Object.fromEntries(Object.entries(groups).filter(([k]) => k === keep));
+    }
+
+    Object.keys(groups).forEach(k => {
+        let arr = groups[k];
+        if (searchVal.trim()) {
+            const q = cpNorm(searchVal.trim());
+            arr = arr.filter(s =>
+                cpNorm(s.name).includes(q) ||
+                (s.code && s.code.includes(searchVal.trim())) ||
+                cpNorm(s.description).includes(q) ||
+                cpNorm(s.content).includes(q)
+            );
+        }
+        if (typeFilter !== 'all') arr = arr.filter(s => s.type === typeFilter);
+        if (arr.length) groups[k] = arr;
+        else delete groups[k];
+    });
+
+    if (Object.keys(groups).length === 0) {
         container.innerHTML = `<div class="no-data"><p>No se encontraron asignaturas con esos criterios.</p></div>`;
         return;
     }
 
-    // Agrupar por semestre
-    const groups = {};
-    filtered.forEach(s => {
-        const key = (s.semester && s.semester !== 'N/A' && s.semester.trim() !== '')
-            ? `Semestre ${s.semester}`
-            : 'Electivas / Sin semestre';
-        if (!groups[key]) groups[key] = [];
-        groups[key].push(s);
-    });
-
     const semOrder = k => {
         if (k.startsWith('Semestre')) return parseInt(k.replace('Semestre ', '')) || 99;
+        if (k === 'Sin asignar en malla') return 98;
         return 100;
     };
 
@@ -300,7 +376,9 @@ function renderContenidoView() {
                             </div>
                             <div class="cp-card-name">${s.name}</div>
                             ${s.code ? `<div class="cp-card-code">${s.code}</div>` : ''}
-                            ${s.description ? `<div class="cp-card-desc">${s.description.slice(0, 120)}${s.description.length > 120 ? '…' : ''}</div>` : ''}
+                            ${s.description
+                                ? `<div class="cp-card-desc">${s.description.slice(0,120)}${s.description.length>120?'…':''}</div>`
+                                : '<div class="cp-card-desc" style="color:var(--text-secondary);font-style:italic;font-size:0.75rem;">Sin descripción en CSV</div>'}
                             <div class="cp-card-footer">📖 Ver contenido</div>
                         </div>`).join('')}
                 </div>
