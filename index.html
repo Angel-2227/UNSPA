@@ -429,93 +429,79 @@
                     </div>
                 </div>
                 
+
+
 <div id="mallaView" class="view-content" style="display: none;">
-    <div class="header-bar">
+
+    <!-- Cabecera -->
+    <div class="header-bar" style="flex-shrink:0;">
         <div class="header-controls">
             <div>
-                <h2 style="margin-bottom: 4px;">Malla Curricular</h2>
+                <h2 style="margin-bottom:4px;">Malla Curricular</h2>
                 <p class="text-secondary" style="font-size:0.85rem;">
-                    Haz clic sobre una materia para marcarla • Clic sucesivos cambian el estado
+                    Clic sobre una materia para cambiar su estado · Pendiente → En curso → Aprobada
                 </p>
-                <div style="display:flex; align-items:center; gap:10px; margin-top:8px; flex-wrap:wrap;">
-                    <button class="btn btn-secondary" onclick="document.getElementById('mallaPdfInput').click()" style="font-size:0.82rem; padding:6px 14px;">
-                        📂 Cargar mi malla (PDF)
-                    </button>
-                    <span id="mallaPdfName" style="font-size:0.8rem; color:var(--text-secondary);"></span>
-                    <button id="mallaPdfClearBtn" class="btn btn-danger" onclick="clearMallaPDF()" style="font-size:0.75rem; padding:4px 10px; display:none;">
-                        🗑 Quitar malla
-                    </button>
-                </div>
-                <input type="file" id="mallaPdfInput" accept=".pdf" style="display:none">
-            </div>
-            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                <span class="malla-stats-bar" id="mallaStatsText">Cargando...</span>
-                <button class="btn btn-danger btn-sm" onclick="clearAllMallaMarks()">🗑️ Borrar marcas</button>
             </div>
         </div>
     </div>
 
-    <!-- Barra de herramientas -->
-    <div class="malla-toolbar">
-        <!-- Herramientas de marcado -->
-        <div class="malla-toolbar-group">
-            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">MARCAR:</span>
-            <button id="mallaTool_completed" class="malla-tool-btn completed active"
-                    onclick="setMallaTool('completed')">
-                ✅ Completada
-            </button>
-            <button id="mallaTool_current" class="malla-tool-btn current"
-                    onclick="setMallaTool('current')">
-                ▶ En curso
-            </button>
-            <button id="mallaTool_erase" class="malla-tool-btn erase"
-                    onclick="setMallaTool('erase')">
-                🚫 Borrar
-            </button>
-        </div>
-
+    <!-- Toolbar -->
+    <div class="malla-toolbar" style="flex-shrink:0; margin-bottom:10px;">
         <!-- Zoom -->
         <div class="malla-toolbar-group">
-            <span style="font-size:0.75rem; color:var(--text-secondary); font-weight:600;">ZOOM:</span>
-            <button class="malla-tool-btn" onclick="mallaZoomOut()">−</button>
-            <span class="malla-zoom-label" id="mallaZoomLevel">150%</span>
-            <button class="malla-tool-btn" onclick="mallaZoomIn()">+</button>
-            <button class="malla-tool-btn" onclick="mallaZoomFit()" title="Ajustar al ancho">⊡ Fit</button>
+            <button class="malla-tool-btn" onclick="mallaGenZoomOut()">🔍−</button>
+            <span id="mallaGenZoomLabel" class="malla-zoom-label">100%</span>
+            <button class="malla-tool-btn" onclick="mallaGenZoomIn()">🔍+</button>
+            <button class="malla-tool-btn" onclick="mallaGenZoomFit()">⬜ Ajustar</button>
         </div>
-
-        <!-- Leyenda -->
+        <!-- Estadísticas -->
+        <div class="malla-toolbar-group" style="flex:1; border-right:none;">
+            <span id="mallaGenStats" class="malla-stats-bar">Cargando…</span>
+        </div>
+        <!-- Reset -->
         <div class="malla-toolbar-group" style="border-right:none;">
-            <div class="malla-legend">
-                <div class="malla-legend-item">
-                    <div class="malla-legend-dot completed"></div>
-                    <span>Completada</span>
-                </div>
-                <div class="malla-legend-item">
-                    <div class="malla-legend-dot current"></div>
-                    <span>En curso</span>
-                </div>
-                <span style="font-size:0.75rem; color:var(--text-secondary);">
-                    Clic para marcar • Clic de nuevo para cambiar estado • 3er clic para borrar
-                </span>
-            </div>
+            <button class="malla-tool-btn" onclick="resetMallaEstados()"
+                    style="color:#c62828; border-color:#c62828;">🗑️ Reiniciar</button>
         </div>
     </div>
 
-    <!-- Canvas PDF + overlay de marcas -->
-    <div class="malla-canvas-wrapper" id="mallaCanvasWrapper">
-        <!-- Loading -->
-        <div class="malla-loading" id="mallaLoading">
-            <div class="malla-spinner"></div>
-            <span>Cargando malla curricular...</span>
+    <!-- Leyenda -->
+    <div class="malla-legend" style="margin-bottom:10px; flex-shrink:0; padding:0 4px;">
+        <div class="malla-legend-item">
+            <div class="malla-legend-dot" style="background:#e8f5e9;border:2px solid #ccc;"></div>
+            <span>Pendiente</span>
         </div>
-        <!-- Error / placeholder -->
-        <div class="malla-error" id="mallaError" style="display:none;"></div>
-        <!-- Stack de canvas -->
-        <div class="malla-canvas-stack" id="mallaCanvasStack">
-            <canvas id="mallaCanvas"></canvas>
-            <canvas id="mallaOverlay"></canvas>
+        <div class="malla-legend-item">
+            <div class="malla-legend-dot" style="background:#fff9c4;border:2px solid #f9a825;"></div>
+            <span>En curso ▶</span>
+        </div>
+        <div class="malla-legend-item">
+            <div class="malla-legend-dot" style="background:#c8e6c9;border:2px solid #2e7d32;"></div>
+            <span>Aprobada ✓</span>
+        </div>
+        <div class="malla-legend-item" style="margin-left:auto; font-size:0.75rem; color:var(--text-secondary);">
+            ↝ = prerrequisito
         </div>
     </div>
+
+    <!-- Contenedor con scroll — NO cambia de tamaño -->
+    <div id="mallaGenWrapper"
+         style="flex:1; overflow:auto; background:#f0f0f0;
+                border:1px solid var(--border-color); border-radius:8px;
+                min-height:300px; max-height:calc(100vh - 260px);
+                -webkit-overflow-scrolling:touch; padding:8px;">
+        <canvas id="mallaGenCanvas" style="display:block; transform-origin:top left;"></canvas>
+    </div>
+
+</div>
+
+<!-- Tooltip flotante (fuera del mallaView, al final del body) -->
+<div id="mallaGenTooltip"
+     style="display:none; position:fixed; z-index:9999;
+            background:rgba(30,30,30,0.92); color:#fff;
+            padding:8px 12px; border-radius:8px; font-size:0.78rem;
+            max-width:260px; line-height:1.5; pointer-events:none;
+            box-shadow:0 4px 16px rgba(0,0,0,0.3);">
 </div>
 <div id="gradesView" class="view-content" style="display: none;">
     <div class="header-bar">
@@ -609,6 +595,7 @@
     <script src="scripts/script.js"></script>
     <script src="scripts/chat.js"></script>
     <script src="scripts/grades.js"></script>
+    <script src="scripts/malla-generada.js"></script>
 
     <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
     <script>

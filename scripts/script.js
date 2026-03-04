@@ -877,6 +877,9 @@ function showView(viewName, clickedEl) {
     else if (viewName === 'grades') {
     renderGradesView();
 }
+if (view === 'malla') {
+    onMallaViewOpen();
+}
 }
 
 function scrollToSemester(semesterNum) {

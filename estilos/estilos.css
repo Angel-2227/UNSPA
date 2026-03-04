@@ -1492,7 +1492,7 @@ body {
     border-radius: 8px;
     border: 1px solid var(--border-color);
     /* Altura calculada: pantalla menos toolbar y header */
-    height: calc(100vh - 260px);
+    
     min-height: 400px;
     cursor: crosshair;
     -webkit-overflow-scrolling: touch;
