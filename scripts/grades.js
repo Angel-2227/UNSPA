@@ -527,7 +527,20 @@ function refreshOverallBanner() {
     if (v) { v.className = `gn-banner-value ${gradeClass(avg)}`; v.textContent = avg !== null ? avg.toFixed(2) : '—'; }
     if (f) { f.style.width = avg !== null ? `${(avg/5)*100}%` : '0%'; f.style.background = gradeColor(avg); }
 }
+function refreshOverallAvg() {
+    const avg = calcOverallAvg();
+    const v = document.getElementById('gn-overall-val');
+    const f = document.getElementById('gn-overall-fill');
+    if (v) { v.className = `gn-banner-value ${gradeClass(avg)}`; v.textContent = avg !== null ? avg.toFixed(2) : '—'; }
+    if (f) { f.style.width = avg !== null ? `${(avg/5)*100}%` : '0%'; f.style.background = gradeColor(avg); }
 
+    // Sincronizar con sidebar y stat card del overview
+    const txt = avg !== null ? avg.toFixed(2) : '—';
+    const sa = document.getElementById('sidebarAverage');
+    const oc = document.getElementById('overallAverageCard');
+    if (sa) sa.textContent = txt;
+    if (oc) { oc.textContent = txt; oc.style.color = avg !== null ? gradeColor(avg) : 'var(--unal-green)'; }
+}
 // ── Acordeón ──────────────────────────────────
 
 function toggleSemBlock(semNum) {
