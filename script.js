@@ -868,15 +868,13 @@ function showView(viewName, clickedEl) {
         renderSchedules();
         loadPeriodConfig();
     } else if (viewName === 'malla') {
-        // Pequeño delay para que el DOM esté listo
         setTimeout(() => {
-            initMallaView();
-            setupMallaOverlayEvents();
+            onMallaViewOpen();
         }, 100);
     }
     else if (viewName === 'grades') {
-    renderGradesView();
-}
+        renderGradesView();
+    }
 }
 
 function scrollToSemester(semesterNum) {
