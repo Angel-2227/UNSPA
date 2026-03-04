@@ -90,8 +90,7 @@ function renderMallaGenerada() {
             🔗 Ahora haz clic en la materia que <strong>requiere</strong> la seleccionada como prereq
             <button onclick="exitPrereqMode()" style="margin-left:12px; background:rgba(255,255,255,0.2); border:none; color:white; padding:3px 10px; border-radius:12px; cursor:pointer;">✕ Cancelar</button>
         </div>`;
-container.style.minWidth  = totalWidth  + 'px';
-container.style.minHeight = totalHeight + 'px';
+
     setTimeout(() => drawAllArrows(), 50);
     updateMallaStatsFromPlan();
 }
