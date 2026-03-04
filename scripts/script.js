@@ -872,8 +872,7 @@ function showView(viewName, clickedEl) {
         setTimeout(() => {
             initMallaGenerada();
             buildMgcTypeLegend();
-            initMallaView();
-            setupMallaOverlayEvents();
+            // PDF se carga solo si el usuario activa esa pestaña
         }, 100);
     }
     else if (viewName === 'grades') {
@@ -1861,15 +1860,18 @@ function switchMallaTab(tab) {
         if (pdfPanel) pdfPanel.style.display = 'none';
         if (tabGen)   tabGen.classList.add('active');
         if (tabPdf)   tabPdf.classList.remove('active');
+        // Re-render por si cambió el estado
+        initMallaGenerada();
+        buildMgcTypeLegend();
     } else {
         if (genPanel) genPanel.style.display = 'none';
         if (pdfPanel) pdfPanel.style.display = 'block';
         if (tabGen)   tabGen.classList.remove('active');
         if (tabPdf)   tabPdf.classList.add('active');
-        // Inicializar PDF si aún no se ha hecho
+        // PDF: solo visualización, sin overlay interactivo
         setTimeout(() => {
             initMallaView();
-            setupMallaOverlayEvents();
+            // NO llamar setupMallaOverlayEvents — PDF es de solo lectura
         }, 50);
     }
 }
@@ -1906,7 +1908,7 @@ function buildMgcTypeLegend() {
 let mallaMarks = {};
 let mallaPdfDoc = null;
 let mallaCurrentPage = 1;
-let mallaScale = 1.5;
+let mallaScale = 1.0;
 let mallaIsDragging = false;
 let mallaOverlayEventsReady = false;
 const CLOUDINARY_CLOUD_NAME = 'dlzdelkc2';   // ← pon el tuyo
@@ -2151,6 +2153,8 @@ function redrawOverlay() {
 
 // ---- Eventos del canvas overlay ----
 function setupMallaOverlayEvents() {
+    // PDF es solo de lectura — no registrar eventos de clic
+    return;
     if (mallaOverlayEventsReady) return;
 
     const overlay = document.getElementById('mallaOverlay');

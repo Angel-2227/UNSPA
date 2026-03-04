@@ -1,10 +1,10 @@
 // ============================================
 // MALLA CURRICULAR GENERADA — malla_curricular.js
-// Genera la malla visualmente desde studyPlan (CSV)
-// con soporte de prerrequisitos configurables
+// Las marcas se toman del estado real del studyPlan
+// El PDF es solo lectura (sin marcas ni clics)
 // ============================================
 
-// ---- Colores por agrupación (tipología) ----
+// Colores por tipología
 const MALLA_TYPE_COLORS = {
     'DISCIPLINAR OBLIGATORIA':     { bg: '#e3f2fd', border: '#1976d2', text: '#0d47a1' },
     'DISCIPLINAR OPTATIVA':        { bg: '#e8f5e9', border: '#388e3c', text: '#1b5e20' },
@@ -15,17 +15,12 @@ const MALLA_TYPE_COLORS = {
     'NIVELACIÓN':                  { bg: '#fff3e0', border: '#ff6f00', text: '#bf360c' },
 };
 
-// ---- Estado de prereqs ----
-let mallaPrereqs = {};         // { subjectId: [subjectId, ...] }
-let mallaPrereqMode = false;   // true cuando se está eligiendo prereq
-let mallaPrereqSource = null;  // id de la materia origen
-let mallaGenerated = false;
-
-// ---- Inicialización de la vista generada ----
-function initMallaGenerada() {
-    loadMallaPrereqs();
-    renderMallaGenerada();
-}
+// Prereqs configurables
+let mallaPrereqs = {};
+let mallaPrereqMode = false;
+let mallaPrereqSource = null;
+let selectedCardId = null;
+let selectedCardSem = null;
 
 function loadMallaPrereqs() {
     try {
@@ -38,12 +33,17 @@ function saveMallaPrereqs() {
     localStorage.setItem('mallaPrereqs', JSON.stringify(mallaPrereqs));
     if (typeof currentUser !== 'undefined' && currentUser) {
         db.collection('users').doc(currentUser.uid)
-          .set({ mallaPrereqs }, { merge: true })
-          .catch(console.error);
+          .set({ mallaPrereqs }, { merge: true }).catch(console.error);
     }
 }
 
-// ---- Render principal ----
+// ---- Inicialización ----
+function initMallaGenerada() {
+    loadMallaPrereqs();
+    renderMallaGenerada();
+}
+
+// ---- Render ----
 function renderMallaGenerada() {
     const container = document.getElementById('mallaGeneradaContainer');
     if (!container) return;
@@ -56,221 +56,180 @@ function renderMallaGenerada() {
         container.innerHTML = `
             <div style="text-align:center; padding:60px 20px; color:var(--text-secondary);">
                 <div style="font-size:3rem; margin-bottom:16px;">📋</div>
-                <h3 style="margin-bottom:8px;">No hay materias cargadas</h3>
-                <p>Carga tu CSV desde la vista de Resumen General primero.</p>
+                <h3>No hay materias cargadas</h3>
+                <p>Carga tu CSV desde Resumen General primero.</p>
             </div>`;
         return;
     }
 
-    // Calcular ancho total de la malla
-    const COL_WIDTH = 200;
-    const COL_GAP   = 40;
-    const totalWidth = semNums.length * (COL_WIDTH + COL_GAP) - COL_GAP + 40;
+    // Dimensiones adaptativas
+    const CARD_W   = 176;
+    const CARD_H   = 82;
+    const COL_GAP  = 32;
+    const CARD_GAP = 10;
+    const HEADER_H = 48;
+    const PAD      = 16;
 
-    // Calcular altura máxima
-    const maxSubjects = Math.max(...semNums.map(n => studyPlan[n].subjects.length));
-    const CARD_H = 90;
-    const CARD_GAP = 12;
-    const HEADER_H = 52;
-    const totalHeight = HEADER_H + maxSubjects * (CARD_H + CARD_GAP) + 40;
+    const maxSubjects  = Math.max(...semNums.map(n => studyPlan[n].subjects.length));
+    const totalWidth   = semNums.length * (CARD_W + COL_GAP) - COL_GAP + PAD * 2;
+    const totalHeight  = HEADER_H + maxSubjects * (CARD_H + CARD_GAP) + PAD * 2;
+
+    container.style.position = 'relative';
+    container.style.width    = totalWidth + 'px';
+    container.style.height   = totalHeight + 'px';
+
+    const cols = semNums.map((n, i) => buildSemColumn(n, i, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADER_H, PAD)).join('');
 
     container.innerHTML = `
-        <div class="mgc-wrapper" id="mgcWrapper">
-            <svg class="mgc-arrows" id="mgcArrows"
-                 width="${totalWidth}" height="${totalHeight}"
-                 style="position:absolute;top:0;left:0;pointer-events:none;z-index:1;">
-            </svg>
-            <div class="mgc-grid" id="mgcGrid" style="width:${totalWidth}px; min-height:${totalHeight}px; position:relative; z-index:2;">
-                ${semNums.map((n, colIdx) => buildSemColumn(n, colIdx, COL_WIDTH, COL_GAP, CARD_H, CARD_GAP, HEADER_H)).join('')}
-            </div>
-        </div>
-        ${buildPrereqPanel()}`;
+        <svg id="mgcArrows" style="position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible;"
+             width="${totalWidth}" height="${totalHeight}"></svg>
+        ${cols}
+        <div id="mgcPrereqBar" style="display:none; position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+             background:#1a237e; color:white; padding:10px 20px; border-radius:24px; z-index:1000;
+             font-size:0.85rem; font-weight:600; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            🔗 Ahora haz clic en la materia que <strong>requiere</strong> la seleccionada como prereq
+            <button onclick="exitPrereqMode()" style="margin-left:12px; background:rgba(255,255,255,0.2); border:none; color:white; padding:3px 10px; border-radius:12px; cursor:pointer;">✕ Cancelar</button>
+        </div>`;
 
-    attachMallaGenListeners();
-    drawAllArrows();
-    mallaGenerated = true;
+    setTimeout(() => drawAllArrows(), 50);
+    updateMallaStatsFromPlan();
 }
 
-function buildSemColumn(semNum, colIdx, COL_WIDTH, COL_GAP, CARD_H, CARD_GAP, HEADER_H) {
-    const sem = studyPlan[semNum];
-    const left = colIdx * (COL_WIDTH + COL_GAP) + 20;
-    const statusColors = {
-        completed: { bg: '#2e7d32', text: 'white' },
-        current:   { bg: '#f9a825', text: 'white' },
-        pending:   { bg: '#90a4ae', text: 'white' },
-    };
-    const sc = statusColors[sem.status] || statusColors.pending;
+function buildSemColumn(semNum, colIdx, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADER_H, PAD) {
+    const sem  = studyPlan[semNum];
+    const left = PAD + colIdx * (CARD_W + COL_GAP);
+
+    const statusBg = {
+        completed: '#2e7d32', current: '#f9a825', pending: '#90a4ae'
+    }[sem.status] || '#90a4ae';
+
+    const header = `
+        <div style="position:absolute; left:${left}px; top:${PAD}px; width:${CARD_W}px;
+                    background:${statusBg}; color:white; border-radius:8px 8px 0 0;
+                    padding:8px 10px; display:flex; justify-content:space-between;
+                    align-items:center; font-size:0.78rem; font-weight:700;
+                    box-shadow:0 2px 4px rgba(0,0,0,0.15); z-index:2;">
+            <span>Semestre ${semNum}</span>
+            <span style="opacity:0.9;">${sem.subjects.reduce((s,x)=>s+x.credits,0)} cr</span>
+        </div>`;
 
     const cards = sem.subjects.map((sub, i) => {
-        const top = HEADER_H + i * (CARD_H + CARD_GAP);
-        return buildSubjectBlock(sub, semNum, left, top, COL_WIDTH, CARD_H);
+        const top = PAD + HEADER_H + i * (CARD_H + CARD_GAP);
+        return buildSubjectCard(sub, semNum, left, top, CARD_W, CARD_H);
     }).join('');
 
-    return `
-        <div class="mgc-sem-col" style="position:absolute; left:${left}px; top:0; width:${COL_WIDTH}px;">
-            <div class="mgc-sem-header" style="background:${sc.bg}; color:${sc.text};">
-                <span class="mgc-sem-num">Semestre ${semNum}</span>
-                <span class="mgc-sem-cr">${sem.subjects.reduce((s,x)=>s+x.credits,0)} cr</span>
-            </div>
-        </div>
-        ${cards}`;
+    return header + cards;
 }
 
-function buildSubjectBlock(sub, semNum, left, top, width, height) {
+function buildSubjectCard(sub, semNum, left, top, w, h) {
     const sem = studyPlan[semNum];
-    const tc = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
+    const tc  = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
 
-    // Estado de la materia según el semestre + marcas de la malla
-    let stateIcon = '';
-    let stateClass = '';
-    const mark = mallaMarks && mallaMarks[sub.id];
-    if (mark === 'completed' || sem.status === 'completed') {
-        stateIcon = '✓'; stateClass = 'mgc-state-done';
-    } else if (mark === 'current' || sem.status === 'current') {
-        stateIcon = '▶'; stateClass = 'mgc-state-current';
+    // Estado automático desde el semestre
+    let stateIcon = '', borderExtra = '', overlayColor = '';
+    if (sem.status === 'completed') {
+        stateIcon    = '✓';
+        borderExtra  = `border: 2.5px solid #2e7d32 !important;`;
+        overlayColor = 'rgba(46,125,50,0.12)';
+    } else if (sem.status === 'current') {
+        stateIcon    = '▶';
+        borderExtra  = `border: 2.5px solid #ffa000 !important;`;
+        overlayColor = 'rgba(255,160,0,0.10)';
     }
 
-    const prereqIds = mallaPrereqs[sub.id] || [];
-    const hasPrereq = prereqIds.length > 0;
-
-    const shortName = sub.name.length > 48 ? sub.name.slice(0, 46) + '…' : sub.name;
+    const prereqCount = (mallaPrereqs[sub.id] || []).length;
+    const shortName   = sub.name.length > 44 ? sub.name.slice(0, 42) + '…' : sub.name;
+    const typeAbbr    = sub.type.split(' ').map(w=>w[0]).join('');
 
     return `
-        <div class="mgc-card ${stateClass}"
-             id="mgc-${sub.id}"
-             data-id="${sub.id}"
-             data-sem="${semNum}"
+        <div id="mgc-${sub.id}"
+             data-id="${sub.id}" data-sem="${semNum}"
+             onclick="handleMallaCardClick(event,'${sub.id}','${semNum}')"
+             title="${sub.name} · ${sub.type} · ${sub.credits} créditos"
              style="
-                position: absolute;
-                left: ${left}px;
-                top: ${top}px;
-                width: ${width}px;
-                height: ${height}px;
-                background: ${tc.bg};
-                border: 2px solid ${tc.border};
-                border-radius: 8px;
-                padding: 8px 10px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-                cursor: pointer;
-                transition: all 0.2s;
-                display: flex;
-                flex-direction: column;
-                justify-content: space-between;
-                z-index: 2;
+                position:absolute; left:${left}px; top:${top}px;
+                width:${w}px; height:${h}px;
+                background:${overlayColor ? 'transparent' : tc.bg};
+                ${borderExtra || `border:2px solid ${tc.border};`}
+                border-radius:6px; padding:7px 9px;
+                box-shadow:0 2px 5px rgba(0,0,0,0.09);
+                cursor:pointer; z-index:2;
+                display:flex; flex-direction:column; justify-content:space-between;
+                transition:transform 0.15s, box-shadow 0.15s;
+                overflow:hidden;
              "
-             title="${sub.name}"
-             onclick="handleMallaCardClick(event, '${sub.id}', '${semNum}')">
-            <div style="font-size:0.78rem; font-weight:700; color:${tc.text}; line-height:1.2;">
-                ${stateIcon ? `<span style="margin-right:4px;">${stateIcon}</span>` : ''}${shortName}
+             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 14px rgba(0,0,0,0.18)';this.style.zIndex='10'"
+             onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 5px rgba(0,0,0,0.09)';this.style.zIndex='2'">
+            ${overlayColor ? `<div style="position:absolute;inset:0;background:${overlayColor};border-radius:4px;pointer-events:none;"></div>` : ''}
+            <div style="font-size:0.73rem;font-weight:700;color:${tc.text};line-height:1.25;position:relative;">
+                ${stateIcon ? `<span style="margin-right:3px;font-size:0.8rem;">${stateIcon}</span>` : ''}${shortName}
             </div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
-                <span style="font-size:0.65rem; background:${tc.border}; color:white; padding:2px 6px; border-radius:10px; font-weight:600;">
+            <div style="display:flex;justify-content:space-between;align-items:center;position:relative;">
+                <span style="font-size:0.62rem;background:${tc.border};color:white;padding:2px 7px;border-radius:10px;font-weight:700;">
                     ${sub.credits} cr
                 </span>
-                ${hasPrereq ? `<span style="font-size:0.65rem; color:${tc.text}; opacity:0.8;">📌 ${prereqIds.length} prereq</span>` : ''}
-                <span style="font-size:0.6rem; color:${tc.text}; opacity:0.7; text-align:right; max-width:90px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                    ${sub.type.split(' ').map(w=>w[0]).join('')}
-                </span>
+                ${prereqCount ? `<span style="font-size:0.6rem;color:${tc.text};opacity:0.75;">📌${prereqCount}</span>` : ''}
+                <span style="font-size:0.58rem;color:${tc.text};opacity:0.6;">${typeAbbr}</span>
             </div>
         </div>`;
 }
 
-function buildPrereqPanel() {
-    return `
-        <div id="mgcPrereqInfo" style="
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: var(--bg-secondary);
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
-        ">
-            <span id="mgcPrereqMsg">💡 Haz clic en una materia para marcarla. Usa el botón <strong>+ Prereq</strong> para asignar prerrequisitos.</span>
-            <button class="btn btn-sm btn-secondary" id="mgcPrereqModeBtn" onclick="togglePrereqMode()">🔗 + Prereq</button>
-            <button class="btn btn-sm btn-danger" onclick="clearAllPrereqs()">🗑 Borrar prereqs</button>
-        </div>
-        <!-- Panel flotante de materia seleccionada -->
-        <div id="mgcCardPanel" style="display:none; margin-top:8px; padding:12px 16px; background:var(--bg-primary); border:1px solid var(--border-color); border-radius:10px; box-shadow:var(--shadow-light);">
-            <div style="display:flex; justify-content:space-between; align-items:start;">
-                <div>
-                    <div style="font-weight:700; font-size:0.95rem;" id="mgcPanelName"></div>
-                    <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;" id="mgcPanelMeta"></div>
-                </div>
-                <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                    <button class="btn btn-sm btn-success" onclick="markSelectedCard('completed')">✅ Completada</button>
-                    <button class="btn btn-sm btn-warning" onclick="markSelectedCard('current')">▶ En curso</button>
-                    <button class="btn btn-sm btn-secondary" onclick="markSelectedCard('none')">✕ Quitar</button>
-                    <button class="btn btn-sm btn-danger" onclick="closeMgcPanel()">Cerrar</button>
-                </div>
-            </div>
-            <div style="margin-top:8px; font-size:0.8rem;" id="mgcPanelPrereqs"></div>
-        </div>`;
-}
-
-// ---- Flechas SVG de prereqs ----
+// ---- Flechas SVG prereqs ----
 function drawAllArrows() {
     const svg = document.getElementById('mgcArrows');
     if (!svg) return;
-    svg.innerHTML = '';
+    svg.innerHTML = `
+        <defs>
+            <marker id="arr" markerWidth="7" markerHeight="7" refX="5" refY="3.5" orient="auto">
+                <path d="M0,0 L0,7 L7,3.5 z" fill="#e91e63" opacity="0.85"/>
+            </marker>
+        </defs>`;
 
-    // defs para marcadores
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defs.innerHTML = `
-        <marker id="arrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-            <path d="M0,0 L0,6 L8,3 z" fill="#e91e63" opacity="0.8"/>
-        </marker>`;
-    svg.appendChild(defs);
+    const container  = document.getElementById('mallaGeneradaContainer');
+    const cRect      = container.getBoundingClientRect();
 
-    Object.entries(mallaPrereqs).forEach(([targetId, sourceIds]) => {
-        sourceIds.forEach(srcId => {
-            const srcEl  = document.getElementById(`mgc-${srcId}`);
-            const tgtEl  = document.getElementById(`mgc-${targetId}`);
-            if (!srcEl || !tgtEl) return;
+    Object.entries(mallaPrereqs).forEach(([tgtId, srcIds]) => {
+        srcIds.forEach(srcId => {
+            const s = document.getElementById(`mgc-${srcId}`);
+            const t = document.getElementById(`mgc-${tgtId}`);
+            if (!s || !t) return;
 
-            const wrapper = document.getElementById('mgcWrapper');
-            const wRect   = wrapper.getBoundingClientRect();
-            const sRect   = srcEl.getBoundingClientRect();
-            const tRect   = tgtEl.getBoundingClientRect();
+            const sR = s.getBoundingClientRect();
+            const tR = t.getBoundingClientRect();
 
-            // Coordenadas relativas al wrapper
-            const x1 = sRect.right  - wRect.left;
-            const y1 = sRect.top    - wRect.top + sRect.height / 2;
-            const x2 = tRect.left   - wRect.left;
-            const y2 = tRect.top    - wRect.top + tRect.height / 2;
+            const x1 = sR.right  - cRect.left + container.parentElement.scrollLeft;
+            const y1 = sR.top    - cRect.top  + container.parentElement.scrollTop + sR.height / 2;
+            const x2 = tR.left   - cRect.left + container.parentElement.scrollLeft;
+            const y2 = tR.top    - cRect.top  + container.parentElement.scrollTop + tR.height / 2;
 
-            const cx1 = x1 + Math.abs(x2 - x1) * 0.4;
-            const cx2 = x2 - Math.abs(x2 - x1) * 0.4;
-
+            const dx = Math.abs(x2 - x1) * 0.45;
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}`);
+            path.setAttribute('d', `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
             path.setAttribute('stroke', '#e91e63');
-            path.setAttribute('stroke-width', '2');
+            path.setAttribute('stroke-width', '1.8');
             path.setAttribute('fill', 'none');
-            path.setAttribute('opacity', '0.7');
-            path.setAttribute('marker-end', 'url(#arrow)');
+            path.setAttribute('opacity', '0.75');
+            path.setAttribute('marker-end', 'url(#arr)');
             svg.appendChild(path);
         });
     });
 }
 
-// ---- Interacción con tarjetas ----
-let selectedCardId = null;
-let selectedCardSem = null;
-
+// ---- Clic en tarjeta ----
 function handleMallaCardClick(e, subId, semNum) {
     e.stopPropagation();
 
+    if (mallaPrereqMode && !mallaPrereqSource) {
+        mallaPrereqSource = subId;
+        document.querySelectorAll('.mgc-highlighted').forEach(el => el.classList.remove('mgc-highlighted'));
+        const el = document.getElementById(`mgc-${subId}`);
+        if (el) el.style.outline = '3px solid #e91e63';
+        document.getElementById('mgcPrereqBar').style.display = 'block';
+        return;
+    }
+
     if (mallaPrereqMode && mallaPrereqSource) {
-        // Asignar prereq
-        if (mallaPrereqSource === subId) {
-            alert('Una materia no puede ser prereq de sí misma.');
-            return;
-        }
+        if (mallaPrereqSource === subId) return;
         if (!mallaPrereqs[subId]) mallaPrereqs[subId] = [];
         if (!mallaPrereqs[subId].includes(mallaPrereqSource)) {
             mallaPrereqs[subId].push(mallaPrereqSource);
@@ -281,137 +240,144 @@ function handleMallaCardClick(e, subId, semNum) {
         return;
     }
 
-    if (mallaPrereqMode) {
-        // Primera materia seleccionada como fuente de prereq
-        mallaPrereqSource = subId;
-        document.getElementById('mgcPrereqMsg').innerHTML =
-            `🔗 Ahora haz clic en la materia que <strong>requiere</strong> esta como prerrequisito.`;
-        // Highlight source
-        document.querySelectorAll('.mgc-card').forEach(c => c.style.opacity = '0.5');
-        document.getElementById(`mgc-${subId}`).style.opacity = '1';
-        document.getElementById(`mgc-${subId}`).style.outline = '3px solid #e91e63';
-        return;
-    }
-
-    // Modo normal: mostrar panel
-    selectedCardId  = subId;
-    selectedCardSem = semNum;
-    showMgcPanel(subId, semNum);
+    // Modo normal: tooltip / panel info
+    showMgcTooltip(subId, semNum);
 }
 
-function showMgcPanel(subId, semNum) {
+function showMgcTooltip(subId, semNum) {
+    selectedCardId  = subId;
+    selectedCardSem = semNum;
+
+    // Quitar tooltip anterior
+    const old = document.getElementById('mgcTooltip');
+    if (old) old.remove();
+
     const sem = studyPlan[semNum];
     if (!sem) return;
     const sub = sem.subjects.find(s => s.id === subId);
     if (!sub) return;
 
-    const panel   = document.getElementById('mgcCardPanel');
-    const nameEl  = document.getElementById('mgcPanelName');
-    const metaEl  = document.getElementById('mgcPanelMeta');
-    const prereqEl= document.getElementById('mgcPanelPrereqs');
-
-    nameEl.textContent = sub.name;
-    metaEl.textContent = `${sub.credits} créditos · ${sub.type} · Semestre ${semNum}`;
-
-    // Prereqs de esta materia
     const prereqIds = mallaPrereqs[subId] || [];
-    if (prereqIds.length > 0) {
-        const prereqNames = prereqIds.map(pid => {
-            for (const s of Object.values(studyPlan)) {
-                const f = s.subjects.find(x => x.id === pid);
-                if (f) return f.name;
-            }
-            return pid;
-        });
-        prereqEl.innerHTML = `📌 <strong>Prerrequisitos:</strong> ${prereqNames.join(' • ')}
-            <button class="btn btn-sm btn-danger" style="margin-left:8px;" onclick="removeAllPrereqsOf('${subId}')">🗑 Quitar todos</button>`;
-    } else {
-        prereqEl.innerHTML = `<em style="color:var(--text-secondary)">Sin prerrequisitos asignados</em>`;
-    }
+    const prereqNames = prereqIds.map(pid => {
+        for (const s of Object.values(studyPlan)) {
+            const f = s.subjects.find(x => x.id === pid);
+            if (f) return f.name;
+        }
+        return pid;
+    });
 
-    panel.style.display = 'block';
+    const cardEl = document.getElementById(`mgc-${subId}`);
+    if (!cardEl) return;
+    const cardRect = cardEl.getBoundingClientRect();
+    const scrollEl = document.getElementById('mgcScrollContainer');
+    const sRect    = scrollEl ? scrollEl.getBoundingClientRect() : { left: 0, top: 0 };
+
+    const tooltip = document.createElement('div');
+    tooltip.id = 'mgcTooltip';
+    tooltip.style.cssText = `
+        position:fixed; z-index:9999;
+        background:var(--bg-primary); border:1px solid var(--border-color);
+        border-radius:10px; padding:12px 14px; box-shadow:0 6px 24px rgba(0,0,0,0.18);
+        max-width:280px; font-size:0.82rem;
+    `;
+    tooltip.innerHTML = `
+        <div style="font-weight:700;margin-bottom:4px;color:var(--text-primary);">${sub.name}</div>
+        <div style="color:var(--text-secondary);margin-bottom:6px;">${sub.credits} créditos · ${sub.type} · Sem. ${semNum}</div>
+        ${prereqNames.length ? `<div style="color:#e91e63;font-size:0.75rem;margin-bottom:6px;">📌 Prereqs: ${prereqNames.join(', ')}</div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+            <button onclick="addPrereqFor('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">🔗 + Prereq</button>
+            ${prereqIds.length ? `<button onclick="removeAllPrereqsOf('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">🗑 Quitar prereqs</button>` : ''}
+            <button onclick="closeTooltip()" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">✕</button>
+        </div>`;
+
+    // Posicionar cerca de la tarjeta
+    const top  = Math.min(cardRect.bottom + 6, window.innerHeight - 180);
+    const left = Math.min(cardRect.left, window.innerWidth - 296);
+    tooltip.style.top  = top  + 'px';
+    tooltip.style.left = left + 'px';
+    document.body.appendChild(tooltip);
+
+    // Cerrar al hacer clic fuera
+    setTimeout(() => document.addEventListener('click', closeTooltip, { once: true }), 50);
 }
 
-function closeMgcPanel() {
-    document.getElementById('mgcCardPanel').style.display = 'none';
-    selectedCardId = null;
-    selectedCardSem = null;
+function closeTooltip() {
+    const t = document.getElementById('mgcTooltip');
+    if (t) t.remove();
 }
 
-function markSelectedCard(state) {
-    if (!selectedCardId) return;
-    if (state === 'none') {
-        delete mallaMarks[selectedCardId];
-    } else {
-        mallaMarks[selectedCardId] = state;
+function addPrereqFor(subId) {
+    closeTooltip();
+    mallaPrereqMode   = true;
+    mallaPrereqSource = null;
+    // Highlight the target card lightly
+    const el = document.getElementById(`mgc-${subId}`);
+    if (el) el.style.outline = '3px dashed #e91e63';
+    // Store target so second click assigns correctly
+    // Override: first click = source, auto-target = subId
+    // Hacemos que el primer clic sea la fuente, y asignamos como target subId
+    mallaPrereqTarget = subId;
+    document.getElementById('mgcPrereqBar').style.display = 'block';
+}
+
+let mallaPrereqTarget = null;
+
+// Sobrescribir handleMallaCardClick para modo con target
+const _origClick = handleMallaCardClick;
+
+function handleMallaCardClick(e, subId, semNum) {
+    e.stopPropagation();
+
+    if (mallaPrereqMode && mallaPrereqTarget) {
+        // subId es la FUENTE (prereq)
+        if (subId === mallaPrereqTarget) return;
+        if (!mallaPrereqs[mallaPrereqTarget]) mallaPrereqs[mallaPrereqTarget] = [];
+        if (!mallaPrereqs[mallaPrereqTarget].includes(subId)) {
+            mallaPrereqs[mallaPrereqTarget].push(subId);
+            saveMallaPrereqs();
+        }
+        exitPrereqMode();
+        renderMallaGenerada();
+        return;
     }
-    saveMallaMarks();
-    closeMgcPanel();
-    renderMallaGenerada();
+
+    // Modo normal: tooltip
+    showMgcTooltip(subId, semNum);
+}
+
+function exitPrereqMode() {
+    mallaPrereqMode   = false;
+    mallaPrereqSource = null;
+    mallaPrereqTarget = null;
+    const bar = document.getElementById('mgcPrereqBar');
+    if (bar) bar.style.display = 'none';
+    document.querySelectorAll('[id^="mgc-"]').forEach(el => el.style.outline = '');
 }
 
 function removeAllPrereqsOf(subId) {
+    closeTooltip();
     delete mallaPrereqs[subId];
     saveMallaPrereqs();
     renderMallaGenerada();
 }
 
 function clearAllPrereqs() {
-    if (!confirm('¿Borrar todos los prerrequisitos configurados?')) return;
+    if (!confirm('¿Borrar todos los prerrequisitos?')) return;
     mallaPrereqs = {};
     saveMallaPrereqs();
     renderMallaGenerada();
 }
 
-// ---- Modo prerrequisito ----
-function togglePrereqMode() {
-    mallaPrereqMode = !mallaPrereqMode;
-    const btn = document.getElementById('mgcPrereqModeBtn');
-    if (mallaPrereqMode) {
-        mallaPrereqSource = null;
-        if (btn) { btn.textContent = '❌ Cancelar prereq'; btn.className = 'btn btn-sm btn-danger'; }
-        document.getElementById('mgcPrereqMsg').innerHTML =
-            `🔗 Haz clic en la materia que <strong>es prerrequisito</strong> (la que se debe ver antes).`;
-    } else {
-        exitPrereqMode();
-    }
-}
-
-function exitPrereqMode() {
-    mallaPrereqMode = false;
-    mallaPrereqSource = null;
-    const btn = document.getElementById('mgcPrereqModeBtn');
-    if (btn) { btn.textContent = '🔗 + Prereq'; btn.className = 'btn btn-sm btn-secondary'; }
-    document.getElementById('mgcPrereqMsg').innerHTML =
-        `💡 Haz clic en una materia para marcarla. Usa el botón <strong>+ Prereq</strong> para asignar prerrequisitos.`;
-    document.querySelectorAll('.mgc-card').forEach(c => {
-        c.style.opacity = '';
-        c.style.outline = '';
-    });
-}
-
-function attachMallaGenListeners() {
-    // Cerrar panel al hacer clic fuera
-    const wrapper = document.getElementById('mgcWrapper');
-    if (wrapper) {
-        wrapper.addEventListener('click', (e) => {
-            if (!e.target.closest('.mgc-card') && !mallaPrereqMode) {
-                closeMgcPanel();
-            }
-        });
-    }
-}
-
-// ---- Estadísticas para la malla generada ----
-function getMallaGenStats() {
+// ---- Stats automáticas ----
+function updateMallaStatsFromPlan() {
     let done = 0, inProgress = 0, total = 0;
     Object.values(studyPlan).forEach(sem => {
-        sem.subjects.forEach(sub => {
+        sem.subjects.forEach(() => {
             total++;
-            const mark = mallaMarks && mallaMarks[sub.id];
-            if (mark === 'completed' || sem.status === 'completed') done++;
-            else if (mark === 'current' || sem.status === 'current') inProgress++;
+            if (sem.status === 'completed') done++;
+            else if (sem.status === 'current') inProgress++;
         });
     });
-    return { done, inProgress, total, pending: total - done - inProgress };
+    const el = document.getElementById('mallaStatsText');
+    if (el) el.textContent = `✅ ${done} completadas  •  ▶ ${inProgress} en curso  •  ${total - done - inProgress} pendientes`;
 }
