@@ -870,15 +870,14 @@ function showView(viewName, clickedEl) {
     } else if (viewName === 'malla') {
         // Pequeño delay para que el DOM esté listo
         setTimeout(() => {
+            initMallaGenerada();
+            buildMgcTypeLegend();
             initMallaView();
             setupMallaOverlayEvents();
         }, 100);
     }
     else if (viewName === 'grades') {
     renderGradesView();
-}
-if (view === 'malla') {
-    onMallaViewOpen();
 }
 }
 
@@ -935,11 +934,13 @@ function resetData() {
         localStorage.removeItem('savedSchedules');
         localStorage.removeItem('currentPeriod');
         localStorage.removeItem('mallaMarks');
+        localStorage.removeItem('mallaPrereqs');
 
         studyPlan = {};
         subjectBank = [];
         schedules = [];
         mallaMarks = {};
+        mallaPrereqs = {};
         config = { programName: '', university: '', totalCredits: 0, creditsByType: {} };
 
         const csvInput = document.getElementById('csvFile');
@@ -1737,6 +1738,10 @@ async function loadUserDataFromFirestore() {
                 mallaMarks = data.mallaMarks;
                 localStorage.setItem('mallaMarks', JSON.stringify(mallaMarks));
             }
+            if (data.mallaPrereqs) {
+                mallaPrereqs = data.mallaPrereqs;
+                localStorage.setItem('mallaPrereqs', JSON.stringify(mallaPrereqs));
+            }
             if (data.mallaPdfURL) {
     localStorage.setItem('mallaPdfURL', data.mallaPdfURL);
     localStorage.setItem('mallaPdfFileName', data.mallaPdfFileName || 'malla.pdf');
@@ -1773,6 +1778,7 @@ async function saveToFirestore() {
             schedules,
             currentPeriodConfig,
             mallaMarks,
+            mallaPrereqs: (typeof mallaPrereqs !== 'undefined') ? mallaPrereqs : {},
             gradesData: (typeof gradesData !== 'undefined') ? gradesData : {},
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
@@ -1839,6 +1845,59 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
+
+// ============================================
+// MALLA — PESTAÑAS Y LEYENDA
+// ============================================
+
+function switchMallaTab(tab) {
+    const genPanel = document.getElementById('mallaPanelGen');
+    const pdfPanel = document.getElementById('mallaPanelPdf');
+    const tabGen   = document.getElementById('mallaTabGen');
+    const tabPdf   = document.getElementById('mallaTabPdf');
+
+    if (tab === 'gen') {
+        if (genPanel) genPanel.style.display = 'block';
+        if (pdfPanel) pdfPanel.style.display = 'none';
+        if (tabGen)   tabGen.classList.add('active');
+        if (tabPdf)   tabPdf.classList.remove('active');
+    } else {
+        if (genPanel) genPanel.style.display = 'none';
+        if (pdfPanel) pdfPanel.style.display = 'block';
+        if (tabGen)   tabGen.classList.remove('active');
+        if (tabPdf)   tabPdf.classList.add('active');
+        // Inicializar PDF si aún no se ha hecho
+        setTimeout(() => {
+            initMallaView();
+            setupMallaOverlayEvents();
+        }, 50);
+    }
+}
+
+function buildMgcTypeLegend() {
+    const el = document.getElementById('mgcLegendTypes');
+    if (!el) return;
+    const MALLA_TYPE_COLORS = {
+        'DISCIPLINAR OBLIGATORIA':    { border: '#1976d2' },
+        'DISCIPLINAR OPTATIVA':       { border: '#388e3c' },
+        'FUNDAMENTACIÓN OBLIGATORIA': { border: '#f9a825' },
+        'FUNDAMENTACIÓN OPTATIVA':    { border: '#e91e63' },
+        'LIBRE ELECCIÓN':             { border: '#7b1fa2' },
+        'TRABAJO DE GRADO':           { border: '#3f51b5' },
+        'NIVELACIÓN':                 { border: '#ff6f00' },
+    };
+    // Solo mostrar los tipos que existen en el plan
+    const usedTypes = new Set();
+    Object.values(studyPlan).forEach(sem => sem.subjects.forEach(s => usedTypes.add(s.type)));
+
+    el.innerHTML = Array.from(usedTypes).map(type => {
+        const color = (MALLA_TYPE_COLORS[type] || { border: '#90a4ae' }).border;
+        return `<div class="malla-legend-item">
+            <div class="malla-legend-dot" style="background:${color}33; border-color:${color};"></div>
+            <span>${type}</span>
+        </div>`;
+    }).join('');
+}
 
 // ============================================
 // MALLA CURRICULAR
