@@ -876,11 +876,11 @@ function showView(viewName, clickedEl) {
         }, 100);
     }
     else if (viewName === 'grades') {
-    renderGradesView();
-}
-else if (viewName === 'contenido') {
-    initContenidoView();
-}
+        renderGradesView();
+    }
+    else if (viewName === 'contenido') {
+        initContenidoView();
+    }
 }
 
 function scrollToSemester(semesterNum) {
@@ -1745,9 +1745,10 @@ async function loadUserDataFromFirestore() {
                 localStorage.setItem('mallaPrereqs', JSON.stringify(mallaPrereqs));
             }
             if (data.mallaPdfURL) {
-    localStorage.setItem('mallaPdfURL', data.mallaPdfURL);
-    localStorage.setItem('mallaPdfFileName', data.mallaPdfFileName || 'malla.pdf');
-}
+                localStorage.setItem('mallaPdfURL', data.mallaPdfURL);
+                localStorage.setItem('mallaPdfFileName', data.mallaPdfFileName || 'malla.pdf');
+            }
+            if (typeof loadCPFromFirestore === 'function') loadCPFromFirestore(data);
             // Cargar notas desde Firestore
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
@@ -1855,22 +1856,22 @@ document.addEventListener('DOMContentLoaded', () => {
 function switchMallaTab(tab) {
     const genPanel = document.getElementById('mallaPanelGen');
     const pdfPanel = document.getElementById('mallaPanelPdf');
-    const tabGen   = document.getElementById('mallaTabGen');
-    const tabPdf   = document.getElementById('mallaTabPdf');
+    const tabGen = document.getElementById('mallaTabGen');
+    const tabPdf = document.getElementById('mallaTabPdf');
 
     if (tab === 'gen') {
         if (genPanel) genPanel.style.display = 'block';
         if (pdfPanel) pdfPanel.style.display = 'none';
-        if (tabGen)   tabGen.classList.add('active');
-        if (tabPdf)   tabPdf.classList.remove('active');
+        if (tabGen) tabGen.classList.add('active');
+        if (tabPdf) tabPdf.classList.remove('active');
         // Re-render por si cambió el estado
         initMallaGenerada();
         buildMgcTypeLegend();
     } else {
         if (genPanel) genPanel.style.display = 'none';
         if (pdfPanel) pdfPanel.style.display = 'block';
-        if (tabGen)   tabGen.classList.remove('active');
-        if (tabPdf)   tabPdf.classList.add('active');
+        if (tabGen) tabGen.classList.remove('active');
+        if (tabPdf) tabPdf.classList.add('active');
         // PDF: solo visualización, sin overlay interactivo
         setTimeout(() => {
             initMallaView();
@@ -1883,13 +1884,13 @@ function buildMgcTypeLegend() {
     const el = document.getElementById('mgcLegendTypes');
     if (!el) return;
     const MALLA_TYPE_COLORS = {
-        'DISCIPLINAR OBLIGATORIA':    { border: '#1976d2' },
-        'DISCIPLINAR OPTATIVA':       { border: '#388e3c' },
+        'DISCIPLINAR OBLIGATORIA': { border: '#1976d2' },
+        'DISCIPLINAR OPTATIVA': { border: '#388e3c' },
         'FUNDAMENTACIÓN OBLIGATORIA': { border: '#f9a825' },
-        'FUNDAMENTACIÓN OPTATIVA':    { border: '#e91e63' },
-        'LIBRE ELECCIÓN':             { border: '#7b1fa2' },
-        'TRABAJO DE GRADO':           { border: '#3f51b5' },
-        'NIVELACIÓN':                 { border: '#ff6f00' },
+        'FUNDAMENTACIÓN OPTATIVA': { border: '#e91e63' },
+        'LIBRE ELECCIÓN': { border: '#7b1fa2' },
+        'TRABAJO DE GRADO': { border: '#3f51b5' },
+        'NIVELACIÓN': { border: '#ff6f00' },
     };
     // Solo mostrar los tipos que existen en el plan
     const usedTypes = new Set();
@@ -1932,12 +1933,12 @@ async function initMallaView() {
 
 async function loadMallaPDF() {
     const loadingEl = document.getElementById('mallaLoading');
-    const errorEl   = document.getElementById('mallaError');
-    const stackEl   = document.getElementById('mallaCanvasStack');
+    const errorEl = document.getElementById('mallaError');
+    const stackEl = document.getElementById('mallaCanvasStack');
 
     if (loadingEl) loadingEl.style.display = 'flex';
-    if (errorEl)   errorEl.style.display   = 'none';
-    if (stackEl)   stackEl.style.display   = 'none';
+    if (errorEl) errorEl.style.display = 'none';
+    if (stackEl) stackEl.style.display = 'none';
 
     // Buscar URL guardada: primero localStorage, luego Firestore
     let pdfURL = localStorage.getItem('mallaPdfURL');
@@ -1950,7 +1951,7 @@ async function loadMallaPDF() {
                 localStorage.setItem('mallaPdfURL', pdfURL);
                 localStorage.setItem('mallaPdfFileName', doc.data().mallaPdfFileName || 'malla.pdf');
             }
-        } catch(e) { console.warn('No se pudo leer URL de Firestore', e); }
+        } catch (e) { console.warn('No se pudo leer URL de Firestore', e); }
     }
 
     // Actualizar nombre visible si ya había uno
@@ -1981,12 +1982,12 @@ async function loadMallaPDF() {
             'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         // Descargar el PDF como binario primero para evitar problemas CORS
-const response = await fetch(pdfURL);
-const arrayBuffer = await response.arrayBuffer();
-mallaPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const response = await fetch(pdfURL);
+        const arrayBuffer = await response.arrayBuffer();
+        mallaPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
 
         if (loadingEl) loadingEl.style.display = 'none';
-        if (stackEl)   stackEl.style.display   = 'block';
+        if (stackEl) stackEl.style.display = 'block';
 
         renderMallaPage(mallaCurrentPage);
     } catch (err) {
@@ -2024,8 +2025,8 @@ function setupMallaPdfInput() {
             formData.append('resource_type', 'raw');
             formData.append('access_mode', 'public');
             // Usar el UID del usuario como public_id fijo → siempre sobreescribe
-formData.append('public_id', `mallas/${currentUser.uid}`);
-formData.append('overwrite', 'true');
+            formData.append('public_id', `mallas/${currentUser.uid}`);
+            formData.append('overwrite', 'true');
 
             const res = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
@@ -2050,7 +2051,7 @@ formData.append('overwrite', 'true');
             updateMallaPdfUI(file.name);
             mallaPdfDoc = null; // forzar recarga
             await loadMallaPDF();
-            
+
 
         } catch (err) {
             console.error('Error subiendo PDF:', err);
@@ -2061,10 +2062,10 @@ formData.append('overwrite', 'true');
 }
 
 function updateMallaPdfUI(name) {
-    const nameEl   = document.getElementById('mallaPdfName');
+    const nameEl = document.getElementById('mallaPdfName');
     const clearBtn = document.getElementById('mallaPdfClearBtn');
-    if (nameEl)   nameEl.textContent       = name ? `📄 ${name}` : '';
-    if (clearBtn) clearBtn.style.display   = name ? 'inline-block' : 'none';
+    if (nameEl) nameEl.textContent = name ? `📄 ${name}` : '';
+    if (clearBtn) clearBtn.style.display = name ? 'inline-block' : 'none';
 }
 
 function clearMallaPDF() {
@@ -2128,9 +2129,9 @@ function redrawOverlay() {
         const [x, y] = key.split('_').map(Number);
 
         const isCompleted = mark.state === 'completed';
-        const fillColor  = isCompleted ? 'rgba(46,125,50,0.5)'   : 'rgba(255,160,0,0.5)';
-        const strokeColor = isCompleted ? '#1b5e20'               : '#e65100';
-        const icon        = isCompleted ? '✓'                     : '▶';
+        const fillColor = isCompleted ? 'rgba(46,125,50,0.5)' : 'rgba(255,160,0,0.5)';
+        const strokeColor = isCompleted ? '#1b5e20' : '#e65100';
+        const icon = isCompleted ? '✓' : '▶';
 
         // Sombra suave
         ctx.shadowColor = 'rgba(0,0,0,0.25)';
@@ -2206,15 +2207,15 @@ function setupMallaOverlayEvents() {
         dragStartX = e.pageX - wrapper.offsetLeft;
         dragStartY = e.pageY - wrapper.offsetTop;
         scrollLeft = wrapper.scrollLeft;
-        scrollTop  = wrapper.scrollTop;
+        scrollTop = wrapper.scrollTop;
         wrapper.style.cursor = 'grabbing';
 
         const onMove = (ev) => {
             const dx = ev.pageX - wrapper.offsetLeft - dragStartX;
-            const dy = ev.pageY - wrapper.offsetTop  - dragStartY;
+            const dy = ev.pageY - wrapper.offsetTop - dragStartY;
             if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasDragged = true;
             wrapper.scrollLeft = scrollLeft - dx;
-            wrapper.scrollTop  = scrollTop  - dy;
+            wrapper.scrollTop = scrollTop - dy;
         };
 
         const onUp = () => {
@@ -2255,7 +2256,7 @@ function setupMallaOverlayEvents() {
     wrapper.addEventListener('touchmove', (e) => {
         if (e.touches.length === 1 && touchStartData) {
             wrapper.scrollLeft = touchStartData.sl - (e.touches[0].clientX - touchStartData.x);
-            wrapper.scrollTop  = touchStartData.st - (e.touches[0].clientY - touchStartData.y);
+            wrapper.scrollTop = touchStartData.st - (e.touches[0].clientY - touchStartData.y);
         } else if (e.touches.length === 2) {
             e.preventDefault();
             const dist = Math.hypot(
@@ -2284,7 +2285,7 @@ function mallaZoom(delta) {
     renderMallaPage(mallaCurrentPage);
 }
 
-function mallaZoomIn()  { mallaZoom(0.25); }
+function mallaZoomIn() { mallaZoom(0.25); }
 function mallaZoomOut() { mallaZoom(-0.25); }
 
 function mallaZoomFit() {
@@ -2344,7 +2345,7 @@ function clearAllMallaMarks() {
 // ---- Estadísticas rápidas ----
 function updateMallaStats() {
     const completed = Object.values(mallaMarks).filter(m => m && m.state === 'completed').length;
-    const current   = Object.values(mallaMarks).filter(m => m && m.state === 'current').length;
+    const current = Object.values(mallaMarks).filter(m => m && m.state === 'current').length;
     const el = document.getElementById('mallaStatsText');
     if (el) el.textContent = `✅ ${completed} completadas  •  ▶ ${current} en curso`;
 }
