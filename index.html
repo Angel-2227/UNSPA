@@ -157,9 +157,6 @@
                     <div class="nav-item" onclick="showView('malla', this)">
                         🗺️ Malla Curricular
                     </div>
-                    <div class="nav-item" onclick="showView('contenido', this)">
-                        📖 Contenido Programático
-                    </div>
                     <div class="nav-item" onclick="showView('grades', this)">
                         📝 Notas
                     </div>
@@ -274,11 +271,15 @@
                 <!-- Subjects Bank View -->
                 <div id="subjectsView" class="view-content" style="display: none;">
                     <div class="header-bar">
-                        <div class="header-controls">
-                            <h2>Banco de Materias</h2>
-                            <button class="btn btn-success" onclick="openSubjectModal()">➕ Nueva Materia</button>
-                        </div>
-                    </div>
+    <div class="header-controls">
+        <h2>Banco de Materias</h2>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <button class="btn btn-success" onclick="openSubjectModal()">➕ Nueva Materia</button>
+            <button class="btn btn-primary btn-sm" id="cpLoadBtnBank" onclick="document.getElementById('cpCsvInputBank').click()">📖 Cargar programa</button>
+        </div>
+    </div>
+</div>
+<input type="file" id="cpCsvInputBank" accept=".csv" style="display:none">
 
                     <div style="margin-bottom: 20px;">
                         <input type="text" class="form-control" id="searchSubjects" placeholder="🔍 Buscar materias..."
