@@ -102,6 +102,31 @@ function setupEventListeners() {
         if (event.target === typologyModal) closeTypologyModal();
         if (event.target === currentScheduleModal) closeCurrentScheduleModal();
     });
+    // Listener CSV contenido programático en banco de materias
+    const cpCsvInputBank = document.getElementById('cpCsvInputBank');
+    if (cpCsvInputBank) {
+        cpCsvInputBank.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const btn = document.getElementById('cpLoadBtnBank');
+            if (btn) { btn.textContent = '⏳ Procesando...'; btn.disabled = true; }
+            try {
+                const text = await file.text();
+                const parsed = await parseCPCSV(text);
+                if (!parsed.length) { alert('⚠️ No se encontraron asignaturas en el CSV.'); return; }
+                contenidoProgramaticoData = parsed;
+                saveCPToStorage();
+                saveCPToFirestore();
+                renderSubjectsBank();
+                alert(`✅ ${parsed.length} asignaturas cargadas.`);
+            } catch (err) {
+                alert('❌ Error al leer el archivo: ' + err.message);
+            } finally {
+                if (btn) { btn.textContent = '📖 Cargar programa'; btn.disabled = false; }
+                e.target.value = '';
+            }
+        });
+    }
 }
 
 // ============================================
@@ -623,27 +648,111 @@ function renderSubjectsBank() {
     if (!container) return;
     const searchTerm = document.getElementById('searchSubjects').value.toLowerCase();
 
-    const filteredSubjects = subjectBank.filter(subject =>
+    // Helper: normaliza texto para comparar nombres
+    function normName(s) {
+        return (s || '').toLowerCase()
+            .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e')
+            .replace(/[íìï]/g,'i').replace(/[óòö]/g,'o')
+            .replace(/[úùü]/g,'u').replace(/ñ/g,'n').trim();
+    }
+
+    // Obtener semestre asignado de una materia del banco
+    function getSemesterFor(subject) {
+        for (const [num, sem] of Object.entries(studyPlan)) {
+            if (sem.subjects && sem.subjects.some(s => s.id === subject.id || s.name === subject.name)) {
+                return num;
+            }
+        }
+        return null;
+    }
+
+    // Cruzar materia del banco con CP data por nombre o código
+    function getCpData(subject) {
+        if (typeof contenidoProgramaticoData === 'undefined' || !contenidoProgramaticoData.length) return null;
+        const normSubj = normName(subject.name);
+        return contenidoProgramaticoData.find(cp =>
+            normName(cp.name) === normSubj ||
+            (subject.code && cp.code && subject.code === cp.code)
+        ) || null;
+    }
+
+    // ── Materias del banco filtradas ──
+    const filteredBank = subjectBank.filter(subject =>
         subject.name.toLowerCase().includes(searchTerm) ||
         subject.type.toLowerCase().includes(searchTerm)
     );
 
-    if (filteredSubjects.length === 0) {
+    // ── Materias del CP que NO están en el banco ──
+    let unassignedCP = [];
+    if (typeof contenidoProgramaticoData !== 'undefined' && contenidoProgramaticoData.length) {
+        unassignedCP = contenidoProgramaticoData.filter(cp => {
+            if (searchTerm && !normName(cp.name).includes(normName(searchTerm)) &&
+                !(cp.code || '').toLowerCase().includes(searchTerm)) return false;
+            return !subjectBank.some(s =>
+                normName(s.name) === normName(cp.name) ||
+                (s.code && cp.code && s.code === cp.code)
+            );
+        });
+    }
+
+    if (filteredBank.length === 0 && unassignedCP.length === 0) {
         container.innerHTML = '<div class="no-data"><p>No se encontraron materias</p></div>';
         return;
     }
 
-    container.innerHTML = filteredSubjects.map(subject => `
-        <div class="subject-item">
-            <div class="subject-info">
-                <h4>${subject.name}</h4>
-                <p><span class="type-badge ${getTypeClass(subject.type)}">${subject.type}</span> • ${subject.credits} créditos</p>
+    // ── Renderizar materias del banco ──
+    const bankHTML = filteredBank.map(subject => {
+        const cp = getCpData(subject);
+        const semNum = getSemesterFor(subject);
+        const semBadge = semNum
+            ? `<span style="font-size:0.75rem;background:var(--unal-blue);color:#fff;padding:2px 7px;border-radius:10px;margin-left:6px;">Sem. ${semNum}</span>`
+            : `<span style="font-size:0.75rem;background:var(--bg-secondary);color:var(--text-secondary);padding:2px 7px;border-radius:10px;border:1px solid var(--border-color);margin-left:6px;">Sin semestre</span>`;
+        const cpBtn = cp
+            ? `<button class="btn btn-secondary btn-sm" title="Ver programa" onclick="cpShowModal('${cp.code}')">📖</button>`
+            : `<button class="btn btn-secondary btn-sm" title="Sin programa cargado" style="opacity:0.4;cursor:default;">📖</button>`;
+        const desc = cp && cp.description
+            ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;line-height:1.4;">${cp.description.slice(0,100)}${cp.description.length>100?'…':''}</p>`
+            : '';
+
+        return `
+        <div class="subject-item" style="align-items:flex-start;flex-direction:column;gap:6px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                <div class="subject-info">
+                    <h4>${subject.name} ${semBadge}</h4>
+                    <p><span class="type-badge ${getTypeClass(subject.type)}">${subject.type}</span> • ${subject.credits} créditos${subject.code ? ` • <span style="font-size:0.78rem;color:var(--text-secondary);">${subject.code}</span>` : ''}</p>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;">
+                    ${cpBtn}
+                    <button class="btn btn-primary btn-sm" onclick="editBankSubject('${subject.id}')">✏️</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteBankSubject('${subject.id}')">🗑️</button>
+                </div>
             </div>
-            <div>
-                <button class="btn btn-primary btn-sm" onclick="editBankSubject('${subject.id}')">✏️</button>
-                <button class="btn btn-danger btn-sm" onclick="deleteBankSubject('${subject.id}')">🗑️</button>
-            </div>
-        </div>`).join('');
+            ${desc}
+        </div>`;
+    }).join('');
+
+    // ── Renderizar materias del CP sin asignar ──
+    const unassignedHTML = unassignedCP.length ? `
+        <div style="margin-top:18px;padding-top:14px;border-top:2px dashed var(--border-color);">
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:10px;font-weight:600;">
+                📋 En el programa pero sin agregar al banco (${unassignedCP.length})
+            </p>
+            ${unassignedCP.map(cp => `
+            <div class="subject-item" style="align-items:flex-start;flex-direction:column;gap:6px;opacity:0.8;border-style:dashed;">
+                <div style="display:flex;justify-content:space-between;align-items:center;width:100%;">
+                    <div class="subject-info">
+                        <h4>${cp.name} <span style="font-size:0.72rem;background:#fff3cd;color:#856404;padding:2px 7px;border-radius:10px;margin-left:6px;">No en banco</span></h4>
+                        <p><span class="type-badge ${getTypeClass(cp.type)}">${cp.type || '—'}</span> • ${cp.credits || '?'} créditos${cp.code ? ` • <span style="font-size:0.78rem;color:var(--text-secondary);">${cp.code}</span>` : ''}</p>
+                    </div>
+                    <div style="display:flex;gap:6px;flex-shrink:0;margin-left:10px;">
+                        <button class="btn btn-secondary btn-sm" title="Ver programa" onclick="cpShowModal('${cp.code}')">📖</button>
+                    </div>
+                </div>
+                ${cp.description ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;line-height:1.4;">${cp.description.slice(0,100)}${cp.description.length>100?'…':''}</p>` : ''}
+            </div>`).join('')}
+        </div>` : '';
+
+    container.innerHTML = bankHTML + unassignedHTML;
 }
 
 function filterSubjects() {
@@ -863,6 +972,7 @@ function showView(viewName, clickedEl) {
     closeSidebar();
 
     if (viewName === 'subjects') renderSubjectsBank();
+    else if (viewName === 'contenido') { showView('subjects'); return; }
     else if (viewName === 'config') renderTypologies();
     else if (viewName === 'schedule') {
         renderSchedules();
