@@ -805,8 +805,200 @@ body {
 
 
 /* ============================================
-   PLANIFICADOR DE HORARIOS
+   PLANIFICADOR — SECCIONES POR SEMESTRE
    ============================================ */
+
+.sem-section-label {
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--unal-green);
+  margin: 18px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--unal-green);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sem-section-label.other {
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+.sem-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.sem-badge.current-sem {
+  background: rgba(46,125,50,0.15);
+  color: var(--unal-green);
+  border: 1px solid rgba(46,125,50,0.3);
+}
+
+.sem-badge.other-sem {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.other-sem-card {
+  opacity: 0.85;
+}
+
+.other-sems-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  border: 1px dashed var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.88rem;
+  font-weight: 500;
+  margin: 12px 0 4px;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.other-sems-toggle:hover {
+  border-color: var(--unal-green);
+  color: var(--unal-green);
+}
+
+/* ============================================
+   PREVIEW GRID MEJORADO (schedule preview)
+   ============================================ */
+
+.schedule-preview-grid {
+  display: grid;
+  gap: 0;
+  border: 1.5px solid var(--border-color);
+  border-radius: 10px;
+  overflow: hidden;
+  margin-top: 14px;
+  font-size: 0.8rem;
+}
+
+.spg-cell {
+  background: var(--bg-primary);
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-right: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  position: relative;
+}
+
+.spg-cell:last-child { border-right: none; }
+
+.spg-corner {
+  background: var(--bg-secondary);
+  border-right: 2px solid var(--border-color);
+  border-bottom: 2px solid var(--border-color);
+}
+
+.spg-header {
+  background: var(--bg-secondary);
+  font-weight: 700;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  color: var(--unal-green);
+  letter-spacing: 0.03em;
+  border-bottom: 2px solid var(--border-color);
+  flex-direction: column;
+  gap: 0;
+  padding: 6px 2px;
+}
+
+.spg-day-full {
+  font-size: 0.6rem;
+  opacity: 0.7;
+  font-weight: 400;
+  text-transform: lowercase;
+}
+
+.spg-time {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.72rem;
+  border-right: 2px solid var(--border-color);
+  padding: 0 6px;
+  flex-direction: column;
+}
+
+.spg-slot {
+  transition: background 0.1s;
+}
+
+.spg-conflict {
+  background: rgba(198,40,40,0.07);
+}
+
+.spg-class {
+  background: color-mix(in srgb, var(--class-color, #2e7d32) 18%, var(--bg-primary));
+  border-left: 3px solid var(--class-color, #2e7d32);
+  border-radius: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 6px 8px;
+  gap: 3px;
+  cursor: default;
+  overflow: hidden;
+  min-height: 48px;
+}
+
+.spg-class-name {
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--class-color, #2e7d32);
+  line-height: 1.2;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.spg-class-meta {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spg-hint {
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  padding: 14px;
+  margin: 0;
+}
+
+/* ============================================
+   MODAL DE CONFIRMACIÓN DE SINCRONIZACIÓN
+   ============================================ */
+
+#syncConfirmModal .modal-content {
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+
 
 .schedule-card {
   background: var(--bg-primary);

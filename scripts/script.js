@@ -1351,45 +1351,88 @@ function createNewSchedule() {
     document.getElementById('scheduleModal').style.display = 'block';
 }
 
-function renderSubjectSelector() {
-    const container = document.getElementById('subjectSelector');
-    const availableSubjects = [];
-
-    Object.entries(studyPlan).forEach(([semNum, semester]) => {
-        if (semester.status === 'pending' || semester.status === 'current') {
-            semester.subjects.forEach(subject => {
-                if (subject.horariosInfo && subject.horariosInfo.length > 0) {
-                    availableSubjects.push({ ...subject, semester: semNum });
-                }
-            });
-        }
-    });
-
-    if (availableSubjects.length === 0) {
-        container.innerHTML = '<p>No hay materias disponibles. Asegúrate de haber cargado los horarios.</p>';
-        return;
-    }
-
-    container.innerHTML = availableSubjects.map(subject => `
-        <div class="subject-select-card" id="subject-${subject.id}" onclick="toggleSubjectCard('${subject.id}')">
+function buildSubjectCard(subject, isOtherSemester = false) {
+    const semLabel = isOtherSemester
+        ? `<span class="sem-badge other-sem">Sem. ${subject.semester}</span>`
+        : `<span class="sem-badge current-sem">Sem. ${subject.semester} • Cursando</span>`;
+    return `
+        <div class="subject-select-card${isOtherSemester ? ' other-sem-card' : ''}" id="subject-${subject.id}" onclick="toggleSubjectCard('${subject.id}')" data-sem="${subject.semester}" data-other="${isOtherSemester}">
             <div class="subject-header-info">
                 <div>
                     <strong>${subject.name}</strong>
-                    <div style="font-size: 0.85rem; color: var(--text-secondary);">
-                        Semestre ${subject.semester} • ${subject.credits} créditos • ${subject.code}
+                    <div style="font-size: 0.82rem; color: var(--text-secondary); margin-top: 2px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                        ${semLabel}
+                        <span>${subject.credits} créditos</span>
+                        ${subject.code ? `<span style="opacity:0.7">${subject.code}</span>` : ''}
                     </div>
                 </div>
                 <span class="expand-icon" id="expand-${subject.id}">▼</span>
             </div>
             <div class="group-selector" id="groups-${subject.id}">
                 ${subject.horariosInfo.map((grupo, idx) => `
-                    <div class="group-option" onclick="event.stopPropagation(); selectGroup('${subject.id}', ${idx})">
+                    <div class="group-option" onclick="event.stopPropagation(); selectGroup('${subject.id}', ${idx}, ${isOtherSemester})">
                         <strong>Grupo ${grupo.numero}</strong><br>
                         <small>👨‍🏫 ${grupo.profesor}</small><br>
                         <small>📅 ${grupo.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}</small>
                     </div>`).join('')}
             </div>
-        </div>`).join('');
+        </div>`;
+}
+
+function renderSubjectSelector() {
+    const container = document.getElementById('subjectSelector');
+    const currentSubjects = [];
+    const otherSubjects = [];
+
+    Object.entries(studyPlan).forEach(([semNum, semester]) => {
+        semester.subjects.forEach(subject => {
+            if (subject.horariosInfo && subject.horariosInfo.length > 0) {
+                if (semester.status === 'current') {
+                    currentSubjects.push({ ...subject, semester: semNum });
+                } else if (semester.status === 'pending') {
+                    otherSubjects.push({ ...subject, semester: semNum });
+                }
+            }
+        });
+    });
+
+    if (currentSubjects.length === 0 && otherSubjects.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-secondary);">No hay materias disponibles. Asegúrate de haber cargado los horarios.</p>';
+        return;
+    }
+
+    let html = '';
+
+    if (currentSubjects.length > 0) {
+        html += `<div class="sem-section-label">📚 Materias del semestre actual</div>`;
+        html += currentSubjects.map(s => buildSubjectCard(s, false)).join('');
+    } else {
+        html += `<div class="sem-section-label" style="opacity:0.6;">Sin materias con horario para el semestre marcado como "Cursando"</div>`;
+    }
+
+    if (otherSubjects.length > 0) {
+        html += `
+        <div id="otherSubjectsToggle" class="other-sems-toggle" onclick="toggleOtherSubjects()">
+            <span id="otherSubjectsToggleIcon">▶</span>
+            Ver otras materias (${otherSubjects.length} de semestres pendientes)
+        </div>
+        <div id="otherSubjectsContainer" style="display:none;">
+            <div class="sem-section-label other">📋 Otras materias disponibles
+                <span style="font-size:0.78rem; font-weight:400; opacity:0.75; margin-left:6px;">Agregarlas actualizará su semestre en la malla</span>
+            </div>
+            ${otherSubjects.map(s => buildSubjectCard(s, true)).join('')}
+        </div>`;
+    }
+
+    container.innerHTML = html;
+}
+
+function toggleOtherSubjects() {
+    const cont = document.getElementById('otherSubjectsContainer');
+    const icon = document.getElementById('otherSubjectsToggleIcon');
+    const isOpen = cont.style.display !== 'none';
+    cont.style.display = isOpen ? 'none' : 'block';
+    icon.textContent = isOpen ? '▶' : '▼';
 }
 
 function toggleSubjectCard(subjectId) {
@@ -1443,21 +1486,91 @@ function filterSubjectSelector() {
 
 let selectedSubjects = {};
 
-function selectGroup(subjectId, groupIndex) {
+function selectGroup(subjectId, groupIndex, isOtherSemester = false) {
     const subjectCard = document.getElementById(`subject-${subjectId}`);
     const groupOptions = subjectCard.querySelectorAll('.group-option');
 
     if (selectedSubjects[subjectId] === groupIndex) {
+        // Deselect
         delete selectedSubjects[subjectId];
         subjectCard.classList.remove('selected');
         groupOptions[groupIndex].classList.remove('selected');
-    } else {
-        selectedSubjects[subjectId] = groupIndex;
-        subjectCard.classList.add('selected');
+        updateSchedulePreview();
+        return;
+    }
+
+    if (isOtherSemester) {
+        const semNum = subjectCard.getAttribute('data-sem');
+        const subjectName = subjectCard.querySelector('strong').textContent;
+        const grupo = (() => {
+            const subj = findSubjectById(subjectId);
+            return subj?.horariosInfo?.[groupIndex];
+        })();
+        const grupoDesc = grupo
+            ? `Grupo ${grupo.numero} · ${grupo.profesor}\n${grupo.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}`
+            : '';
+
+        showSyncConfirmModal(subjectId, groupIndex, subjectName, semNum, grupoDesc, subjectCard, groupOptions);
+        return;
+    }
+
+    // Normal select for current semester
+    selectedSubjects[subjectId] = groupIndex;
+    subjectCard.classList.add('selected');
+    groupOptions.forEach(opt => opt.classList.remove('selected'));
+    groupOptions[groupIndex].classList.add('selected');
+    updateSchedulePreview();
+}
+
+function showSyncConfirmModal(subjectId, groupIndex, subjectName, semNum, grupoDesc, subjectCard, groupOptions) {
+    // Remove any existing confirm modal
+    const old = document.getElementById('syncConfirmModal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'syncConfirmModal';
+    modal.className = 'modal';
+    modal.style.display = 'flex';
+    modal.style.zIndex = '1200';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width:460px; padding:28px;">
+            <div style="margin-bottom:18px;">
+                <h3 style="margin:0 0 8px;">Agregar materia de otro semestre</h3>
+                <p style="color:var(--text-secondary); font-size:0.9rem; margin:0;">
+                    Estás agregando <strong>${subjectName}</strong> (Sem. ${semNum}) al horario actual.<br>
+                    Esto <strong>marcará ese semestre como "Cursando"</strong> en tu malla para mantener todo sincronizado.
+                </p>
+            </div>
+            <div style="background:var(--bg-secondary); border-radius:8px; padding:12px; font-size:0.85rem; margin-bottom:20px; color:var(--text-secondary);">
+                📌 ${grupoDesc}
+            </div>
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button class="btn btn-secondary" onclick="document.getElementById('syncConfirmModal').remove()">Cancelar</button>
+                <button class="btn btn-success" onclick="confirmSyncAndSelect('${subjectId}', ${groupIndex}, ${semNum})">✅ Confirmar y agregar</button>
+            </div>
+        </div>`;
+    document.body.appendChild(modal);
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+}
+
+function confirmSyncAndSelect(subjectId, groupIndex, semNum) {
+    document.getElementById('syncConfirmModal')?.remove();
+
+    // Mark that semester as 'current' in studyPlan
+    if (studyPlan[semNum]) {
+        studyPlan[semNum].status = 'current';
+        saveData();
+    }
+
+    const subjectCard = document.getElementById(`subject-${subjectId}`);
+    const groupOptions = subjectCard?.querySelectorAll('.group-option');
+
+    selectedSubjects[subjectId] = groupIndex;
+    if (subjectCard) subjectCard.classList.add('selected');
+    if (groupOptions) {
         groupOptions.forEach(opt => opt.classList.remove('selected'));
         groupOptions[groupIndex].classList.add('selected');
     }
-
     updateSchedulePreview();
 }
 
@@ -1465,8 +1578,9 @@ function updateSchedulePreview() {
     const preview = document.getElementById('schedulePreview');
     const allDays = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
     const usedDays = new Set();
+    const subjectEntries = Object.entries(selectedSubjects);
 
-    Object.entries(selectedSubjects).forEach(([subjectId, groupIdx]) => {
+    subjectEntries.forEach(([subjectId, groupIdx]) => {
         const subject = findSubjectById(subjectId);
         if (!subject || !subject.horariosInfo) return;
         subject.horariosInfo[groupIdx].horarios.forEach(h => usedDays.add(h.dia));
@@ -1474,8 +1588,8 @@ function updateSchedulePreview() {
 
     const days = usedDays.size > 0 ? allDays.filter(day => usedDays.has(day)) : allDays;
 
-    let minHour = 18, maxHour = 7;
-    Object.entries(selectedSubjects).forEach(([subjectId, groupIdx]) => {
+    let minHour = 20, maxHour = 7;
+    subjectEntries.forEach(([subjectId, groupIdx]) => {
         const subject = findSubjectById(subjectId);
         if (!subject || !subject.horariosInfo) return;
         subject.horariosInfo[groupIdx].horarios.forEach(h => {
@@ -1484,36 +1598,98 @@ function updateSchedulePreview() {
         });
     });
 
-    const hours = Object.keys(selectedSubjects).length > 0
+    const hours = subjectEntries.length > 0
         ? Array.from({ length: maxHour - minHour }, (_, i) => minHour + i)
         : Array.from({ length: 14 }, (_, i) => 7 + i);
 
-    let grid = `<div class="schedule-grid">`;
-    grid += `<div class="schedule-cell header"></div>`;
-    days.forEach(day => { grid += `<div class="schedule-cell header">${day}</div>`; });
-    hours.forEach(hour => {
-        grid += `<div class="schedule-cell time">${hour}:00</div>`;
-        days.forEach(day => { grid += `<div class="schedule-cell" data-day="${day}" data-hour="${hour}"></div>`; });
+    // Assign a stable color per subject
+    const SUBJECT_COLORS = [
+        '#2e7d32','#1565c0','#6a1b9a','#c62828','#e65100',
+        '#00695c','#283593','#558b2f','#4527a0','#00838f'
+    ];
+    const colorMap = {};
+    subjectEntries.forEach(([subjectId], i) => {
+        colorMap[subjectId] = SUBJECT_COLORS[i % SUBJECT_COLORS.length];
     });
-    grid += `</div>`;
-    preview.innerHTML = grid;
 
-    Object.entries(selectedSubjects).forEach(([subjectId, groupIdx]) => {
+    // Build conflict map
+    const conflictSet = new Set();
+    const timeSlots = {};
+    subjectEntries.forEach(([subjectId, groupIdx]) => {
         const subject = findSubjectById(subjectId);
         if (!subject || !subject.horariosInfo) return;
-        const grupo = subject.horariosInfo[groupIdx];
-        grupo.horarios.forEach(horario => {
-            const startHour = parseInt(horario.inicio.split(':')[0]);
-            const endHour = parseInt(horario.fin.split(':')[0]);
-            for (let h = startHour; h < endHour; h++) {
-                const cell = preview.querySelector(`[data-day="${horario.dia}"][data-hour="${h}"]`);
-                if (cell) {
-                    cell.classList.add('class');
-                    cell.innerHTML = `<div class="class-name">${subject.name}</div><div class="class-group">Grupo ${grupo.numero}</div>`;
+        subject.horariosInfo[groupIdx].horarios.forEach(h => {
+            const startH = parseInt(h.inicio.split(':')[0]);
+            const endH = parseInt(h.fin.split(':')[0]);
+            for (let hr = startH; hr < endH; hr++) {
+                const key = `${h.dia}-${hr}`;
+                if (timeSlots[key]) {
+                    conflictSet.add(key);
+                    conflictSet.add(`${h.dia}-${hr}-${subjectId}`);
                 }
+                timeSlots[key] = subjectId;
             }
         });
     });
+
+    const numCols = days.length + 1;
+    let grid = `<div class="schedule-preview-grid" style="grid-template-columns: 56px repeat(${days.length}, 1fr);">`;
+    // Header row
+    grid += `<div class="spg-cell spg-corner"></div>`;
+    days.forEach(day => {
+        grid += `<div class="spg-cell spg-header">${day.substring(0,3)}<span class="spg-day-full">${day.substring(3)}</span></div>`;
+    });
+
+    // Time rows
+    hours.forEach(hour => {
+        grid += `<div class="spg-cell spg-time">${hour}:00</div>`;
+        days.forEach(day => {
+            const key = `${day}-${hour}`;
+            const hasConflict = conflictSet.has(key);
+            grid += `<div class="spg-cell spg-slot${hasConflict ? ' spg-conflict' : ''}" data-day="${day}" data-hour="${hour}"></div>`;
+        });
+    });
+    grid += `</div>`;
+
+    if (subjectEntries.length === 0) {
+        grid += `<p class="spg-hint">Selecciona un grupo de una materia para ver la previsualización</p>`;
+    }
+
+    preview.innerHTML = grid;
+
+    // Fill in classes
+    subjectEntries.forEach(([subjectId, groupIdx]) => {
+        const subject = findSubjectById(subjectId);
+        if (!subject || !subject.horariosInfo) return;
+        const grupo = subject.horariosInfo[groupIdx];
+        const color = colorMap[subjectId];
+        grupo.horarios.forEach(horario => {
+            const startHour = parseInt(horario.inicio.split(':')[0]);
+            const endHour = parseInt(horario.fin.split(':')[0]);
+            const startCell = preview.querySelector(`[data-day="${horario.dia}"][data-hour="${startHour}"]`);
+            if (!startCell) return;
+            const span = endHour - startHour;
+            startCell.style.gridRow = `span ${span}`;
+            startCell.classList.add('spg-class');
+            startCell.style.setProperty('--class-color', color);
+            startCell.innerHTML = `
+                <div class="spg-class-name">${subject.name}</div>
+                <div class="spg-class-meta">G${grupo.numero} · ${horario.inicio}-${horario.fin}</div>`;
+            // Mark subsequent rows as occupied so they don't render
+            for (let h = startHour + 1; h < endHour; h++) {
+                const cell = preview.querySelector(`[data-day="${horario.dia}"][data-hour="${h}"]`);
+                if (cell) cell.style.display = 'none';
+            }
+        });
+    });
+
+    // Conflict alert
+    if (conflictSet.size > 0) {
+        const warn = document.createElement('div');
+        warn.className = 'conflict-warning';
+        warn.innerHTML = '⚠️ Hay conflictos de horario entre las materias seleccionadas';
+        preview.prepend(warn);
+    }
 }
 
 function findSubjectById(id) {
