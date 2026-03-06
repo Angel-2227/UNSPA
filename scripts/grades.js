@@ -44,6 +44,10 @@ function loadGradesFromFirestore(data) {
     }
     // Re-sincronizar estructura con el studyPlan recién llegado de Firestore
     ensureGradesStructure();
+    // Si el usuario está en la vista de notas, re-renderizar con datos frescos
+    if (typeof currentView !== 'undefined' && currentView === 'grades') {
+        renderGradesView();
+    }
 }
 
 function ensureGradesStructure() {
@@ -193,14 +197,28 @@ function renderGradesView() {
 
     // Si no hay materias todavía, mostrar estado vacío
     if (!semNums.length) {
+        const hasLocalData = localStorage.getItem('academicPlannerData');
+        const isLoading = hasLocalData && Object.keys(studyPlan).length === 0;
         container.innerHTML = `
             <div style="text-align:center;padding:3rem 1rem;color:var(--text-secondary);">
-                <div style="font-size:2.5rem;margin-bottom:1rem;">📋</div>
-                <p style="font-size:1rem;font-weight:500;">No hay materias cargadas todavía.</p>
+                <div style="font-size:2.5rem;margin-bottom:1rem;">${isLoading ? '⏳' : '📋'}</div>
+                <p style="font-size:1rem;font-weight:500;">${isLoading ? 'Cargando materias...' : 'No hay materias cargadas todavía.'}</p>
                 <p style="font-size:0.85rem;margin-top:0.5rem;">
-                    Importa tu plan de estudios desde la sección <strong>Materias</strong> para comenzar a registrar notas.
+                    ${isLoading
+                        ? 'Tus datos se están sincronizando. Si esto no cambia, recarga la página.'
+                        : 'Importa tu plan de estudios desde la sección <strong>Materias</strong> para comenzar a registrar notas.'
+                    }
                 </p>
             </div>`;
+        // Si parece que está cargando, reintentar en 1.5s
+        if (isLoading) {
+            setTimeout(() => {
+                if (typeof currentView !== 'undefined' && currentView === 'grades') {
+                    ensureGradesStructure();
+                    renderGradesView();
+                }
+            }, 1500);
+        }
         return;
     }
 
@@ -620,5 +638,5 @@ function buildGradesContext() {
         if (typeof studyPlan !== 'undefined' && typeof currentUser !== 'undefined') {
             initGrades(); clearInterval(t);
         }
-    }, 500);
+    }, 200);
 })();

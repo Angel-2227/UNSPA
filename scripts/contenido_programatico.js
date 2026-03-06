@@ -10,15 +10,15 @@ let contenidoProgramaticoData = [];   // Array de objetos parseados del CSV
 // ── Normalización ────────────────────────────────────────────────────────────
 function cpNorm(str) {
     return (str || '').toLowerCase()
-        .replace(/á/g,'a').replace(/é/g,'e').replace(/í/g,'i')
-        .replace(/ó/g,'o').replace(/ú/g,'u').replace(/ü/g,'u').replace(/ñ/g,'n');
+        .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
+        .replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u').replace(/ñ/g, 'n');
 }
 
 // ── Persistencia local (localStorage) ───────────────────────────────────────
 function saveCPToStorage() {
     try {
         localStorage.setItem('contenidoProgramatico', JSON.stringify(contenidoProgramaticoData));
-    } catch(e) {
+    } catch (e) {
         console.warn('No se pudo guardar CP en localStorage (¿muy grande?):', e);
     }
 }
@@ -36,7 +36,7 @@ async function saveCPToFirestore() {
     try {
         await db.collection('users').doc(currentUser.uid)
             .set({ contenidoProgramatico: contenidoProgramaticoData }, { merge: true });
-    } catch(e) {
+    } catch (e) {
         console.error('Error guardando CP en Firestore:', e);
     }
 }
@@ -95,7 +95,7 @@ function parseCPCSV(csvText) {
                 // Fallback: asumir orden fijo si no se encontró encabezado
                 if (headerIdx === -1) {
                     headerIdx = 0;
-                    colMap = { code:0, name:1, credits:2, type:3, description:4, content:5, semester:6, uab:7 };
+                    colMap = { code: 0, name: 1, credits: 2, type: 3, description: 4, content: 5, semester: 6, uab: 7 };
                 }
 
                 // Índice por código para búsqueda rápida
@@ -104,14 +104,14 @@ function parseCPCSV(csvText) {
                     const row = rows[i];
                     if (!row || row.every(c => !c || !c.toString().trim())) continue;
 
-                    const code    = (row[colMap.code]        || '').toString().trim();
-                    const name    = (row[colMap.name]        || '').toString().trim();
-                    const credits = (row[colMap.credits]     || '').toString().trim();
-                    const type    = (row[colMap.type]        || '').toString().trim();
-                    const desc    = (row[colMap.description] || '').toString().trim();
-                    const content = (row[colMap.content]     || '').toString().trim();
-                    const sem     = (row[colMap.semester]    || '').toString().trim();
-                    const uab     = (row[colMap.uab]         || '').toString().trim();
+                    const code = (row[colMap.code] || '').toString().trim();
+                    const name = (row[colMap.name] || '').toString().trim();
+                    const credits = (row[colMap.credits] || '').toString().trim();
+                    const type = (row[colMap.type] || '').toString().trim();
+                    const desc = (row[colMap.description] || '').toString().trim();
+                    const content = (row[colMap.content] || '').toString().trim();
+                    const sem = (row[colMap.semester] || '').toString().trim();
+                    const uab = (row[colMap.uab] || '').toString().trim();
 
                     if (!name && !code) continue;
 
@@ -163,22 +163,22 @@ function buildContenidoContext() {
 // ── Badge de tipología ────────────────────────────────────────────────────────
 function cpTypeBadge(type) {
     const t = cpNorm(type || '');
-    if (t.includes('disc') && t.includes('oblig'))  return 'type-disciplinar-obligatoria';
+    if (t.includes('disc') && t.includes('oblig')) return 'type-disciplinar-obligatoria';
     if (t.includes('disc') && t.includes('optati')) return 'type-disciplinar-optativa';
-    if (t.includes('fund') && t.includes('oblig'))  return 'type-fundamentacion-obligatoria';
+    if (t.includes('fund') && t.includes('oblig')) return 'type-fundamentacion-obligatoria';
     if (t.includes('fund') && t.includes('optati')) return 'type-fundamentacion-optativa';
-    if (t.includes('libre'))                         return 'type-libre-eleccion';
-    if (t.includes('grado'))                         return 'type-trabajo-grado';
-    if (t.includes('nivel'))                         return 'type-nivelacion';
+    if (t.includes('libre')) return 'type-libre-eleccion';
+    if (t.includes('grado')) return 'type-trabajo-grado';
+    if (t.includes('nivel')) return 'type-nivelacion';
     return 'type-disciplinar-obligatoria';
 }
 
 // ── MODAL DE DETALLE ──────────────────────────────────────────────────────────
 function cpShowModal(code) {
-    const s = contenidoProgramaticoData.find(x => 
-    x.code && code && 
-    x.code.trim().toLowerCase() === code.trim().toLowerCase()
-);
+    const s = contenidoProgramaticoData.find(x =>
+        x.code && code &&
+        x.code.trim().toLowerCase() === code.trim().toLowerCase()
+    );
     if (!s) return;
 
     let modal = document.getElementById('cpDetailModal');
@@ -253,8 +253,8 @@ function renderContenidoView() {
         return;
     }
 
-    const searchVal  = (document.getElementById('cpSearch')     || {}).value || '';
-    const semFilter  = (document.getElementById('cpSemFilter')  || {}).value || 'all';
+    const searchVal = (document.getElementById('cpSearch') || {}).value || '';
+    const semFilter = (document.getElementById('cpSemFilter') || {}).value || 'all';
     const typeFilter = (document.getElementById('cpTypeFilter') || {}).value || 'all';
 
     // ── Construir grupos desde studyPlan (igual que la malla) ──────────────
@@ -262,13 +262,13 @@ function renderContenidoView() {
     const cpByCode = {};
     const cpByName = {};
     contenidoProgramaticoData.forEach(s => {
-        if (s.code)  cpByCode[s.code.trim()] = s;
-        if (s.name)  cpByName[cpNorm(s.name)] = s;
+        if (s.code) cpByCode[s.code.trim()] = s;
+        if (s.name) cpByName[cpNorm(s.name)] = s;
     });
 
     // Si studyPlan existe y tiene materias, agrupar por sus semestres
     const hasPlan = typeof studyPlan !== 'undefined' &&
-                    Object.keys(studyPlan).some(k => studyPlan[k].subjects && studyPlan[k].subjects.length);
+        Object.keys(studyPlan).some(k => studyPlan[k].subjects && studyPlan[k].subjects.length);
 
     let groups = {};   // { 'Semestre 1': [cpEntry, ...], ... }
 
@@ -282,8 +282,8 @@ function renderContenidoView() {
             studyPlan[semNum].subjects.forEach(subj => {
                 // Buscar la entrada en el CSV: primero por código, luego por nombre
                 let cpEntry = (subj.code && cpByCode[subj.code.trim()])
-                           || cpByName[cpNorm(subj.name)]
-                           || null;
+                    || cpByName[cpNorm(subj.name)]
+                    || null;
 
                 // Si no hay entrada en el CSV, crear una mínima con los datos del plan
                 if (!cpEntry) {
@@ -363,7 +363,7 @@ function renderContenidoView() {
     };
 
     container.innerHTML = Object.entries(groups)
-        .sort(([a],[b]) => semOrder(a) - semOrder(b))
+        .sort(([a], [b]) => semOrder(a) - semOrder(b))
         .map(([group, subs]) => `
             <div class="cp-group">
                 <div class="cp-group-title">
@@ -372,7 +372,7 @@ function renderContenidoView() {
                 </div>
                 <div class="cp-cards-grid">
                     ${subs.map(s => `
-                        <div class="cp-card" onclick="cpShowModal('${(s.code || s.name).replace(/'/g,"\\'")}')">
+                        <div class="cp-card" onclick="cpShowModal('${(s.code || s.name).replace(/'/g, "\\'")}')">
                             <div class="cp-card-top">
                                 <span class="type-badge ${cpTypeBadge(s.type)}">${s.type || '—'}</span>
                                 ${s.credits ? `<span class="cp-credits">${s.credits} cr</span>` : ''}
@@ -380,8 +380,8 @@ function renderContenidoView() {
                             <div class="cp-card-name">${s.name}</div>
                             ${s.code ? `<div class="cp-card-code">${s.code}</div>` : ''}
                             ${s.description
-                                ? `<div class="cp-card-desc">${s.description.slice(0,120)}${s.description.length>120?'…':''}</div>`
-                                : '<div class="cp-card-desc" style="color:var(--text-secondary);font-style:italic;font-size:0.75rem;">Sin descripción en CSV</div>'}
+                ? `<div class="cp-card-desc">${s.description.slice(0, 120)}${s.description.length > 120 ? '…' : ''}</div>`
+                : '<div class="cp-card-desc" style="color:var(--text-secondary);font-style:italic;font-size:0.75rem;">Sin descripción en CSV</div>'}
                             <div class="cp-card-footer">📖 Ver contenido</div>
                         </div>`).join('')}
                 </div>
@@ -415,8 +415,8 @@ function initContenidoView() {
 
 function _buildCpHeader(header) {
     const total = contenidoProgramaticoData.length;
-    const sems  = [...new Set(contenidoProgramaticoData.map(s => s.semester).filter(s => s && s !== 'N/A' && s.trim()))]
-                  .sort((a,b) => +a - +b);
+    const sems = [...new Set(contenidoProgramaticoData.map(s => s.semester).filter(s => s && s !== 'N/A' && s.trim()))]
+        .sort((a, b) => +a - +b);
     const types = [...new Set(contenidoProgramaticoData.map(s => s.type).filter(Boolean))].sort();
 
     header.innerHTML = `
@@ -453,7 +453,7 @@ function _buildCpHeader(header) {
                 <option value="all">Todos los semestres</option>
                 ${sems.map(s => `<option value="${s}">Semestre ${s}</option>`).join('')}
                 ${contenidoProgramaticoData.some(s => !s.semester || s.semester === 'N/A' || !s.semester.trim())
-                    ? '<option value="N/A">Electivas / Sin semestre</option>' : ''}
+                ? '<option value="N/A">Electivas / Sin semestre</option>' : ''}
             </select>
             <select id="cpTypeFilter" onchange="renderContenidoView()">
                 <option value="all">Todas las tipologías</option>

@@ -6,13 +6,13 @@
 
 // Colores por tipología
 const MALLA_TYPE_COLORS = {
-    'DISCIPLINAR OBLIGATORIA':     { bg: '#e3f2fd', border: '#1976d2', text: '#0d47a1' },
-    'DISCIPLINAR OPTATIVA':        { bg: '#e8f5e9', border: '#388e3c', text: '#1b5e20' },
-    'FUNDAMENTACIÓN OBLIGATORIA':  { bg: '#fff8e1', border: '#f9a825', text: '#e65100' },
-    'FUNDAMENTACIÓN OPTATIVA':     { bg: '#fce4ec', border: '#e91e63', text: '#880e4f' },
-    'LIBRE ELECCIÓN':              { bg: '#f3e5f5', border: '#7b1fa2', text: '#4a148c' },
-    'TRABAJO DE GRADO':            { bg: '#e8eaf6', border: '#3f51b5', text: '#1a237e' },
-    'NIVELACIÓN':                  { bg: '#fff3e0', border: '#ff6f00', text: '#bf360c' },
+    'DISCIPLINAR OBLIGATORIA': { bg: '#e3f2fd', border: '#1976d2', text: '#0d47a1' },
+    'DISCIPLINAR OPTATIVA': { bg: '#e8f5e9', border: '#388e3c', text: '#1b5e20' },
+    'FUNDAMENTACIÓN OBLIGATORIA': { bg: '#fff8e1', border: '#f9a825', text: '#e65100' },
+    'FUNDAMENTACIÓN OPTATIVA': { bg: '#fce4ec', border: '#e91e63', text: '#880e4f' },
+    'LIBRE ELECCIÓN': { bg: '#f3e5f5', border: '#7b1fa2', text: '#4a148c' },
+    'TRABAJO DE GRADO': { bg: '#e8eaf6', border: '#3f51b5', text: '#1a237e' },
+    'NIVELACIÓN': { bg: '#fff3e0', border: '#ff6f00', text: '#bf360c' },
 };
 
 // Prereqs configurables
@@ -33,7 +33,7 @@ function saveMallaPrereqs() {
     localStorage.setItem('mallaPrereqs', JSON.stringify(mallaPrereqs));
     if (typeof currentUser !== 'undefined' && currentUser) {
         db.collection('users').doc(currentUser.uid)
-          .set({ mallaPrereqs }, { merge: true }).catch(console.error);
+            .set({ mallaPrereqs }, { merge: true }).catch(console.error);
     }
 }
 
@@ -138,20 +138,20 @@ function renderMallaGenerada() {
     }
 
     // Dimensiones adaptativas
-    const CARD_W   = 176;
-    const CARD_H   = 82;
-    const COL_GAP  = 32;
+    const CARD_W = 176;
+    const CARD_H = 82;
+    const COL_GAP = 32;
     const CARD_GAP = 10;
     const HEADER_H = 48;
-    const PAD      = 16;
+    const PAD = 16;
 
-    const maxSubjects  = Math.max(...semNums.map(n => studyPlan[n].subjects.length));
-    const totalWidth   = semNums.length * (CARD_W + COL_GAP) - COL_GAP + PAD * 2;
-    const totalHeight  = HEADER_H + maxSubjects * (CARD_H + CARD_GAP) + PAD * 2;
+    const maxSubjects = Math.max(...semNums.map(n => studyPlan[n].subjects.length));
+    const totalWidth = semNums.length * (CARD_W + COL_GAP) - COL_GAP + PAD * 2;
+    const totalHeight = HEADER_H + maxSubjects * (CARD_H + CARD_GAP) + PAD * 2;
 
     container.style.position = 'relative';
-    container.style.width    = totalWidth + 'px';
-    container.style.height   = totalHeight + 'px';
+    container.style.width = totalWidth + 'px';
+    container.style.height = totalHeight + 'px';
 
     const cols = semNums.map((n, i) => buildSemColumn(n, i, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADER_H, PAD)).join('');
 
@@ -171,7 +171,7 @@ function renderMallaGenerada() {
 }
 
 function buildSemColumn(semNum, colIdx, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADER_H, PAD) {
-    const sem  = studyPlan[semNum];
+    const sem = studyPlan[semNum];
     const left = PAD + colIdx * (CARD_W + COL_GAP);
 
     const statusBg = {
@@ -185,7 +185,7 @@ function buildSemColumn(semNum, colIdx, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADE
                     align-items:center; font-size:0.78rem; font-weight:700;
                     box-shadow:0 2px 4px rgba(0,0,0,0.15); z-index:2;">
             <span>Semestre ${semNum}</span>
-            <span style="opacity:0.9;">${sem.subjects.reduce((s,x)=>s+x.credits,0)} cr</span>
+            <span style="opacity:0.9;">${sem.subjects.reduce((s, x) => s + x.credits, 0)} cr</span>
         </div>`;
 
     const cards = sem.subjects.map((sub, i) => {
@@ -198,15 +198,15 @@ function buildSemColumn(semNum, colIdx, CARD_W, CARD_H, COL_GAP, CARD_GAP, HEADE
 
 function buildMallaCard(sub, semNum, left, top, w, h) {
     const sem = studyPlan[semNum];
-    const tc  = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
+    const tc = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
 
     let stateIcon = '', statusClass = '';
     if (sem.status === 'completed') { stateIcon = '✓'; statusClass = 'mgc-card--completed'; }
     else if (sem.status === 'current') { stateIcon = '▶'; statusClass = 'mgc-card--current'; }
 
     const prereqCount = (mallaPrereqs[sub.id] || []).length;
-    const shortName   = sub.name.length > 44 ? sub.name.slice(0, 42) + '\u2026' : sub.name;
-    const typeAbbr    = sub.type.split(' ').map(w=>w[0]).join('');
+    const shortName = sub.name.length > 44 ? sub.name.slice(0, 42) + '\u2026' : sub.name;
+    const typeAbbr = sub.type.split(' ').map(w => w[0]).join('');
 
     return `
         <div id="mgc-${sub.id}"
@@ -248,8 +248,8 @@ function drawAllArrows() {
             </marker>
         </defs>`;
 
-    const container  = document.getElementById('mallaGeneradaContainer');
-    const cRect      = container.getBoundingClientRect();
+    const container = document.getElementById('mallaGeneradaContainer');
+    const cRect = container.getBoundingClientRect();
 
     Object.entries(mallaPrereqs).forEach(([tgtId, srcIds]) => {
         srcIds.forEach(srcId => {
@@ -260,14 +260,14 @@ function drawAllArrows() {
             const sR = s.getBoundingClientRect();
             const tR = t.getBoundingClientRect();
 
-            const x1 = sR.right  - cRect.left + container.parentElement.scrollLeft;
-            const y1 = sR.top    - cRect.top  + container.parentElement.scrollTop + sR.height / 2;
-            const x2 = tR.left   - cRect.left + container.parentElement.scrollLeft;
-            const y2 = tR.top    - cRect.top  + container.parentElement.scrollTop + tR.height / 2;
+            const x1 = sR.right - cRect.left + container.parentElement.scrollLeft;
+            const y1 = sR.top - cRect.top + container.parentElement.scrollTop + sR.height / 2;
+            const x2 = tR.left - cRect.left + container.parentElement.scrollLeft;
+            const y2 = tR.top - cRect.top + container.parentElement.scrollTop + tR.height / 2;
 
             const dx = Math.abs(x2 - x1) * 0.45;
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            path.setAttribute('d', `M${x1},${y1} C${x1+dx},${y1} ${x2-dx},${y2} ${x2},${y2}`);
+            path.setAttribute('d', `M${x1},${y1} C${x1 + dx},${y1} ${x2 - dx},${y2} ${x2},${y2}`);
             path.setAttribute('stroke', '#e91e63');
             path.setAttribute('stroke-width', '1.8');
             path.setAttribute('fill', 'none');
@@ -308,7 +308,7 @@ function handleMallaCardClick(e, subId, semNum) {
 }
 
 function showMgcTooltip(subId, semNum) {
-    selectedCardId  = subId;
+    selectedCardId = subId;
     selectedCardSem = semNum;
 
     const sem = studyPlan[semNum];
@@ -316,7 +316,7 @@ function showMgcTooltip(subId, semNum) {
     const sub = sem.subjects.find(s => s.id === subId);
     if (!sub) return;
 
-    const prereqIds   = mallaPrereqs[subId] || [];
+    const prereqIds = mallaPrereqs[subId] || [];
     const prereqNames = prereqIds.map(pid => {
         for (const s of Object.values(studyPlan)) {
             const f = s.subjects.find(x => x.id === pid);
@@ -328,10 +328,10 @@ function showMgcTooltip(subId, semNum) {
     // ── Si existe contenido programático, abrir ese modal (el bueno) ──
     if (typeof cpShowModal === 'function' && sub.code &&
         typeof contenidoProgramaticoData !== 'undefined' &&
-        contenidoProgramaticoData.find(x => 
-    x.code && sub.code && 
-    x.code.trim().toLowerCase() === sub.code.trim().toLowerCase()
-)) {
+        contenidoProgramaticoData.find(x =>
+            x.code && sub.code &&
+            x.code.trim().toLowerCase() === sub.code.trim().toLowerCase()
+        )) {
 
         cpShowModal(sub.code.trim());
 
@@ -378,7 +378,7 @@ function showMgcTooltip(subId, semNum) {
     const cardEl = document.getElementById(`mgc-${subId}`);
     if (!cardEl) return;
     const cardRect = cardEl.getBoundingClientRect();
-    const tooltip  = document.createElement('div');
+    const tooltip = document.createElement('div');
     tooltip.id = 'mgcTooltip';
     tooltip.style.cssText = `position:fixed;z-index:9999;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,0.18);max-width:300px;font-size:0.82rem;`;
     tooltip.innerHTML = `
@@ -393,7 +393,7 @@ function showMgcTooltip(subId, semNum) {
             ${prereqIds.length ? `<button onclick="removeAllPrereqsOf('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">🗑 Quitar prereqs</button>` : ''}
             <button onclick="closeTooltip()" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">✕</button>
         </div>`;
-    tooltip.style.top  = Math.min(cardRect.bottom + 6, window.innerHeight - 200) + 'px';
+    tooltip.style.top = Math.min(cardRect.bottom + 6, window.innerHeight - 200) + 'px';
     tooltip.style.left = Math.min(cardRect.left, window.innerWidth - 316) + 'px';
     document.body.appendChild(tooltip);
     setTimeout(() => document.addEventListener('click', closeTooltip, { once: true }), 50);
@@ -406,7 +406,7 @@ function closeTooltip() {
 
 function addPrereqFor(subId) {
     closeTooltip();
-    mallaPrereqMode   = true;
+    mallaPrereqMode = true;
     mallaPrereqSource = null;
     // Highlight the target card lightly
     const el = document.getElementById(`mgc-${subId}`);
@@ -444,7 +444,7 @@ function handleMallaCardClick(e, subId, semNum) {
 }
 
 function exitPrereqMode() {
-    mallaPrereqMode   = false;
+    mallaPrereqMode = false;
     mallaPrereqSource = null;
     mallaPrereqTarget = null;
     const bar = document.getElementById('mgcPrereqBar');

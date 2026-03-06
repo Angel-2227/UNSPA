@@ -395,8 +395,8 @@ function initChatWidget() {
 function toggleChat() {
     chatOpen = !chatOpen;
     const panel = document.getElementById('chatPanel');
-    const icon  = document.getElementById('chatBtnIcon');
-    const btn   = document.getElementById('chatToggleBtn');
+    const icon = document.getElementById('chatBtnIcon');
+    const btn = document.getElementById('chatToggleBtn');
 
     if (chatOpen) {
         panel.classList.add('open');
@@ -426,7 +426,7 @@ function autoResizeTextarea(el) {
 }
 
 async function handleChatSend() {
-    const input   = document.getElementById('chatInput');
+    const input = document.getElementById('chatInput');
     const message = input.value.trim();
     if (!message) return;
 
@@ -539,22 +539,22 @@ function formatMarkdown(text) {
 function inlineFormat(text) {
     return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g,     '<em>$1</em>')
-        .replace(/`(.*?)`/g,       '<code class="chat-code">$1</code>');
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/`(.*?)`/g, '<code class="chat-code">$1</code>');
 }
 
 function appendChatMessage(role, content) {
     const messages = document.getElementById('chatMessages');
-    const div      = document.createElement('div');
-    div.className  = `chat-msg ${role}`;
-    div.innerHTML  = `<div class="chat-bubble">${role === 'ai' ? formatMarkdown(content) : inlineFormat(content).replace(/\n/g,'<br>')}</div>`;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${role}`;
+    div.innerHTML = `<div class="chat-bubble">${role === 'ai' ? formatMarkdown(content) : inlineFormat(content).replace(/\n/g, '<br>')}</div>`;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
 }
 
 function appendLoadingMessage() {
     const messages = document.getElementById('chatMessages');
-    const id  = 'loading-' + Date.now();
+    const id = 'loading-' + Date.now();
     const div = document.createElement('div');
     div.className = 'chat-msg ai';
     div.id = id;
