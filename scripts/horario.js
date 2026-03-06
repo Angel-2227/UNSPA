@@ -525,6 +525,9 @@ function updateSchedulePreview() {
         warn.innerHTML = '⚠️ Hay conflictos de horario entre las materias seleccionadas';
         preview.prepend(warn);
     }
+
+    // Resaltar hora/día actual en el preview también
+    updateCurrentTimeIndicator();
 }
 
 // ============================================
@@ -660,18 +663,31 @@ function renderCurrentScheduleView(schedule) {
     const title = document.getElementById('currentScheduleTitle');
     title.textContent = schedule.name;
 
-    const days = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const SUBJECT_COLORS = [
+        '#2e7d32','#1565c0','#6a1b9a','#c62828','#e65100',
+        '#00695c','#283593','#558b2f','#4527a0','#00838f'
+    ];
+    const colorMap = {};
+    Object.keys(schedule.subjects).forEach((subjectId, i) => {
+        colorMap[subjectId] = SUBJECT_COLORS[i % SUBJECT_COLORS.length];
+    });
+
+    // Detect used days only
+    const allDays = ['LUNES', 'MARTES', 'MIÉRCOLES', 'JUEVES', 'VIERNES', 'SÁBADO'];
+    const usedDays = new Set();
     let minHour = 20, maxHour = 7;
 
     Object.entries(schedule.subjects).forEach(([subjectId, groupIdx]) => {
         const subject = findSubjectById(subjectId);
         if (!subject || !subject.horariosInfo) return;
         subject.horariosInfo[groupIdx].horarios.forEach(horario => {
+            usedDays.add(horario.dia);
             minHour = Math.min(minHour, parseInt(horario.inicio.split(':')[0]));
             maxHour = Math.max(maxHour, parseInt(horario.fin.split(':')[0]));
         });
     });
 
+    const days = usedDays.size > 0 ? allDays.filter(d => usedDays.has(d)) : allDays;
     const hours = (minHour <= maxHour)
         ? Array.from({ length: maxHour - minHour }, (_, i) => minHour + i)
         : Array.from({ length: 14 }, (_, i) => 7 + i);
@@ -690,9 +706,15 @@ function renderCurrentScheduleView(schedule) {
             const startHour = parseInt(horario.inicio.split(':')[0]);
             const endHour = parseInt(horario.fin.split(':')[0]);
             const duration = endHour - startHour;
-            schedule_map[horario.dia][startHour] = { subject, grupo, duration, start: true };
-            for (let h = startHour + 1; h < endHour; h++) {
-                schedule_map[horario.dia][h] = { occupied: true };
+            if (schedule_map[horario.dia]) {
+                schedule_map[horario.dia][startHour] = {
+                    subject, grupo, duration, start: true,
+                    color: colorMap[subjectId],
+                    startTime: horario.inicio, endTime: horario.fin
+                };
+                for (let h = startHour + 1; h < endHour; h++) {
+                    schedule_map[horario.dia][h] = { occupied: true };
+                }
             }
         });
     });
@@ -703,23 +725,27 @@ function renderCurrentScheduleView(schedule) {
         return parts.length <= 2 ? name : `${parts[0]} ${parts[parts.length - 1]}`;
     };
 
-    let grid = `<div class="schedule-grid-wrapper"><div class="schedule-grid-viewer">`;
-    grid += `<div class="schedule-cell-viewer header"></div>`;
+    const numCols = days.length;
+    let grid = `<div class="schedule-grid-wrapper"><div class="schedule-grid-viewer" style="grid-template-columns: 56px repeat(${numCols}, minmax(90px, 1fr));">`;
+    grid += `<div class="schedule-cell-viewer header scv-corner"></div>`;
     days.forEach(day => {
-        grid += `<div class="schedule-cell-viewer header" id="day-${day}">${day}</div>`;
+        grid += `<div class="schedule-cell-viewer header" id="day-${day}">${day.substring(0,3)}<span class="scv-day-full">${day.substring(3).toLowerCase()}</span></div>`;
     });
 
     hours.forEach(hour => {
         grid += `<div class="schedule-cell-viewer time" id="time-${hour}">${hour}:00</div>`;
         days.forEach(day => {
-            const cell_data = schedule_map[day][hour];
-            if (cell_data && cell_data.occupied) return;
-            if (cell_data && cell_data.start) {
-                const rowspan_style = cell_data.duration > 1 ? `grid-row: span ${cell_data.duration};` : '';
-                grid += `<div class="schedule-cell-viewer class-block" style="${rowspan_style}"
-                    data-day="${day}" data-hour="${hour}" data-duration="${cell_data.duration}">
-                    <div class="class-block-name">${cell_data.subject.name}</div>
-                    <div class="class-block-info">G${cell_data.grupo.numero} • ${shortenProfessor(cell_data.grupo.profesor)}</div>
+            const cd = schedule_map[day][hour];
+            if (cd && cd.occupied) return;
+            if (cd && cd.start) {
+                const rowspan_style = cd.duration > 1 ? `grid-row: span ${cd.duration};` : '';
+                const color = cd.color || '#2e7d32';
+                grid += `<div class="schedule-cell-viewer class-block"
+                    style="${rowspan_style} --class-color:${color};"
+                    data-day="${day}" data-hour="${hour}" data-duration="${cd.duration}">
+                    <div class="class-block-name">${cd.subject.name}</div>
+                    <div class="class-block-info">G${cd.grupo.numero} · ${cd.startTime}–${cd.endTime}</div>
+                    <div class="class-block-prof">${shortenProfessor(cd.grupo.profesor)}</div>
                 </div>`;
             } else {
                 grid += `<div class="schedule-cell-viewer" data-day="${day}" data-hour="${hour}"></div>`;
@@ -745,6 +771,7 @@ function updateCurrentTimeIndicator() {
         })} - ${currentHour}:${currentMinute.toString().padStart(2, '0')}`;
     }
 
+    // ── Viewer (modal ver horario) ──────────────────
     document.querySelectorAll('.current-day-indicator').forEach(el => el.remove());
     document.querySelectorAll('.schedule-cell-viewer.current-time').forEach(el => el.classList.remove('current-time'));
     document.querySelectorAll('.schedule-cell-viewer.current-class').forEach(el => el.classList.remove('current-class'));
@@ -767,6 +794,33 @@ function updateCurrentTimeIndicator() {
             classBlock.classList.add('current-class');
         }
     });
+
+    // ── Preview (modal crear/editar horario) ────────
+    document.querySelectorAll('.spg-header.spg-today').forEach(el => el.classList.remove('spg-today'));
+    document.querySelectorAll('.spg-time.spg-now').forEach(el => el.classList.remove('spg-now'));
+    document.querySelectorAll('.spg-class.spg-current-class').forEach(el => el.classList.remove('spg-current-class'));
+
+    document.querySelectorAll('.spg-cell.spg-header').forEach(header => {
+        if (header.textContent.trim().toUpperCase().startsWith(currentDay.substring(0, 3))) {
+            header.classList.add('spg-today');
+        }
+    });
+
+    document.querySelectorAll(`[data-day="${currentDay}"][data-hour]`).forEach(slot => {
+        const hour = parseInt(slot.getAttribute('data-hour'));
+        if (hour === currentHour && slot.classList.contains('spg-class')) {
+            slot.classList.add('spg-current-class');
+        }
+    });
+
+    // Mark current hour in time column of preview
+    const previewGrid = document.getElementById('schedulePreview');
+    if (previewGrid) {
+        previewGrid.querySelectorAll('.spg-cell.spg-time').forEach(cell => {
+            const txt = cell.textContent.trim();
+            if (txt === `${currentHour}:00`) cell.classList.add('spg-now');
+        });
+    }
 }
 
 // ============================================
