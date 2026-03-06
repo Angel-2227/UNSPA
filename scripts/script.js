@@ -656,9 +656,9 @@ function renderSubjectsBank() {
     // Helper: normaliza texto para comparar nombres
     function normName(s) {
         return (s || '').toLowerCase()
-            .replace(/[áàä]/g,'a').replace(/[éèë]/g,'e')
-            .replace(/[íìï]/g,'i').replace(/[óòö]/g,'o')
-            .replace(/[úùü]/g,'u').replace(/ñ/g,'n').trim();
+            .replace(/[áàä]/g, 'a').replace(/[éèë]/g, 'e')
+            .replace(/[íìï]/g, 'i').replace(/[óòö]/g, 'o')
+            .replace(/[úùü]/g, 'u').replace(/ñ/g, 'n').trim();
     }
 
     // Obtener semestre asignado de una materia del banco
@@ -716,7 +716,7 @@ function renderSubjectsBank() {
             ? `<button class="btn btn-secondary btn-sm" title="Ver programa" onclick="cpShowModal('${cp.code}')">📖</button>`
             : `<button class="btn btn-secondary btn-sm" title="Sin programa cargado" style="opacity:0.4;cursor:default;">📖</button>`;
         const desc = cp && cp.description
-            ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;line-height:1.4;">${cp.description.slice(0,100)}${cp.description.length>100?'…':''}</p>`
+            ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:4px;line-height:1.4;">${cp.description.slice(0, 100)}${cp.description.length > 100 ? '…' : ''}</p>`
             : '';
 
         return `
@@ -753,7 +753,7 @@ function renderSubjectsBank() {
                         <button class="btn btn-secondary btn-sm" title="Ver programa" onclick="cpShowModal('${cp.code}')">📖</button>
                     </div>
                 </div>
-                ${cp.description ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;line-height:1.4;">${cp.description.slice(0,100)}${cp.description.length>100?'…':''}</p>` : ''}
+                ${cp.description ? `<p style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;line-height:1.4;">${cp.description.slice(0, 100)}${cp.description.length > 100 ? '…' : ''}</p>` : ''}
             </div>`).join('')}
         </div>` : '';
 
@@ -1375,6 +1375,10 @@ async function loadUserDataFromFirestore() {
             // Cargar notas desde Firestore
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
+                // Si el usuario está en la vista de notas, re-renderizar con los datos frescos
+                if (currentView === 'grades' && typeof renderGradesView === 'function') {
+                    renderGradesView();
+                }
             }
             console.log('✅ Datos cargados desde Firestore');
         } else {
