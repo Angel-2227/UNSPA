@@ -1146,17 +1146,37 @@ async function saveSubjectBank() {
 }
 
 function exportData() {
-    const data = {
-        studyPlan,
-        subjectBank,
-        config,
-        exportDate: new Date().toISOString()
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const rows = [];
+
+    // Fila de créditos totales — parseCSVData la detecta por este texto
+    rows.push(['', 'TOTAL DE CRÉDITOS EXIGIDOS AL ESTUDIANTE', config.totalCredits || 0, '']);
+
+    // Semestres en orden
+    const semNums = Object.keys(studyPlan).map(Number).sort((a, b) => a - b);
+    for (const semNum of semNums) {
+        const semester = studyPlan[semNum];
+        rows.push(['', `Periodo académico ${semNum}`, '', '']);
+        rows.push(['', 'ASIGNATURAS INSCRITAS', 'Tipología', 'Créditos']);
+        for (const subject of semester.subjects) {
+            rows.push(['', subject.name, subject.type, subject.credits]);
+        }
+        const semCredits = semester.subjects.reduce((s, sub) => s + sub.credits, 0);
+        rows.push(['', `Total Créditos Semestre ${semNum}`, '', semCredits]);
+        rows.push(['', '', '', '']);
+    }
+
+    function escapeField(val) {
+        const str = String(val ?? '');
+        return str.includes(',') || str.includes('"') || str.includes('\n')
+            ? `"${str.replace(/"/g, '""')}"` : str;
+    }
+    const csvContent = rows.map(r => r.map(escapeField).join(',')).join('\r\n');
+
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `plan_estudios_${config.programName}_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `plan_estudios_${config.programName || 'carrera'}_${new Date().toISOString().split('T')[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
 }
