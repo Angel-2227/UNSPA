@@ -368,8 +368,8 @@ body {
 }
 
 .semester-body {
-  padding: 20px;
-  overflow-x: auto;
+  padding: 16px;
+  overflow-x: visible;
 }
 
 .semester-drop-zone {
@@ -1764,13 +1764,19 @@ body {
 
 
 /* ============================================
-   TARJETAS MÓVILES PARA MATERIAS
+   TARJETAS DE MATERIAS (MÓVIL Y DESKTOP)
    ============================================ */
 
 .subjects-cards-mobile {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 900px) {
+  .subjects-cards-mobile {
+    grid-template-columns: 1fr;
+  }
 }
 
 .subject-card-mobile {

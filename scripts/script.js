@@ -378,29 +378,9 @@ function createSubjectsTable(subjects, semesterNum) {
         return '<div class="no-data" style="margin: 0;"><p>No hay materias en este semestre</p></div>';
     }
 
-    if (window.innerWidth <= 768) {
-        return `<div class="subjects-cards-mobile">
-            ${subjects.map((subject, index) => createSubjectCard(subject, semesterNum, index)).join('')}
-        </div>`;
-    }
-
-    return `
-        <table class="subjects-table">
-            <thead>
-                <tr>
-                    <th>Materia</th>
-                    <th>Tipo</th>
-                    <th>Créditos</th>
-                    <th>Código</th>
-                    <th>Profesor</th>
-                    <th>Grupo</th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                ${subjects.map((subject, index) => createSubjectRow(subject, semesterNum, index)).join('')}
-            </tbody>
-        </table>`;
+    return `<div class="subjects-cards-mobile">
+        ${subjects.map((subject, index) => createSubjectCard(subject, semesterNum, index)).join('')}
+    </div>`;
 }
 
 function createSubjectCard(subject, semesterNum, index) {
