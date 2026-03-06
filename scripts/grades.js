@@ -535,10 +535,9 @@ function refreshOverallAvg() {
     if (f) { f.style.width = avg !== null ? `${(avg/5)*100}%` : '0%'; f.style.background = gradeColor(avg); }
 
     // Sincronizar con sidebar y stat card del overview
-    const txt = avg !== null ? avg.toFixed(2) : '—';
     const sa = document.getElementById('sidebarAverage');
     const oc = document.getElementById('overallAverageCard');
-    if (sa) sa.textContent = txt;
+    if (sa) sa.textContent = avg !== null ? avg.toFixed(2) : 'N/A';
     if (oc) {
         if (avg !== null) {
             oc.textContent = avg.toFixed(2);
