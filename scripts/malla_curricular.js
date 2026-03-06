@@ -328,9 +328,13 @@ function showMgcTooltip(subId, semNum) {
     // ── Si existe contenido programático, abrir ese modal (el bueno) ──
     if (typeof cpShowModal === 'function' && sub.code &&
         typeof contenidoProgramaticoData !== 'undefined' &&
-        contenidoProgramaticoData.find(x => x.code === sub.code)) {
+        contenidoProgramaticoData.find(x => 
+    x.code && sub.code && 
+    x.code.trim().toLowerCase() === sub.code.trim().toLowerCase()
+)) {
 
-        cpShowModal(sub.code);
+        cpShowModal(sub.code.trim());
+
 
         // Inyectar sección de prereqs al final del modal de contenido
         setTimeout(() => {

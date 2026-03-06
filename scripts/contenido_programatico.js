@@ -175,7 +175,10 @@ function cpTypeBadge(type) {
 
 // ── MODAL DE DETALLE ──────────────────────────────────────────────────────────
 function cpShowModal(code) {
-    const s = contenidoProgramaticoData.find(x => x.code === code);
+    const s = contenidoProgramaticoData.find(x => 
+    x.code && code && 
+    x.code.trim().toLowerCase() === code.trim().toLowerCase()
+);
     if (!s) return;
 
     let modal = document.getElementById('cpDetailModal');
