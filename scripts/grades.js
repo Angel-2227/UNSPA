@@ -44,10 +44,14 @@ function loadGradesFromFirestore(data) {
     }
     // Re-sincronizar estructura con el studyPlan recién llegado de Firestore
     ensureGradesStructure();
-    // Si el usuario está en la vista de notas, re-renderizar con datos frescos
-    if (typeof currentView !== 'undefined' && currentView === 'grades') {
-        renderGradesView();
-    }
+    // Re-renderizar siempre que sea la vista activa, con un pequeño delay
+    // para garantizar que studyPlan ya esté completamente asignado en memoria
+    setTimeout(() => {
+        ensureGradesStructure();
+        if (typeof currentView !== 'undefined' && currentView === 'grades') {
+            renderGradesView();
+        }
+    }, 300);
 }
 
 function ensureGradesStructure() {

@@ -992,6 +992,17 @@ function showView(viewName, clickedEl) {
     }
     else if (viewName === 'grades') {
         renderGradesView();
+        // Si studyPlan aún no tiene materias (datos de Firestore no llegaron todavía),
+        // reintentamos en 800ms para cubrir la carrera entre auth y carga de datos
+        const hasSubjects = Object.values(studyPlan).some(s => s.subjects && s.subjects.length > 0);
+        if (!hasSubjects) {
+            setTimeout(() => {
+                if (currentView === 'grades') {
+                    ensureGradesStructure();
+                    renderGradesView();
+                }
+            }, 800);
+        }
     }
     else if (viewName === 'contenido') {
         initContenidoView();
@@ -1375,10 +1386,6 @@ async function loadUserDataFromFirestore() {
             // Cargar notas desde Firestore
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
-                // Si el usuario está en la vista de notas, re-renderizar con los datos frescos
-                if (currentView === 'grades' && typeof renderGradesView === 'function') {
-                    renderGradesView();
-                }
             }
             console.log('✅ Datos cargados desde Firestore');
         } else {
