@@ -325,75 +325,74 @@ function showMgcTooltip(subId, semNum) {
         return pid;
     });
 
-    // ── Abrir el modal estándar de materia (modo solo-lectura desde la malla) ──
-    const modal = document.getElementById('subjectModal');
-    if (modal && typeof openSubjectModal === 'function') {
-        // Pre-llenar el modal con la info de la materia
-        openSubjectModal(sub);
+    // ── Si existe contenido programático, abrir ese modal (el bueno) ──
+    if (typeof cpShowModal === 'function' && sub.code &&
+        typeof contenidoProgramaticoData !== 'undefined' &&
+        contenidoProgramaticoData.find(x => x.code === sub.code)) {
 
-        // Inyectar panel de prereqs al final del modal, si no existe ya
-        let prereqPanel = document.getElementById('mgcModalPrereqPanel');
-        if (!prereqPanel) {
-            prereqPanel = document.createElement('div');
-            prereqPanel.id = 'mgcModalPrereqPanel';
-            prereqPanel.style.cssText = 'margin-top:16px; padding-top:14px; border-top:1px solid var(--border-color);';
-            // Buscar el form o el footer del modal para insertarlo antes del botón guardar
-            const modalBody = modal.querySelector('.modal-body') || modal.querySelector('form') || modal;
-            modalBody.appendChild(prereqPanel);
-        }
+        cpShowModal(sub.code);
 
-        prereqPanel.innerHTML = `
-            <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); margin-bottom:8px;">
-                🔗 Prerrequisitos en la malla
-            </div>
-            ${prereqNames.length
-                ? `<div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
-                       ${prereqNames.map(n => `<span style="display:inline-block;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;margin:2px 3px 2px 0;font-size:0.75rem;">${n}</span>`).join('')}
-                   </div>`
-                : `<div style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:8px;">Sin prerrequisitos asignados.</div>`
+        // Inyectar sección de prereqs al final del modal de contenido
+        setTimeout(() => {
+            const cpBody = document.getElementById('cpModalBody');
+            if (!cpBody) return;
+            let prereqPanel = document.getElementById('mgcCpPrereqPanel');
+            if (!prereqPanel) {
+                prereqPanel = document.createElement('div');
+                prereqPanel.id = 'mgcCpPrereqPanel';
+                prereqPanel.style.cssText = 'margin-top:16px;padding-top:14px;border-top:1px solid var(--border-color);';
+                cpBody.appendChild(prereqPanel);
             }
-            <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                <button type="button" onclick="closeMallaModal();addPrereqFor('${subId}')"
-                    style="font-size:0.78rem;padding:4px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">
-                    🔗 + Agregar prereq
-                </button>
-                ${prereqIds.length ? `
-                <button type="button" onclick="closeMallaModal();removeAllPrereqsOf('${subId}')"
-                    style="font-size:0.78rem;padding:4px 12px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">
-                    🗑 Quitar prereqs
-                </button>` : ''}
-            </div>`;
+            prereqPanel.innerHTML = `
+                <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;color:var(--text-secondary);letter-spacing:.05em;margin-bottom:8px;">
+                    🔗 Prerrequisitos en la malla
+                </div>
+                ${prereqNames.length
+                    ? prereqNames.map(n => `<span style="display:inline-block;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;margin:2px 3px 2px 0;font-size:0.78rem;color:var(--text-primary);">${n}</span>`).join('')
+                    : `<span style="font-size:0.78rem;color:var(--text-secondary);">Sin prerrequisitos asignados.</span>`
+                }
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
+                    <button type="button"
+                        onclick="cpCloseModal();addPrereqFor('${subId}')"
+                        style="font-size:0.78rem;padding:4px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">
+                        🔗 + Agregar prereq
+                    </button>
+                    ${prereqIds.length ? `
+                    <button type="button"
+                        onclick="cpCloseModal();removeAllPrereqsOf('${subId}')"
+                        style="font-size:0.78rem;padding:4px 12px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">
+                        🗑 Quitar prereqs
+                    </button>` : ''}
+                </div>`;
+        }, 30);
         return;
     }
 
-    // Fallback: tooltip pequeño si el modal no existe
-    const old = document.getElementById('mgcTooltip');
-    if (old) old.remove();
+    // ── Fallback: tooltip pequeño con info básica + prereqs ──
+    const oldTip = document.getElementById('mgcTooltip');
+    if (oldTip) oldTip.remove();
     const cardEl = document.getElementById(`mgc-${subId}`);
     if (!cardEl) return;
     const cardRect = cardEl.getBoundingClientRect();
     const tooltip  = document.createElement('div');
     tooltip.id = 'mgcTooltip';
-    tooltip.style.cssText = `position:fixed;z-index:9999;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,0.18);max-width:280px;font-size:0.82rem;`;
+    tooltip.style.cssText = `position:fixed;z-index:9999;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:14px 16px;box-shadow:0 6px 24px rgba(0,0,0,0.18);max-width:300px;font-size:0.82rem;`;
     tooltip.innerHTML = `
-        <div style="font-weight:700;margin-bottom:4px;">${sub.name}</div>
-        <div style="color:var(--text-secondary);margin-bottom:6px;">${sub.credits} cr · Sem. ${semNum}</div>
+        <div style="font-weight:700;margin-bottom:4px;color:var(--text-primary);">${sub.name}</div>
+        <div style="color:var(--text-secondary);font-size:0.78rem;margin-bottom:10px;">${sub.credits} créditos · ${sub.type} · Sem. ${semNum}</div>
+        ${prereqNames.length ? `
+        <div style="font-size:0.75rem;color:var(--text-secondary);margin-bottom:8px;">
+            <strong>Prereqs:</strong> ${prereqNames.join(', ')}
+        </div>` : ''}
         <div style="display:flex;gap:6px;flex-wrap:wrap;">
-            <button onclick="addPrereqFor('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">🔗 + Prereq</button>
+            <button onclick="addPrereqFor('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">🔗 + Prereq</button>
             ${prereqIds.length ? `<button onclick="removeAllPrereqsOf('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">🗑 Quitar prereqs</button>` : ''}
-            <button onclick="closeTooltip()" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">✕</button>
+            <button onclick="closeTooltip()" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">✕</button>
         </div>`;
-    tooltip.style.top  = Math.min(cardRect.bottom + 6, window.innerHeight - 180) + 'px';
-    tooltip.style.left = Math.min(cardRect.left, window.innerWidth - 296) + 'px';
+    tooltip.style.top  = Math.min(cardRect.bottom + 6, window.innerHeight - 200) + 'px';
+    tooltip.style.left = Math.min(cardRect.left, window.innerWidth - 316) + 'px';
     document.body.appendChild(tooltip);
     setTimeout(() => document.addEventListener('click', closeTooltip, { once: true }), 50);
-}
-
-function closeMallaModal() {
-    // Limpiar el panel de prereqs inyectado antes de cerrar
-    const panel = document.getElementById('mgcModalPrereqPanel');
-    if (panel) panel.remove();
-    if (typeof closeSubjectModal === 'function') closeSubjectModal();
 }
 
 function closeTooltip() {
