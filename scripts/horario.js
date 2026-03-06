@@ -576,8 +576,48 @@ function saveSchedule() {
 }
 
 // ============================================
-// LISTAR HORARIOS
+// LISTAR HORARIOS — Sistema de carpetas por semestre
 // ============================================
+
+/**
+ * Devuelve el periodo actual configurado, o 'Sin periodo' si no hay.
+ */
+function getCurrentPeriod() {
+    return currentPeriodConfig?.period || 'Sin periodo';
+}
+
+/**
+ * Mueve un horario al archivo de semestres pasados.
+ */
+function archiveSchedule(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    if (!confirm(`¿Archivar el horario "${schedule.name}" en semestres anteriores?`)) return;
+    schedule.archived = true;
+    schedule.archivedAt = new Date().toISOString();
+    localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+    renderSchedules();
+}
+
+/**
+ * Restaura un horario archivado al semestre actual.
+ */
+function unarchiveSchedule(scheduleId) {
+    const schedule = schedules.find(s => s.id === scheduleId);
+    if (!schedule) return;
+    schedule.archived = false;
+    delete schedule.archivedAt;
+    localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+    renderSchedules();
+}
+
+function deleteSchedule(scheduleId) {
+    if (confirm('¿Eliminar este horario permanentemente?')) {
+        schedules = schedules.filter(s => s.id !== scheduleId);
+        localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+        renderSchedules();
+    }
+}
 
 function renderSchedules() {
     const container = document.getElementById('schedulesContainer');
@@ -585,29 +625,115 @@ function renderSchedules() {
     const saved = localStorage.getItem('savedSchedules');
     if (saved) schedules = JSON.parse(saved);
 
+    const active = schedules.filter(s => !s.archived);
+    const archived = schedules.filter(s => s.archived);
+
     if (schedules.length === 0) {
         container.innerHTML = '<div class="no-data"><p>No tienes horarios guardados</p></div>';
         updateScheduleButton();
         return;
     }
 
-    container.innerHTML = schedules.map(schedule => `
-        <div class="schedule-card">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 16px;">
-                <div>
-                    <h3>${schedule.name}</h3>
-                    <p style="color: var(--text-secondary);">Periodo: ${schedule.period}</p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button class="btn btn-primary btn-sm" onclick="viewSchedule('${schedule.id}')">👁️ Ver</button>
-                    <button class="btn btn-warning btn-sm" onclick="editSchedule('${schedule.id}')">✏️ Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.id}')">🗑️</button>
-                </div>
-            </div>
-            <p><strong>${Object.keys(schedule.subjects).length}</strong> materias seleccionadas</p>
-        </div>`).join('');
+    // ── Sección activa ──────────────────────────────
+    let html = '';
 
+    if (active.length === 0) {
+        html += `<div class="no-data" style="margin-bottom:16px;"><p>No hay horarios para el semestre actual</p></div>`;
+    } else {
+        // Agrupar activos por periodo
+        const byPeriod = {};
+        active.forEach(s => {
+            const key = s.period || 'Sin periodo';
+            if (!byPeriod[key]) byPeriod[key] = [];
+            byPeriod[key].push(s);
+        });
+
+        Object.entries(byPeriod).forEach(([period, list]) => {
+            html += `
+            <div class="semester-folder-header active-folder">
+                <span class="folder-icon">📂</span>
+                <span class="folder-title">Semestre actual · ${period}</span>
+                <span class="folder-badge">${list.length} horario${list.length !== 1 ? 's' : ''}</span>
+            </div>`;
+            list.forEach(schedule => {
+                html += _buildScheduleCard(schedule, false);
+            });
+        });
+    }
+
+    // ── Carpeta de semestres anteriores ────────────
+    if (archived.length > 0) {
+        // Agrupar archivados por periodo
+        const byPeriod = {};
+        archived.forEach(s => {
+            const key = s.period || 'Sin periodo';
+            if (!byPeriod[key]) byPeriod[key] = [];
+            byPeriod[key].push(s);
+        });
+
+        const totalArchived = archived.length;
+        html += `
+        <div class="archived-section" id="archivedSection">
+            <div class="semester-folder-header archived-folder" onclick="toggleArchivedSection()" style="cursor:pointer;">
+                <span class="folder-icon">🗄️</span>
+                <span class="folder-title">Semestres anteriores</span>
+                <span class="folder-badge">${totalArchived} horario${totalArchived !== 1 ? 's' : ''}</span>
+                <span class="folder-toggle-icon" id="archivedToggleIcon">▶</span>
+            </div>
+            <div id="archivedContent" style="display:none;">`;
+
+        Object.entries(byPeriod).forEach(([period, list]) => {
+            html += `<div class="archived-period-label">📅 ${period}</div>`;
+            list.forEach(schedule => {
+                html += _buildScheduleCard(schedule, true);
+            });
+        });
+
+        html += `</div></div>`;
+    }
+
+    container.innerHTML = html;
     updateScheduleButton();
+}
+
+function _buildScheduleCard(schedule, isArchived) {
+    const subjectCount = Object.keys(schedule.subjects).length;
+    const archivedDate = schedule.archivedAt
+        ? new Date(schedule.archivedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
+        : '';
+
+    return `
+    <div class="schedule-card${isArchived ? ' schedule-card-archived' : ''}">
+        <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:12px;">
+            <div>
+                <h3 style="margin:0 0 4px;">${schedule.name}</h3>
+                <p style="color:var(--text-secondary); margin:0; font-size:0.85rem;">
+                    Periodo: ${schedule.period || '—'}
+                    ${isArchived && archivedDate ? ` · Archivado el ${archivedDate}` : ''}
+                </p>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end;">
+                <button class="btn btn-primary btn-sm" onclick="viewSchedule('${schedule.id}')">👁️ Ver</button>
+                ${!isArchived ? `
+                <button class="btn btn-warning btn-sm" onclick="editSchedule('${schedule.id}')">✏️ Editar</button>
+                <button class="btn btn-secondary btn-sm" onclick="archiveSchedule('${schedule.id}')" title="Archivar en semestres anteriores">🗄️ Archivar</button>
+                ` : `
+                <button class="btn btn-secondary btn-sm" onclick="unarchiveSchedule('${schedule.id}')" title="Mover a semestre actual">📂 Restaurar</button>
+                `}
+                <button class="btn btn-danger btn-sm" onclick="deleteSchedule('${schedule.id}')">🗑️</button>
+            </div>
+        </div>
+        <p style="margin:0; font-size:0.9rem;"><strong>${subjectCount}</strong> materia${subjectCount !== 1 ? 's' : ''} seleccionada${subjectCount !== 1 ? 's' : ''}</p>
+    </div>`;
+}
+
+function toggleArchivedSection() {
+    const content = document.getElementById('archivedContent');
+    const icon = document.getElementById('archivedToggleIcon');
+    if (!content || !icon) return;
+    const isOpen = content.style.display !== 'none';
+    content.style.display = isOpen ? 'none' : 'block';
+    icon.textContent = isOpen ? '▶' : '▼';
 }
 
 function updateScheduleButton() {
@@ -623,14 +749,6 @@ function viewSchedule(scheduleId) {
     updateCurrentTimeIndicator();
     if (window.scheduleUpdateInterval) clearInterval(window.scheduleUpdateInterval);
     window.scheduleUpdateInterval = setInterval(updateCurrentTimeIndicator, 60000);
-}
-
-function deleteSchedule(scheduleId) {
-    if (confirm('¿Eliminar este horario?')) {
-        schedules = schedules.filter(s => s.id !== scheduleId);
-        localStorage.setItem('savedSchedules', JSON.stringify(schedules));
-        renderSchedules();
-    }
 }
 
 function closeScheduleModal() {
