@@ -24,10 +24,7 @@ function buildAcademicContext() {
             subjects: sem.subjects.map(s => ({
                 name: s.name, credits: s.credits, type: s.type,
                 code: s.code || '', professor: s.professor || '', group: s.group || ''
-                
-            })),
-            // Dentro del return de buildAcademicContext, añade esta línea:
-contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildContenidoContext() : null,
+            }))
         };
     }).sort((a, b) => parseInt(a.number) - parseInt(b.number));
 
@@ -55,7 +52,8 @@ contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildCont
             name: s.name, period: s.period, subjects: s.subjects
         })),
         mallaMarks,
-        grades: gradesContext   // ← NUEVO: notas del estudiante
+        grades: gradesContext,   // ← notas del estudiante
+        contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildContenidoContext() : null   // ← contenido programático
     };
 }
 
