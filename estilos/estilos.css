@@ -1645,6 +1645,11 @@ body {
   padding: 14px 18px; cursor: pointer; user-select: none; gap: 12px; flex-wrap: wrap;
 }
 .gn-sem-header:hover { background: var(--bg-secondary); }
+.gn-sem-header--current {
+  background: linear-gradient(135deg, rgba(46,125,50,0.08), rgba(46,125,50,0.04));
+  border-left: 4px solid var(--unal-green);
+}
+.gn-sem-header--current:hover { background: rgba(46,125,50,0.12); }
 .gn-sem-left  { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .gn-sem-right { display: flex; align-items: center; gap: 10px; }
 .gn-sem-title { font-weight: 700; font-size: 1rem; }

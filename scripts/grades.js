@@ -226,11 +226,11 @@ function buildSemesterBlock(semNum) {
     const sem   = studyPlan[semNum];
     const avg   = calcSemAvg(semNum);
     const label = { completed:'Completado', current:'Cursando', pending:'Pendiente' }[sem.status] || 'Pendiente';
-    const open  = sem.status !== 'pending';
+    const open  = sem.status === 'current';
 
     return `
     <div class="gn-sem-block ${sem.status}" id="gn-sem-${semNum}">
-        <div class="gn-sem-header" data-sem="${semNum}">
+        <div class="gn-sem-header${sem.status === 'current' ? ' gn-sem-header--current' : ''}" data-sem="${semNum}">
             <div class="gn-sem-left">
                 <span class="semester-status status-${sem.status}">${label}</span>
                 <span class="gn-sem-title">Semestre ${semNum}</span>
@@ -539,7 +539,17 @@ function refreshOverallAvg() {
     const sa = document.getElementById('sidebarAverage');
     const oc = document.getElementById('overallAverageCard');
     if (sa) sa.textContent = txt;
-    if (oc) { oc.textContent = txt; oc.style.color = avg !== null ? gradeColor(avg) : 'var(--unal-green)'; }
+    if (oc) {
+        if (avg !== null) {
+            oc.textContent = avg.toFixed(2);
+            oc.style.color = gradeColor(avg);
+            oc.style.fontSize = '';
+        } else {
+            oc.textContent = 'N/A';
+            oc.style.color = 'var(--text-secondary)';
+            oc.style.fontSize = '1rem';
+        }
+    }
 }
 // ── Acordeón ──────────────────────────────────
 
