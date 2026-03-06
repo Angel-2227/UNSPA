@@ -48,6 +48,81 @@ function renderMallaGenerada() {
     const container = document.getElementById('mallaGeneradaContainer');
     if (!container) return;
 
+    // Inject card styles once
+    if (!document.getElementById('mgcCardStyles')) {
+        const s = document.createElement('style');
+        s.id = 'mgcCardStyles';
+        s.textContent = `
+            .mgc-card {
+                background: var(--tc-bg);
+                border: 2px solid var(--tc-border);
+                box-shadow: 0 2px 5px rgba(0,0,0,0.09);
+            }
+            .mgc-card--completed {
+                border: 2.5px solid #2e7d32 !important;
+                background: color-mix(in srgb, var(--tc-bg) 85%, #2e7d32 15%) !important;
+            }
+            .mgc-card--current {
+                border: 2.5px solid #ffa000 !important;
+                background: color-mix(in srgb, var(--tc-bg) 85%, #ffa000 15%) !important;
+            }
+            /* Dark mode: make sure card backgrounds stay visible */
+            [data-theme="dark"] .mgc-card,
+            .dark-mode .mgc-card,
+            body.dark .mgc-card {
+                background: color-mix(in srgb, var(--bg-secondary, #2a2a2a) 60%, var(--tc-border) 40%) !important;
+                border-color: var(--tc-border) !important;
+            }
+            [data-theme="dark"] .mgc-card--completed,
+            .dark-mode .mgc-card--completed,
+            body.dark .mgc-card--completed {
+                background: color-mix(in srgb, var(--bg-secondary, #2a2a2a) 55%, #2e7d32 45%) !important;
+                border-color: #4caf50 !important;
+            }
+            [data-theme="dark"] .mgc-card--current,
+            .dark-mode .mgc-card--current,
+            body.dark .mgc-card--current {
+                background: color-mix(in srgb, var(--bg-secondary, #2a2a2a) 55%, #ffa000 45%) !important;
+                border-color: #ffb74d !important;
+            }
+            .mgc-card-name {
+                font-size: 0.73rem;
+                font-weight: 700;
+                color: var(--text-primary);
+                line-height: 1.25;
+                position: relative;
+            }
+            .mgc-state-icon {
+                margin-right: 3px;
+                font-size: 0.8rem;
+            }
+            .mgc-card-footer {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                position: relative;
+            }
+            .mgc-cr-badge {
+                font-size: 0.62rem;
+                background: var(--tc-border);
+                color: white;
+                padding: 2px 7px;
+                border-radius: 10px;
+                font-weight: 700;
+            }
+            .mgc-prereq-badge {
+                font-size: 0.6rem;
+                color: var(--text-secondary);
+            }
+            .mgc-type-abbr {
+                font-size: 0.58rem;
+                color: var(--text-secondary);
+                opacity: 0.8;
+            }
+        `;
+        document.head.appendChild(s);
+    }
+
     const semNums = Object.keys(studyPlan)
         .filter(n => studyPlan[n].subjects && studyPlan[n].subjects.length > 0)
         .sort((a, b) => +a - +b);
@@ -125,51 +200,39 @@ function buildMallaCard(sub, semNum, left, top, w, h) {
     const sem = studyPlan[semNum];
     const tc  = MALLA_TYPE_COLORS[sub.type] || MALLA_TYPE_COLORS['DISCIPLINAR OBLIGATORIA'];
 
-    // Estado automático desde el semestre
-    let stateIcon = '', borderExtra = '', overlayColor = '';
-    if (sem.status === 'completed') {
-        stateIcon    = '✓';
-        borderExtra  = `border: 2.5px solid #2e7d32 !important;`;
-        overlayColor = 'rgba(46,125,50,0.12)';
-    } else if (sem.status === 'current') {
-        stateIcon    = '▶';
-        borderExtra  = `border: 2.5px solid #ffa000 !important;`;
-        overlayColor = 'rgba(255,160,0,0.10)';
-    }
+    let stateIcon = '', statusClass = '';
+    if (sem.status === 'completed') { stateIcon = '✓'; statusClass = 'mgc-card--completed'; }
+    else if (sem.status === 'current') { stateIcon = '▶'; statusClass = 'mgc-card--current'; }
 
     const prereqCount = (mallaPrereqs[sub.id] || []).length;
-    const shortName   = sub.name.length > 44 ? sub.name.slice(0, 42) + '…' : sub.name;
+    const shortName   = sub.name.length > 44 ? sub.name.slice(0, 42) + '\u2026' : sub.name;
     const typeAbbr    = sub.type.split(' ').map(w=>w[0]).join('');
 
     return `
         <div id="mgc-${sub.id}"
              data-id="${sub.id}" data-sem="${semNum}"
+             class="mgc-card ${statusClass}"
              onclick="handleMallaCardClick(event,'${sub.id}','${semNum}')"
              title="${sub.name} · ${sub.type} · ${sub.credits} créditos"
              style="
                 position:absolute; left:${left}px; top:${top}px;
                 width:${w}px; height:${h}px;
-                background:${overlayColor ? 'transparent' : tc.bg};
-                ${borderExtra || `border:2px solid ${tc.border};`}
+                --tc-bg:${tc.bg}; --tc-border:${tc.border}; --tc-text:${tc.text};
                 border-radius:6px; padding:7px 9px;
-                box-shadow:0 2px 5px rgba(0,0,0,0.09);
                 cursor:pointer; z-index:2;
                 display:flex; flex-direction:column; justify-content:space-between;
                 transition:transform 0.15s, box-shadow 0.15s;
                 overflow:hidden;
              "
-             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 14px rgba(0,0,0,0.18)';this.style.zIndex='10'"
-             onmouseleave="this.style.transform='';this.style.boxShadow='0 2px 5px rgba(0,0,0,0.09)';this.style.zIndex='2'">
-            ${overlayColor ? `<div style="position:absolute;inset:0;background:${overlayColor};border-radius:4px;pointer-events:none;"></div>` : ''}
-            <div style="font-size:0.73rem;font-weight:700;color:${tc.text};line-height:1.25;position:relative;">
-                ${stateIcon ? `<span style="margin-right:3px;font-size:0.8rem;">${stateIcon}</span>` : ''}${shortName}
+             onmouseenter="this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 14px rgba(0,0,0,0.22)';this.style.zIndex='10'"
+             onmouseleave="this.style.transform='';this.style.boxShadow='';this.style.zIndex='2'">
+            <div class="mgc-card-name">
+                ${stateIcon ? `<span class="mgc-state-icon">${stateIcon}</span>` : ''}${shortName}
             </div>
-            <div style="display:flex;justify-content:space-between;align-items:center;position:relative;">
-                <span style="font-size:0.62rem;background:${tc.border};color:white;padding:2px 7px;border-radius:10px;font-weight:700;">
-                    ${sub.credits} cr
-                </span>
-                ${prereqCount ? `<span style="font-size:0.6rem;color:${tc.text};opacity:0.75;">📌${prereqCount}</span>` : ''}
-                <span style="font-size:0.58rem;color:${tc.text};opacity:0.6;">${typeAbbr}</span>
+            <div class="mgc-card-footer">
+                <span class="mgc-cr-badge">${sub.credits} cr</span>
+                ${prereqCount ? `<span class="mgc-prereq-badge">📌${prereqCount}</span>` : ''}
+                <span class="mgc-type-abbr">${typeAbbr}</span>
             </div>
         </div>`;
 }
@@ -248,16 +311,12 @@ function showMgcTooltip(subId, semNum) {
     selectedCardId  = subId;
     selectedCardSem = semNum;
 
-    // Quitar tooltip anterior
-    const old = document.getElementById('mgcTooltip');
-    if (old) old.remove();
-
     const sem = studyPlan[semNum];
     if (!sem) return;
     const sub = sem.subjects.find(s => s.id === subId);
     if (!sub) return;
 
-    const prereqIds = mallaPrereqs[subId] || [];
+    const prereqIds   = mallaPrereqs[subId] || [];
     const prereqNames = prereqIds.map(pid => {
         for (const s of Object.values(studyPlan)) {
             const f = s.subjects.find(x => x.id === pid);
@@ -266,39 +325,75 @@ function showMgcTooltip(subId, semNum) {
         return pid;
     });
 
+    // ── Abrir el modal estándar de materia (modo solo-lectura desde la malla) ──
+    const modal = document.getElementById('subjectModal');
+    if (modal && typeof openSubjectModal === 'function') {
+        // Pre-llenar el modal con la info de la materia
+        openSubjectModal(sub);
+
+        // Inyectar panel de prereqs al final del modal, si no existe ya
+        let prereqPanel = document.getElementById('mgcModalPrereqPanel');
+        if (!prereqPanel) {
+            prereqPanel = document.createElement('div');
+            prereqPanel.id = 'mgcModalPrereqPanel';
+            prereqPanel.style.cssText = 'margin-top:16px; padding-top:14px; border-top:1px solid var(--border-color);';
+            // Buscar el form o el footer del modal para insertarlo antes del botón guardar
+            const modalBody = modal.querySelector('.modal-body') || modal.querySelector('form') || modal;
+            modalBody.appendChild(prereqPanel);
+        }
+
+        prereqPanel.innerHTML = `
+            <div style="font-weight:600; font-size:0.85rem; color:var(--text-primary); margin-bottom:8px;">
+                🔗 Prerrequisitos en la malla
+            </div>
+            ${prereqNames.length
+                ? `<div style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:8px;">
+                       ${prereqNames.map(n => `<span style="display:inline-block;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;padding:2px 8px;margin:2px 3px 2px 0;font-size:0.75rem;">${n}</span>`).join('')}
+                   </div>`
+                : `<div style="font-size:0.78rem; color:var(--text-secondary); margin-bottom:8px;">Sin prerrequisitos asignados.</div>`
+            }
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                <button type="button" onclick="closeMallaModal();addPrereqFor('${subId}')"
+                    style="font-size:0.78rem;padding:4px 12px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;color:var(--text-primary);">
+                    🔗 + Agregar prereq
+                </button>
+                ${prereqIds.length ? `
+                <button type="button" onclick="closeMallaModal();removeAllPrereqsOf('${subId}')"
+                    style="font-size:0.78rem;padding:4px 12px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">
+                    🗑 Quitar prereqs
+                </button>` : ''}
+            </div>`;
+        return;
+    }
+
+    // Fallback: tooltip pequeño si el modal no existe
+    const old = document.getElementById('mgcTooltip');
+    if (old) old.remove();
     const cardEl = document.getElementById(`mgc-${subId}`);
     if (!cardEl) return;
     const cardRect = cardEl.getBoundingClientRect();
-    const scrollEl = document.getElementById('mgcScrollContainer');
-    const sRect    = scrollEl ? scrollEl.getBoundingClientRect() : { left: 0, top: 0 };
-
-    const tooltip = document.createElement('div');
+    const tooltip  = document.createElement('div');
     tooltip.id = 'mgcTooltip';
-    tooltip.style.cssText = `
-        position:fixed; z-index:9999;
-        background:var(--bg-primary); border:1px solid var(--border-color);
-        border-radius:10px; padding:12px 14px; box-shadow:0 6px 24px rgba(0,0,0,0.18);
-        max-width:280px; font-size:0.82rem;
-    `;
+    tooltip.style.cssText = `position:fixed;z-index:9999;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;box-shadow:0 6px 24px rgba(0,0,0,0.18);max-width:280px;font-size:0.82rem;`;
     tooltip.innerHTML = `
-        <div style="font-weight:700;margin-bottom:4px;color:var(--text-primary);">${sub.name}</div>
-        <div style="color:var(--text-secondary);margin-bottom:6px;">${sub.credits} créditos · ${sub.type} · Sem. ${semNum}</div>
-        ${prereqNames.length ? `<div style="color:#e91e63;font-size:0.75rem;margin-bottom:6px;">📌 Prereqs: ${prereqNames.join(', ')}</div>` : ''}
-        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;">
+        <div style="font-weight:700;margin-bottom:4px;">${sub.name}</div>
+        <div style="color:var(--text-secondary);margin-bottom:6px;">${sub.credits} cr · Sem. ${semNum}</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
             <button onclick="addPrereqFor('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">🔗 + Prereq</button>
             ${prereqIds.length ? `<button onclick="removeAllPrereqsOf('${subId}')" style="font-size:0.72rem;padding:3px 9px;background:#ffebee;border:1px solid #d32f2f;color:#d32f2f;border-radius:6px;cursor:pointer;">🗑 Quitar prereqs</button>` : ''}
             <button onclick="closeTooltip()" style="font-size:0.72rem;padding:3px 9px;background:var(--bg-secondary);border:1px solid var(--border-color);border-radius:6px;cursor:pointer;">✕</button>
         </div>`;
-
-    // Posicionar cerca de la tarjeta
-    const top  = Math.min(cardRect.bottom + 6, window.innerHeight - 180);
-    const left = Math.min(cardRect.left, window.innerWidth - 296);
-    tooltip.style.top  = top  + 'px';
-    tooltip.style.left = left + 'px';
+    tooltip.style.top  = Math.min(cardRect.bottom + 6, window.innerHeight - 180) + 'px';
+    tooltip.style.left = Math.min(cardRect.left, window.innerWidth - 296) + 'px';
     document.body.appendChild(tooltip);
-
-    // Cerrar al hacer clic fuera
     setTimeout(() => document.addEventListener('click', closeTooltip, { once: true }), 50);
+}
+
+function closeMallaModal() {
+    // Limpiar el panel de prereqs inyectado antes de cerrar
+    const panel = document.getElementById('mgcModalPrereqPanel');
+    if (panel) panel.remove();
+    if (typeof closeSubjectModal === 'function') closeSubjectModal();
 }
 
 function closeTooltip() {
