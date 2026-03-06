@@ -210,6 +210,13 @@ body {
   margin-bottom: 24px;
 }
 
+/* Móvil: siempre 2 columnas, sin importar el ancho mínimo */
+@media (max-width: 768px) {
+  .stats-summary {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
 .stat-card {
   background: var(--bg-primary);
   padding: 20px;
@@ -2023,7 +2030,7 @@ body {
 
 @media (max-width: 480px) {
   .stats-summary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .semester-header {
@@ -2439,12 +2446,26 @@ body {
   display: block;
 }
 
-/* 2 columnas de tarjetas */
+/* 3 columnas fijas en desktop, responsive en móvil */
 .gn-cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   margin-top: 8px;
+}
+
+/* En pantallas medianas: 2 columnas */
+@media (max-width: 1100px) {
+  .gn-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* En móvil: 1 columna */
+@media (max-width: 640px) {
+  .gn-cards-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* Advertencia en banner */
@@ -2793,12 +2814,7 @@ body {
   background: #ffebee;
 }
 
-/* ── Responsive ── */
-@media (max-width: 320px) {
-  .gn-cards-grid {
-    grid-template-columns: 1fr;
-  }
-}
+/* Responsive cubierto por los media queries de gn-cards-grid arriba */
 
 @media (max-width: 600px) {
 
