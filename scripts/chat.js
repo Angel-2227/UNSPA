@@ -53,7 +53,8 @@ function buildAcademicContext() {
         })),
         mallaMarks,
         grades: gradesContext,   // ← notas del estudiante
-        contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildContenidoContext() : null   // ← contenido programático
+        contenidoProgramatico: (typeof buildContenidoContext === 'function') ? buildContenidoContext() : null,   // ← contenido programático
+        _ui_hint: 'El chat renderiza markdown completo: **negrita**, *cursiva*, tablas (| col | col |), listas (- item), ## títulos. Usa tablas cuando compares materias, notas o créditos. Sé conciso.'
     };
 }
 
@@ -270,6 +271,63 @@ function initChatWidget() {
             #chatPanel      { right: 12px; bottom: 90px; width: calc(100vw - 24px); }
             #chatToggleBtn  { right: 16px; bottom: 20px; }
         }
+
+        /* ── Markdown enriquecido ── */
+        .chat-table-wrap {
+            overflow-x: auto;
+            margin: 6px 0;
+            border-radius: 8px;
+            border: 1px solid var(--border-color, #dee2e6);
+        }
+        .chat-table {
+            border-collapse: collapse;
+            font-size: 0.78rem;
+            width: 100%;
+            min-width: 220px;
+        }
+        .chat-table th {
+            background: #2e7d32;
+            color: white;
+            padding: 6px 10px;
+            text-align: left;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .chat-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid var(--border-color, #dee2e6);
+            vertical-align: top;
+        }
+        .chat-table tr:last-child td { border-bottom: none; }
+        .chat-table tr:nth-child(even) td { background: var(--bg-secondary, #f8f9fa); }
+
+        .chat-list {
+            margin: 4px 0 4px 16px;
+            padding: 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+        .chat-list li { margin-bottom: 2px; }
+
+        .chat-h2 {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #2e7d32;
+            margin: 8px 0 2px;
+        }
+        .chat-h3 {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-primary, #212529);
+            margin: 6px 0 2px;
+        }
+        .chat-code {
+            background: rgba(0,0,0,0.08);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-family: monospace;
+            font-size: 0.82em;
+        }
     `;
     document.head.appendChild(style);
 
@@ -399,16 +457,97 @@ async function handleChatSend() {
     }
 }
 
-function appendChatMessage(role, content) {
-    const messages  = document.getElementById('chatMessages');
-    const div       = document.createElement('div');
-    div.className   = `chat-msg ${role}`;
-    const formatted = content
+function formatMarkdown(text) {
+    const lines = text.split('\n');
+    let html = '';
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // ── Tabla markdown ──────────────────────────────
+        // Detecta si la línea siguiente es el separador |---|---|
+        if (
+            line.trim().startsWith('|') &&
+            i + 1 < lines.length &&
+            /^\|[\s\-|:]+\|/.test(lines[i + 1].trim())
+        ) {
+            html += '<div class="chat-table-wrap"><table class="chat-table">';
+
+            // Encabezado
+            const headers = line.split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+            html += '<thead><tr>' + headers.map(h => `<th>${inlineFormat(h.trim())}</th>`).join('') + '</tr></thead>';
+            i += 2; // saltar encabezado + separador
+
+            // Filas
+            html += '<tbody>';
+            while (i < lines.length && lines[i].trim().startsWith('|')) {
+                const cells = lines[i].split('|').filter((_, idx, arr) => idx > 0 && idx < arr.length - 1);
+                html += '<tr>' + cells.map(c => `<td>${inlineFormat(c.trim())}</td>`).join('') + '</tr>';
+                i++;
+            }
+            html += '</tbody></table></div>';
+            continue;
+        }
+
+        // ── Lista no ordenada ─────────────────────────
+        if (/^[\-\*] /.test(line.trim())) {
+            html += '<ul class="chat-list">';
+            while (i < lines.length && /^[\-\*] /.test(lines[i].trim())) {
+                html += `<li>${inlineFormat(lines[i].trim().replace(/^[\-\*] /, ''))}</li>`;
+                i++;
+            }
+            html += '</ul>';
+            continue;
+        }
+
+        // ── Lista ordenada ────────────────────────────
+        if (/^\d+\. /.test(line.trim())) {
+            html += '<ol class="chat-list">';
+            while (i < lines.length && /^\d+\. /.test(lines[i].trim())) {
+                html += `<li>${inlineFormat(lines[i].trim().replace(/^\d+\. /, ''))}</li>`;
+                i++;
+            }
+            html += '</ol>';
+            continue;
+        }
+
+        // ── Encabezado ### ────────────────────────────
+        if (/^###\s/.test(line)) {
+            html += `<p class="chat-h3">${inlineFormat(line.replace(/^###\s/, ''))}</p>`;
+            i++; continue;
+        }
+        if (/^##\s/.test(line)) {
+            html += `<p class="chat-h2">${inlineFormat(line.replace(/^##\s/, ''))}</p>`;
+            i++; continue;
+        }
+
+        // ── Línea vacía ───────────────────────────────
+        if (line.trim() === '') {
+            html += '<br>';
+            i++; continue;
+        }
+
+        // ── Texto normal ──────────────────────────────
+        html += `<span>${inlineFormat(line)}</span><br>`;
+        i++;
+    }
+
+    return html;
+}
+
+function inlineFormat(text) {
+    return text
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*(.*?)\*/g,     '<em>$1</em>')
-        .replace(/`(.*?)`/g,       '<code>$1</code>')
-        .replace(/\n/g,            '<br>');
-    div.innerHTML = `<div class="chat-bubble">${formatted}</div>`;
+        .replace(/`(.*?)`/g,       '<code class="chat-code">$1</code>');
+}
+
+function appendChatMessage(role, content) {
+    const messages = document.getElementById('chatMessages');
+    const div      = document.createElement('div');
+    div.className  = `chat-msg ${role}`;
+    div.innerHTML  = `<div class="chat-bubble">${role === 'ai' ? formatMarkdown(content) : inlineFormat(content).replace(/\n/g,'<br>')}</div>`;
     messages.appendChild(div);
     messages.scrollTop = messages.scrollHeight;
 }
