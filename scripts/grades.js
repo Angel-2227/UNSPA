@@ -44,8 +44,7 @@ function loadGradesFromFirestore(data) {
     }
     // Re-sincronizar estructura con el studyPlan recién llegado de Firestore
     ensureGradesStructure();
-    // Re-renderizar siempre que sea la vista activa, con un pequeño delay
-    // para garantizar que studyPlan ya esté completamente asignado en memoria
+    // Re-renderizar con pequeño delay para garantizar que studyPlan ya esté asignado
     setTimeout(() => {
         ensureGradesStructure();
         if (typeof currentView !== 'undefined' && currentView === 'grades') {
@@ -252,7 +251,7 @@ function renderGradesView() {
             </div>
         </div>
         <div id="gn-semesters">
-            ${semNums.map(n => buildSemesterBlock(n)).join('')}
+            ${semNums.map(n => gnBuildSemesterBlock(n)).join('')}
         </div>`;
 
     attachAllListeners();
@@ -260,7 +259,7 @@ function renderGradesView() {
 
 // ── Semestre ──────────────────────────────────
 
-function buildSemesterBlock(semNum) {
+function gnBuildSemesterBlock(semNum) {
     const sem = studyPlan[semNum];
     const avg = calcSemAvg(semNum);
     const label = { completed: 'Completado', current: 'Cursando', pending: 'Pendiente' }[sem.status] || 'Pendiente';
@@ -283,7 +282,7 @@ function buildSemesterBlock(semNum) {
         </div>
         <div class="gn-sem-body ${open ? 'open' : ''}" id="gn-body-${semNum}">
             <div class="gn-cards-grid">
-                ${sem.subjects.map(sub => buildSubjectCard(semNum, sub)).join('')}
+                ${sem.subjects.map(sub => gnBuildSubjectCard(semNum, sub)).join('')}
             </div>
         </div>
     </div>`;
@@ -291,14 +290,14 @@ function buildSemesterBlock(semNum) {
 
 // ── Tarjeta de materia ────────────────────────
 
-function buildSubjectCard(semNum, sub) {
+function gnBuildSubjectCard(semNum, sub) {
     const entry = (gradesData[semNum] || {})[sub.id];
     if (!entry) return '';
-    if (entry.type === 'pass_fail') return buildPassFailCard(semNum, sub, entry);
-    return buildGradedCard(semNum, sub, entry);
+    if (entry.type === 'pass_fail') return gnBuildPassFailCard(semNum, sub, entry);
+    return gnBuildGradedCard(semNum, sub, entry);
 }
 
-function buildPassFailCard(semNum, sub, entry) {
+function gnBuildPassFailCard(semNum, sub, entry) {
     const pf = entry.passFail;
     return `
     <div class="gn-card pf-card" id="gn-card-${sub.id}">
@@ -317,7 +316,7 @@ function buildPassFailCard(semNum, sub, entry) {
     </div>`;
 }
 
-function buildGradedCard(semNum, sub, entry) {
+function gnBuildGradedCard(semNum, sub, entry) {
     const comps = entry.components || [];
     const avg = calcSubjectAvg(entry);
     const totalW = comps.reduce((s, c) => s + +c.weight, 0);
@@ -353,7 +352,7 @@ function buildGradedCard(semNum, sub, entry) {
                 <span>Corte</span><span>Peso</span><span>Nota</span><span>Aporte</span><span></span>
             </div>
             <div class="gn-comps" id="gn-comps-${sub.id}">
-                ${comps.map(c => buildCompRow(semNum, sub.id, c)).join('')}
+                ${comps.map(c => gnBuildCompRow(semNum, sub.id, c)).join('')}
             </div>
             <div class="gn-totals-row" id="gn-totals-${sub.id}">
                 <span class="gn-totals-label">Total</span>
@@ -381,7 +380,7 @@ function buildGradedCard(semNum, sub, entry) {
     </div>`;
 }
 
-function buildCompRow(semNum, subId, comp) {
+function gnBuildCompRow(semNum, subId, comp) {
     const contrib = (comp.grade !== null && comp.grade !== '')
         ? ((+comp.grade * +comp.weight) / 100).toFixed(3) : '—';
     return `
@@ -492,7 +491,7 @@ function addComp(sem, subId) {
 
     const compsEl = document.getElementById(`gn-comps-${subId}`);
     if (compsEl) {
-        compsEl.insertAdjacentHTML('beforeend', buildCompRow(sem, subId, newC));
+        compsEl.insertAdjacentHTML('beforeend', gnBuildCompRow(sem, subId, newC));
         const newRow = document.getElementById(`gn-comp-${newC.id}`);
         if (newRow) {
             newRow.querySelector('.gn-del-comp').addEventListener('click', () =>
