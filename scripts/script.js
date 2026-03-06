@@ -241,6 +241,10 @@ function updateUI() {
     renderSemesters();
     renderSubjectsBank();
     renderTypologies();
+    // Refrescar resumen general si está activo, para no depender de navegar al horario
+    if (currentView === 'grades' && typeof renderGradesView === 'function') {
+        renderGradesView();
+    }
 }
 
 function updateStats() {
@@ -1041,15 +1045,20 @@ function showView(viewName, clickedEl) {
     else if (viewName === 'grades') {
         renderGradesView();
         // Si studyPlan aún no tiene materias (datos de Firestore no llegaron todavía),
-        // reintentamos en 800ms para cubrir la carrera entre auth y carga de datos
+        // reintentamos en intervalos crecientes hasta que lleguen los datos
         const hasSubjects = Object.values(studyPlan).some(s => s.subjects && s.subjects.length > 0);
         if (!hasSubjects) {
-            setTimeout(() => {
-                if (currentView === 'grades') {
-                    ensureGradesStructure();
-                    renderGradesView();
-                }
-            }, 800);
+            [800, 1800, 3500].forEach(delay => {
+                setTimeout(() => {
+                    if (currentView === 'grades') {
+                        const nowHas = Object.values(studyPlan).some(s => s.subjects && s.subjects.length > 0);
+                        if (nowHas) {
+                            ensureGradesStructure();
+                            renderGradesView();
+                        }
+                    }
+                }, delay);
+            });
         }
     }
     else if (viewName === 'contenido') {
