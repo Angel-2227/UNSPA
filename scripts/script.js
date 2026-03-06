@@ -262,6 +262,11 @@ function updateStats() {
     document.getElementById('currentCredits').textContent = currentCredits;
     document.getElementById('pendingCredits').textContent = pendingCredits;
     document.getElementById('progressPercentage').textContent = progressPercentage + '%';
+
+    // Sincronizar promedio acumulado con el overview y el sidebar
+    if (typeof refreshOverallAvg === 'function') {
+        refreshOverallAvg();
+    }
 }
 
 function updateSidebar() {
