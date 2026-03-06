@@ -1341,7 +1341,12 @@ function loadPeriodConfig() {
 }
 
 function createNewSchedule() {
-    if (horariosData.length === 0) {
+    // Verificar si hay materias con horariosInfo (ya sea cargado en esta sesión o restaurado)
+    const hasHorariosInfo = Object.values(studyPlan).some(sem =>
+        sem.subjects && sem.subjects.some(s => s.horariosInfo && s.horariosInfo.length > 0)
+    ) || subjectBank.some(s => s.horariosInfo && s.horariosInfo.length > 0);
+
+    if (!hasHorariosInfo && horariosData.length === 0) {
         alert('⚠️ Primero debes cargar el archivo de horarios');
         return;
     }
@@ -1386,11 +1391,21 @@ function renderSubjectSelector() {
 
     Object.entries(studyPlan).forEach(([semNum, semester]) => {
         semester.subjects.forEach(subject => {
-            if (subject.horariosInfo && subject.horariosInfo.length > 0) {
+            // Intentar restaurar horariosInfo desde el banco si no está en studyPlan
+            let horariosInfo = subject.horariosInfo;
+            if (!horariosInfo || horariosInfo.length === 0) {
+                const bankMatch = subjectBank.find(s => s.id === subject.id || s.name === subject.name);
+                if (bankMatch && bankMatch.horariosInfo && bankMatch.horariosInfo.length > 0) {
+                    horariosInfo = bankMatch.horariosInfo;
+                    subject.horariosInfo = horariosInfo; // restaurar en studyPlan también
+                }
+            }
+
+            if (horariosInfo && horariosInfo.length > 0) {
                 if (semester.status === 'current') {
-                    currentSubjects.push({ ...subject, semester: semNum });
+                    currentSubjects.push({ ...subject, semester: semNum, horariosInfo });
                 } else if (semester.status === 'pending') {
-                    otherSubjects.push({ ...subject, semester: semNum });
+                    otherSubjects.push({ ...subject, semester: semNum, horariosInfo });
                 }
             }
         });
@@ -1772,6 +1787,17 @@ function renderSchedules() {
 function editSchedule(scheduleId) {
     const schedule = schedules.find(s => s.id === scheduleId);
     if (!schedule) return;
+
+    // Verificar si hay materias con horariosInfo
+    const hasHorariosInfo = Object.values(studyPlan).some(sem =>
+        sem.subjects && sem.subjects.some(s => s.horariosInfo && s.horariosInfo.length > 0)
+    ) || subjectBank.some(s => s.horariosInfo && s.horariosInfo.length > 0);
+
+    if (!hasHorariosInfo && horariosData.length === 0) {
+        alert('⚠️ Para editar el horario necesitas cargar el archivo de horarios primero. Los grupos y horarios se guardan en ese archivo.');
+        return;
+    }
+
     selectedSubjects = { ...schedule.subjects };
     currentEditingSchedule = schedule;
     document.getElementById('scheduleName').value = schedule.name;
