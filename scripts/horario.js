@@ -596,6 +596,7 @@ function archiveSchedule(scheduleId) {
     schedule.archived = true;
     schedule.archivedAt = new Date().toISOString();
     localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+    if (typeof saveToFirestore === 'function') saveToFirestore();
     renderSchedules();
 }
 
@@ -608,6 +609,7 @@ function unarchiveSchedule(scheduleId) {
     schedule.archived = false;
     delete schedule.archivedAt;
     localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+    if (typeof saveToFirestore === 'function') saveToFirestore();
     renderSchedules();
 }
 
@@ -615,6 +617,7 @@ function deleteSchedule(scheduleId) {
     if (confirm('¿Eliminar este horario permanentemente?')) {
         schedules = schedules.filter(s => s.id !== scheduleId);
         localStorage.setItem('savedSchedules', JSON.stringify(schedules));
+        if (typeof saveToFirestore === 'function') saveToFirestore();
         renderSchedules();
     }
 }
@@ -622,8 +625,9 @@ function deleteSchedule(scheduleId) {
 function renderSchedules() {
     const container = document.getElementById('schedulesContainer');
     if (!container) return;
-    const saved = localStorage.getItem('savedSchedules');
-    if (saved) schedules = JSON.parse(saved);
+    // NOTA: NO releer desde localStorage aquí — la variable `schedules` en memoria
+    // siempre es la fuente de verdad. Releerla aquí revertía eliminaciones/archivados
+    // antes de que Firestore los persistiera.
 
     const active = schedules.filter(s => !s.archived);
     const archived = schedules.filter(s => s.archived);
