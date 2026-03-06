@@ -851,7 +851,9 @@ function renderTypologies() {
     ];
 
     const typologyStats = {};
-    typologyTypes.forEach(type => { typologyStats[type] = { credits: 0, count: 0 }; });
+    typologyTypes.forEach(type => {
+        typologyStats[type] = { credits: 0, count: 0, completedCredits: 0, completedCount: 0 };
+    });
 
     Object.values(studyPlan).forEach(semester => {
         if (semester.subjects) {
@@ -859,6 +861,10 @@ function renderTypologies() {
                 if (typologyStats[subject.type]) {
                     typologyStats[subject.type].credits += subject.credits;
                     typologyStats[subject.type].count += 1;
+                    if (semester.status === 'completed') {
+                        typologyStats[subject.type].completedCredits += subject.credits;
+                        typologyStats[subject.type].completedCount += 1;
+                    }
                 }
             });
         }
@@ -866,16 +872,33 @@ function renderTypologies() {
 
     container.innerHTML = typologyTypes.map(type => {
         const stats = typologyStats[type];
+        if (stats.count === 0) return '';
+        const pendingCredits = stats.credits - stats.completedCredits;
+        const pendingCount = stats.count - stats.completedCount;
+        const progressPct = stats.credits > 0 ? Math.round((stats.completedCredits / stats.credits) * 100) : 0;
+        const isComplete = pendingCredits === 0 && stats.count > 0;
+
         return `
-            <div class="typology-card" onclick="showTypologySubjects('${type}')">
+            <div class="typology-card ${isComplete ? 'typology-card--complete' : ''}" onclick="showTypologySubjects('${type}')">
                 <div class="typology-name">
-                    <span class="type-badge ${getTypeClass(type)}" style="display: inline-block; margin-bottom: 4px;">
+                    <span class="type-badge ${getTypeClass(type)}" style="display:inline-block; margin-bottom:6px;">
                         ${type}
                     </span>
                 </div>
+                <div class="typology-progress-bar">
+                    <div class="typology-progress-fill ${getTypeClass(type)}" style="width:${progressPct}%"></div>
+                </div>
                 <div class="typology-stats">
-                    <div class="typology-credits">${stats.credits}</div>
-                    <div class="typology-count">${stats.count} materias</div>
+                    <div>
+                        <div class="typology-credits">${stats.completedCredits}<span style="font-size:0.85rem;font-weight:400;color:var(--text-secondary);">/${stats.credits}</span></div>
+                        <div class="typology-count">créditos cursados</div>
+                    </div>
+                    <div class="typology-pending ${isComplete ? 'typology-pending--done' : ''}">
+                        ${isComplete
+                            ? `<span style="font-size:1.3rem;">✅</span><div style="font-size:0.72rem;margin-top:2px;">¡Completo!</div>`
+                            : `<div class="typology-pending-num">${pendingCredits}</div><div class="typology-count">créd. pendientes</div><div class="typology-count" style="margin-top:2px;">(${pendingCount} mat.)</div>`
+                        }
+                    </div>
                 </div>
             </div>`;
     }).join('');
@@ -886,7 +909,7 @@ function showTypologySubjects(typologyType) {
     const title = document.getElementById('typologyModalTitle');
     const container = document.getElementById('typologySubjectsContainer');
 
-    title.textContent = `Materias: ${typologyType}`;
+    title.textContent = typologyType;
 
     const typologySubjects = [];
 
@@ -912,33 +935,58 @@ function showTypologySubjects(typologyType) {
     if (typologySubjects.length === 0) {
         container.innerHTML = '<div class="no-data"><p>No hay materias de esta tipología</p></div>';
     } else {
+        const totalCredits = typologySubjects.reduce((sum, s) => sum + s.credits, 0);
+        const completedCredits = typologySubjects.filter(s => s.status === 'completed').reduce((sum, s) => sum + s.credits, 0);
+        const completedCount = typologySubjects.filter(s => s.status === 'completed').length;
+        const pendingCredits = totalCredits - completedCredits;
+        const pendingCount = typologySubjects.length - completedCount;
+        const progressPct = totalCredits > 0 ? Math.round((completedCredits / totalCredits) * 100) : 0;
+
+        // Group by status for sorting: completed last so pending appear first
+        const sorted = [...typologySubjects].sort((a, b) => {
+            const order = { 'current': 0, 'pending': 1, 'available': 2, 'completed': 3 };
+            return (order[a.status] ?? 2) - (order[b.status] ?? 2);
+        });
+
         container.innerHTML = `
-            <div style="margin-bottom: 16px;">
-                <strong>Total: ${typologySubjects.length} materias | ${typologySubjects.reduce((sum, s) => sum + s.credits, 0)} créditos</strong>
+            <div class="typo-modal-summary">
+                <div class="typo-summary-row">
+                    <div class="typo-summary-stat">
+                        <span class="typo-summary-num">${completedCredits}<span class="typo-summary-total">/${totalCredits}</span></span>
+                        <span class="typo-summary-label">créditos cursados</span>
+                    </div>
+                    <div class="typo-summary-stat typo-summary-stat--pending">
+                        <span class="typo-summary-num">${pendingCredits}</span>
+                        <span class="typo-summary-label">créditos pendientes</span>
+                    </div>
+                    <div class="typo-summary-stat">
+                        <span class="typo-summary-num">${pendingCount}<span class="typo-summary-total">/${typologySubjects.length}</span></span>
+                        <span class="typo-summary-label">materias pendientes</span>
+                    </div>
+                </div>
+                <div class="typo-progress-bar">
+                    <div class="typo-progress-fill ${getTypeClass(typologyType)}" style="width:${progressPct}%"></div>
+                </div>
+                <div style="text-align:right;font-size:0.75rem;color:var(--text-secondary);margin-top:4px;">${progressPct}% completado</div>
             </div>
-            <table class="subjects-table">
-                <thead>
-                    <tr>
-                        <th>Materia</th>
-                        <th>Créditos</th>
-                        <th>Semestre</th>
-                        <th>Estado</th>
-                        <th>Código</th>
-                        <th>Profesor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${typologySubjects.map(subject => `
-                        <tr>
-                            <td><strong>${subject.name}</strong></td>
-                            <td>${subject.credits}</td>
-                            <td>${subject.semester}</td>
-                            <td><span class="type-badge status-${subject.status}">${getStatusLabel(subject.status)}</span></td>
-                            <td>${subject.code || '-'}</td>
-                            <td>${subject.professor || '-'}</td>
-                        </tr>`).join('')}
-                </tbody>
-            </table>`;
+
+            <div class="typo-subjects-grid">
+                ${sorted.map(subject => `
+                    <div class="typo-subject-card typo-subject-card--${subject.status}">
+                        <div class="typo-subject-header">
+                            <span class="typo-subject-name">${subject.name}</span>
+                            <span class="typo-subject-credits">${subject.credits} cr.</span>
+                        </div>
+                        <div class="typo-subject-meta">
+                            ${subject.code ? `<span class="typo-meta-item">🔢 ${subject.code}</span>` : ''}
+                            <span class="typo-meta-item">📅 Sem. ${subject.semester}</span>
+                            ${subject.professor ? `<span class="typo-meta-item">👤 ${subject.professor}</span>` : ''}
+                        </div>
+                        <div class="typo-subject-status">
+                            <span class="type-badge status-${subject.status}">${getStatusLabel(subject.status)}</span>
+                        </div>
+                    </div>`).join('')}
+            </div>`;
     }
 
     modal.style.display = 'block';
