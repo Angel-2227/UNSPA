@@ -1,9 +1,14 @@
 // ============================================
-// SISTEMA DE NOTAS — grades.js  (v2 — rediseño)
+// SISTEMA DE NOTAS — grades.js  (v3 — fix IDs)
 // ============================================
 //
-// Materias que solo llevan Aprobado / Reprobado
-// (se compara por subcadena, sin importar mayúsculas):
+// CAMBIO CRÍTICO v3:
+// gradesData se indexa por [semestre][nombre_normalizado_materia]
+// en lugar de [semestre][sub.id] (que era aleatorio y cambiaba).
+// Esto garantiza que las notas sobrevivan recargas, reimports de CSV
+// y cualquier regeneración de IDs.
+//
+// Materias que solo llevan Aprobado / Reprobado:
 const PASS_FAIL_SUBJECTS = [
     'ingles',
     'catedra',
@@ -14,10 +19,16 @@ const PASS_FAIL_SUBJECTS = [
 // ── Estado global ─────────────────────────────
 let gradesData = {};
 
+// ── Clave estable por nombre ───────────────────
+function gradeKey(subjectName) {
+    return normalize(subjectName);
+}
+
 // ── Inicialización ────────────────────────────
 
 function initGrades() {
     loadGradesFromStorage();
+    migrateGradesIfNeeded(); // migrar IDs viejos → nombres
     ensureGradesStructure();
 }
 
@@ -42,15 +53,90 @@ function loadGradesFromFirestore(data) {
         gradesData = data.gradesData;
         localStorage.setItem('academicGradesData', JSON.stringify(gradesData));
     }
-    // Re-sincronizar estructura con el studyPlan recién llegado de Firestore
-    ensureGradesStructure();
-    // Re-renderizar con pequeño delay para garantizar que studyPlan ya esté asignado
+    // Migrar y sincronizar estructura con el studyPlan ya asignado.
+    // Delay para garantizar que script.js terminó de asignar studyPlan.
     setTimeout(() => {
+        migrateGradesIfNeeded();
         ensureGradesStructure();
         if (typeof currentView !== 'undefined' && currentView === 'grades') {
             renderGradesView();
         }
-    }, 300);
+    }, 200);
+}
+
+/**
+ * MIGRACIÓN: convierte gradesData indexado por sub.id (formato viejo/aleatorio)
+ * a indexado por gradeKey(sub.name) (formato estable).
+ * Se detecta porque las claves del formato viejo tienen el patrón de generateId()
+ * (números grandes o strings alfanuméricos cortos) y NO coinciden con ningún
+ * nombre normalizado de las materias del plan.
+ */
+function migrateGradesIfNeeded() {
+    if (typeof studyPlan === 'undefined') return;
+    let migrated = false;
+
+    // Construir set de todos los nombres normalizados del plan
+    const allNormNames = new Set();
+    Object.values(studyPlan).forEach(sem => {
+        (sem.subjects || []).forEach(sub => allNormNames.add(gradeKey(sub.name)));
+    });
+
+    Object.entries(gradesData).forEach(([sem, semData]) => {
+        if (!semData || typeof semData !== 'object') return;
+        const newSemData = {};
+        let semChanged = false;
+
+        Object.entries(semData).forEach(([key, entry]) => {
+            // Si la clave ya es un nombre normalizado válido, conservar
+            if (allNormNames.has(key)) {
+                newSemData[key] = entry;
+                return;
+            }
+
+            // Clave parece ser un ID aleatorio (no es nombre normalizado).
+            // Intentar mapearla al nombre correcto buscando en studyPlan y subjectBank.
+            let matchedName = null;
+
+            // Buscar en studyPlan por sub.id === key
+            outer: for (const [sNum, s] of Object.entries(studyPlan)) {
+                for (const sub of (s.subjects || [])) {
+                    if (sub.id === key) {
+                        matchedName = gradeKey(sub.name);
+                        break outer;
+                    }
+                }
+            }
+
+            // Buscar en subjectBank por id === key
+            if (!matchedName && typeof subjectBank !== 'undefined') {
+                const bankMatch = subjectBank.find(b => b.id === key);
+                if (bankMatch) matchedName = gradeKey(bankMatch.name);
+            }
+
+            if (matchedName) {
+                // Solo migrar si no hay ya una entrada con ese nombre (no sobreescribir)
+                if (!newSemData[matchedName]) {
+                    newSemData[matchedName] = entry;
+                    semChanged = true;
+                    console.log(`🔄 Notas migradas: ID "${key}" → nombre "${matchedName}"`);
+                }
+            } else {
+                // No encontramos a qué materia corresponde; conservar la entrada
+                // por si acaso, sin perder datos.
+                newSemData[key] = entry;
+            }
+        });
+
+        if (semChanged) {
+            gradesData[sem] = newSemData;
+            migrated = true;
+        }
+    });
+
+    if (migrated) {
+        console.log('✅ Migración de notas completada — guardando...');
+        saveGradesToStorage();
+    }
 }
 
 function ensureGradesStructure() {
@@ -58,27 +144,27 @@ function ensureGradesStructure() {
     Object.entries(studyPlan).forEach(([sem, s]) => {
         if (!gradesData[sem]) gradesData[sem] = {};
         s.subjects.forEach(sub => {
+            const key = gradeKey(sub.name);
             const expected = defaultEntry(sub);
-            const existing = gradesData[sem][sub.id];
+            const existing = gradesData[sem][key];
 
-            // Si no existe, créala
             if (!existing) {
-                gradesData[sem][sub.id] = expected;
+                gradesData[sem][key] = expected;
                 return;
             }
-
-            // Si el tipo esperado no coincide con el guardado, corregirlo
+            // Si el tipo no coincide, corregir (pero no borrar notas válidas)
             if (existing.type !== expected.type) {
-                gradesData[sem][sub.id] = expected;
+                gradesData[sem][key] = expected;
             }
         });
     });
 }
 
 function normalize(s) {
-    return s.toLowerCase()
+    return (s || '').toLowerCase()
         .replace(/á/g, 'a').replace(/é/g, 'e').replace(/í/g, 'i')
-        .replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u');
+        .replace(/ó/g, 'o').replace(/ú/g, 'u').replace(/ü/g, 'u')
+        .trim();
 }
 
 function defaultEntry(subject) {
@@ -114,7 +200,7 @@ function calcSemAvg(semNum) {
     if (!sem) return null;
     let wSum = 0, cSum = 0;
     sem.subjects.forEach(sub => {
-        const e = (gradesData[semNum] || {})[sub.id];
+        const e = (gradesData[semNum] || {})[gradeKey(sub.name)];
         const avg = calcSubjectAvg(e);
         if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
     });
@@ -122,14 +208,11 @@ function calcSemAvg(semNum) {
 }
 
 function calcOverallAvg() {
-    // Solo semestres COMPLETADOS cuentan para el promedio acumulado oficial.
-    // Si un semestre completado no tiene notas ingresadas, se omite de la ponderación
-    // pero el banner mostrará advertencia de datos incompletos.
     let wSum = 0, cSum = 0;
     Object.keys(studyPlan).forEach(sem => {
         if (studyPlan[sem].status !== 'completed') return;
         studyPlan[sem].subjects.forEach(sub => {
-            const e = (gradesData[sem] || {})[sub.id];
+            const e = (gradesData[sem] || {})[gradeKey(sub.name)];
             const avg = calcSubjectAvg(e);
             if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
         });
@@ -137,12 +220,11 @@ function calcOverallAvg() {
     return cSum ? wSum / cSum : null;
 }
 
-// Cuántos semestres completados tienen al menos una nota incompleta
 function completedSemsWithMissingData() {
     return Object.keys(studyPlan).filter(sem => {
         if (studyPlan[sem].status !== 'completed') return false;
         return studyPlan[sem].subjects.some(sub => {
-            const e = (gradesData[sem] || {})[sub.id];
+            const e = (gradesData[sem] || {})[gradeKey(sub.name)];
             if (!e || e.type === 'pass_fail') return false;
             return calcSubjectAvg(e) === null;
         });
@@ -198,7 +280,6 @@ function renderGradesView() {
         .filter(n => studyPlan[n].subjects && studyPlan[n].subjects.length)
         .sort((a, b) => +a - +b);
 
-    // Si no hay materias todavía, mostrar estado vacío
     if (!semNums.length) {
         const hasLocalData = localStorage.getItem('academicPlannerData');
         const isLoading = hasLocalData && Object.keys(studyPlan).length === 0;
@@ -213,7 +294,6 @@ function renderGradesView() {
                     }
                 </p>
             </div>`;
-        // Si parece que está cargando, reintentar en 1.5s
         if (isLoading) {
             setTimeout(() => {
                 if (typeof currentView !== 'undefined' && currentView === 'grades') {
@@ -291,7 +371,7 @@ function gnBuildSemesterBlock(semNum) {
 // ── Tarjeta de materia ────────────────────────
 
 function gnBuildSubjectCard(semNum, sub) {
-    const entry = (gradesData[semNum] || {})[sub.id];
+    const entry = (gradesData[semNum] || {})[gradeKey(sub.name)];
     if (!entry) return '';
     if (entry.type === 'pass_fail') return gnBuildPassFailCard(semNum, sub, entry);
     return gnBuildGradedCard(semNum, sub, entry);
@@ -299,6 +379,7 @@ function gnBuildSubjectCard(semNum, sub) {
 
 function gnBuildPassFailCard(semNum, sub, entry) {
     const pf = entry.passFail;
+    const key = gradeKey(sub.name);
     return `
     <div class="gn-card pf-card" id="gn-card-${sub.id}">
         <div class="gn-card-top">
@@ -307,7 +388,7 @@ function gnBuildPassFailCard(semNum, sub, entry) {
                 <div class="gn-sub-meta">${sub.credits} cr · Solo aprobado/reprobado</div>
             </div>
             <select class="gn-pf-select ${pf === 'approved' ? 'pf-yes' : pf === 'failed' ? 'pf-no' : ''}"
-                    data-sem="${semNum}" data-subid="${sub.id}">
+                    data-sem="${semNum}" data-gradekey="${key}">
                 <option value=""         ${!pf ? 'selected' : ''}>— Sin registrar —</option>
                 <option value="approved" ${pf === 'approved' ? 'selected' : ''}>✅ Aprobado</option>
                 <option value="failed"   ${pf === 'failed' ? 'selected' : ''}>❌ Reprobado</option>
@@ -324,6 +405,7 @@ function gnBuildGradedCard(semNum, sub, entry) {
     const n3 = neededFor(entry, 3.0);
     const n35 = neededFor(entry, 3.5);
     const n4 = neededFor(entry, 4.0);
+    const key = gradeKey(sub.name);
 
     const chipHtml = (val, label) => {
         if (val === null) return '';
@@ -333,7 +415,7 @@ function gnBuildGradedCard(semNum, sub, entry) {
     };
 
     return `
-    <div class="gn-card" id="gn-card-${sub.id}" data-sem="${semNum}" data-subid="${sub.id}">
+    <div class="gn-card" id="gn-card-${sub.id}" data-sem="${semNum}" data-gradekey="${key}">
         <div class="gn-card-top gn-card-toggle" data-subid="${sub.id}">
             <div class="gn-card-top-left">
                 <div class="gn-sub-name">${sub.name}</div>
@@ -352,7 +434,7 @@ function gnBuildGradedCard(semNum, sub, entry) {
                 <span>Corte</span><span>Peso</span><span>Nota</span><span>Aporte</span><span></span>
             </div>
             <div class="gn-comps" id="gn-comps-${sub.id}">
-                ${comps.map(c => gnBuildCompRow(semNum, sub.id, c)).join('')}
+                ${comps.map(c => gnBuildCompRow(semNum, key, c)).join('')}
             </div>
             <div class="gn-totals-row" id="gn-totals-${sub.id}">
                 <span class="gn-totals-label">Total</span>
@@ -367,7 +449,7 @@ function gnBuildGradedCard(semNum, sub, entry) {
             </div>
             <div class="gn-card-actions">
                 <button class="btn btn-sm btn-secondary gn-add-comp"
-                        data-sem="${semNum}" data-subid="${sub.id}">＋ Agregar corte</button>
+                        data-sem="${semNum}" data-gradekey="${key}" data-subid="${sub.id}">＋ Agregar corte</button>
                 <div class="gn-chips" id="gn-chips-${sub.id}">
                     ${(n3 !== null || avg !== null) ? `
                         <span class="gn-chips-label">Para llegar a:</span>
@@ -380,12 +462,12 @@ function gnBuildGradedCard(semNum, sub, entry) {
     </div>`;
 }
 
-function gnBuildCompRow(semNum, subId, comp) {
+function gnBuildCompRow(semNum, gradekey, comp) {
     const contrib = (comp.grade !== null && comp.grade !== '')
         ? ((+comp.grade * +comp.weight) / 100).toFixed(3) : '—';
     return `
     <div class="gn-comp-row" id="gn-comp-${comp.id}"
-         data-sem="${semNum}" data-subid="${subId}" data-compid="${comp.id}">
+         data-sem="${semNum}" data-gradekey="${gradekey}" data-compid="${comp.id}">
         <input class="gn-in gn-in-name" type="text"
                value="${comp.name}" placeholder="Nombre" data-field="name">
         <div class="gn-weight-wrap">
@@ -399,7 +481,7 @@ function gnBuildCompRow(semNum, subId, comp) {
                placeholder="—" data-field="grade">
         <span class="gn-contrib" id="gn-ctb-${comp.id}">${contrib}</span>
         <button class="gn-del-comp" data-compid="${comp.id}"
-                data-sem="${semNum}" data-subid="${subId}" title="Eliminar corte">×</button>
+                data-sem="${semNum}" data-gradekey="${gradekey}" title="Eliminar corte">×</button>
     </div>`;
 }
 
@@ -419,42 +501,43 @@ function attachAllListeners() {
 
     root.querySelectorAll('.gn-pf-select').forEach(sel =>
         sel.addEventListener('change', () => {
-            const { sem, subid } = sel.dataset;
-            gradesData[sem][subid].passFail = sel.value || null;
+            const { sem, gradekey } = sel.dataset;
+            if (gradesData[sem] && gradesData[sem][gradekey]) {
+                gradesData[sem][gradekey].passFail = sel.value || null;
+            }
             sel.className = `gn-pf-select ${sel.value === 'approved' ? 'pf-yes' : sel.value === 'failed' ? 'pf-no' : ''}`;
             saveGradesToStorage();
         })
     );
 
-    // Delegación en cada contenedor de componentes
     root.querySelectorAll('.gn-comps').forEach(compsEl => {
         compsEl.addEventListener('input', e => {
             const row = e.target.closest('.gn-comp-row');
             if (!row) return;
-            handleCompInput(row.dataset.sem, row.dataset.subid, row.dataset.compid,
+            handleCompInput(row.dataset.sem, row.dataset.gradekey, row.dataset.compid,
                 e.target.dataset.field, e.target.value, e.target);
         });
         compsEl.addEventListener('change', e => {
             const row = e.target.closest('.gn-comp-row');
             if (!row) return;
-            handleCompChange(row.dataset.sem, row.dataset.subid);
+            handleCompChange(row.dataset.sem, row.dataset.gradekey);
         });
     });
 
     root.querySelectorAll('.gn-del-comp').forEach(btn =>
         btn.addEventListener('click', () =>
-            deleteComp(btn.dataset.sem, btn.dataset.subid, btn.dataset.compid))
+            deleteComp(btn.dataset.sem, btn.dataset.gradekey, btn.dataset.compid))
     );
 
     root.querySelectorAll('.gn-add-comp').forEach(btn =>
-        btn.addEventListener('click', () => addComp(btn.dataset.sem, btn.dataset.subid))
+        btn.addEventListener('click', () => addComp(btn.dataset.sem, btn.dataset.gradekey, btn.dataset.subid))
     );
 }
 
 // ── Lógica de edición ─────────────────────────
 
-function handleCompInput(sem, subId, compId, field, rawVal, inputEl) {
-    const entry = gradesData[sem] && gradesData[sem][subId];
+function handleCompInput(sem, gradekey, compId, field, rawVal, inputEl) {
+    const entry = gradesData[sem] && gradesData[sem][gradekey];
     const comp = entry && entry.components && entry.components.find(c => c.id === compId);
     if (!comp) return;
 
@@ -470,17 +553,20 @@ function handleCompInput(sem, subId, compId, field, rawVal, inputEl) {
         comp.name = rawVal;
     }
 
-    refreshCardSummary(sem, subId);
+    // Encontrar el sub.id para refreshCardSummary (necesita el id del DOM)
+    const card = document.querySelector(`[data-gradekey="${gradekey}"]`);
+    const subId = card ? card.id.replace('gn-card-', '') : null;
+    if (subId) refreshCardSummary(sem, gradekey, subId);
 }
 
-function handleCompChange(sem, subId) {
+function handleCompChange(sem, gradekey) {
     saveGradesToStorage();
     refreshSemAvgBadge(sem);
     refreshOverallBanner();
 }
 
-function addComp(sem, subId) {
-    const entry = gradesData[sem] && gradesData[sem][subId];
+function addComp(sem, gradekey, subId) {
+    const entry = gradesData[sem] && gradesData[sem][gradekey];
     if (!entry || !entry.components) return;
 
     const used = entry.components.reduce((s, c) => s + +c.weight, 0);
@@ -491,36 +577,37 @@ function addComp(sem, subId) {
 
     const compsEl = document.getElementById(`gn-comps-${subId}`);
     if (compsEl) {
-        compsEl.insertAdjacentHTML('beforeend', gnBuildCompRow(sem, subId, newC));
+        compsEl.insertAdjacentHTML('beforeend', gnBuildCompRow(sem, gradekey, newC));
         const newRow = document.getElementById(`gn-comp-${newC.id}`);
         if (newRow) {
             newRow.querySelector('.gn-del-comp').addEventListener('click', () =>
-                deleteComp(sem, subId, newC.id));
+                deleteComp(sem, gradekey, newC.id));
         }
-        // listeners de input/change ya en el padre por delegación ✓
     }
 
     saveGradesToStorage();
-    refreshCardSummary(sem, subId);
+    refreshCardSummary(sem, gradekey, subId);
 }
 
-function deleteComp(sem, subId, compId) {
-    const entry = gradesData[sem] && gradesData[sem][subId];
+function deleteComp(sem, gradekey, compId) {
+    const entry = gradesData[sem] && gradesData[sem][gradekey];
     if (!entry || !entry.components) return;
     if (entry.components.length <= 1) { alert('Debe haber al menos 1 corte.'); return; }
     entry.components = entry.components.filter(c => c.id !== compId);
     const rowEl = document.getElementById(`gn-comp-${compId}`);
     if (rowEl) rowEl.remove();
     saveGradesToStorage();
-    refreshCardSummary(sem, subId);
+    const card = document.querySelector(`[data-gradekey="${gradekey}"]`);
+    const subId = card ? card.id.replace('gn-card-', '') : null;
+    if (subId) refreshCardSummary(sem, gradekey, subId);
     refreshSemAvgBadge(sem);
     refreshOverallBanner();
 }
 
 // ── Refrescos parciales ───────────────────────
 
-function refreshCardSummary(sem, subId) {
-    const entry = gradesData[sem] && gradesData[sem][subId];
+function refreshCardSummary(sem, gradekey, subId) {
+    const entry = gradesData[sem] && gradesData[sem][gradekey];
     if (!entry) return;
     const comps = entry.components || [];
     const avg = calcSubjectAvg(entry);
@@ -571,7 +658,6 @@ function refreshOverallAvg() {
     if (v) { v.className = `gn-banner-value ${gradeClass(avg)}`; v.textContent = avg !== null ? avg.toFixed(2) : '—'; }
     if (f) { f.style.width = avg !== null ? `${(avg / 5) * 100}%` : '0%'; f.style.background = gradeColor(avg); }
 
-    // Sincronizar con sidebar y stat card del overview
     const sa = document.getElementById('sidebarAverage');
     const oc = document.getElementById('overallAverageCard');
     if (sa) sa.textContent = avg !== null ? avg.toFixed(2) : 'N/A';
@@ -614,7 +700,7 @@ function buildGradesContext() {
     const semList = Object.keys(studyPlan).sort((a, b) => +a - +b).map(sem => {
         const semAvg = calcSemAvg(sem);
         const subjects = studyPlan[sem].subjects.map(sub => {
-            const e = (gradesData[sem] || {})[sub.id];
+            const e = (gradesData[sem] || {})[gradeKey(sub.name)];
             if (!e) return null;
             if (e.type === 'pass_fail')
                 return { name: sub.name, credits: sub.credits, type: 'pass_fail', status: e.passFail || 'sin registrar' };

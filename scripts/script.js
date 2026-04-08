@@ -58,7 +58,11 @@ function loadConfig() {
     if (savedConfig) {
         config = { ...config, ...JSON.parse(savedConfig) };
     }
+    _applyConfigToUI();
+}
 
+/** Refleja el objeto config actual en todos los elementos del DOM. */
+function _applyConfigToUI() {
     const programNameInput = document.getElementById('configProgramName');
     const totalCreditsInput = document.getElementById('configTotalCredits');
     const universityInput = document.getElementById('configUniversity');
@@ -1415,6 +1419,11 @@ function updateUserInfo() {
 
 async function loadUserDataFromFirestore() {
     if (!currentUser) return;
+
+    // Mostrar UID en consola para depuración
+    console.log('👤 UID del usuario:', currentUser.uid);
+    console.log('📧 Email:', currentUser.email);
+
     try {
         const docRef = db.collection('users').doc(currentUser.uid);
         const doc = await docRef.get();
@@ -1423,9 +1432,31 @@ async function loadUserDataFromFirestore() {
             const data = doc.data();
             if (data.studyPlan) studyPlan = data.studyPlan;
             if (data.subjectBank) subjectBank = data.subjectBank;
-            if (data.config) config = { ...config, ...data.config };
+            if (data.config) {
+                config = { ...config, ...data.config };
+                // Persistir en localStorage y reflejar en los inputs del DOM
+                localStorage.setItem('academicPlannerConfig', JSON.stringify(config));
+                _applyConfigToUI();
+            }
             if (data.schedules) schedules = data.schedules;
             if (data.currentPeriodConfig) currentPeriodConfig = data.currentPeriodConfig;
+            // Restaurar JSON de horarios (evita tener que re-subirlo cada sesión)
+            if (data.horariosData && data.horariosData.length > 0) {
+                horariosData = data.horariosData;
+                _restoreHorariosInfoFromRaw();
+            } else {
+                // Fallback a localStorage si Firestore no tiene horariosData
+                try {
+                    const saved = localStorage.getItem('academicHorariosData');
+                    if (saved) {
+                        const parsed = JSON.parse(saved);
+                        if (parsed && parsed.length > 0) {
+                            horariosData = parsed;
+                            _restoreHorariosInfoFromRaw();
+                        }
+                    }
+                } catch (e) { /* ignorar */ }
+            }
             // Cargar marcas de la malla desde Firestore
             if (data.mallaMarks) {
                 mallaMarks = data.mallaMarks;
@@ -1440,7 +1471,7 @@ async function loadUserDataFromFirestore() {
                 localStorage.setItem('mallaPdfFileName', data.mallaPdfFileName || 'malla.pdf');
             }
             if (typeof loadCPFromFirestore === 'function') loadCPFromFirestore(data);
-            // Cargar notas desde Firestore
+            // Cargar notas DESPUÉS de que studyPlan ya está asignado
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
             }
@@ -1451,6 +1482,9 @@ async function loadUserDataFromFirestore() {
         }
 
         updateUI();
+
+        // Suscripción en tiempo real para detectar cambios desde otras pestañas/dispositivos
+        _subscribeToFirestoreChanges();
     } catch (error) {
         console.error('Error cargando datos de Firestore:', error);
         console.warn('⚠️ Usando datos locales como fallback...');
@@ -1459,6 +1493,65 @@ async function loadUserDataFromFirestore() {
         loadConfig();
         updateUI();
     }
+}
+
+let _firestoreUnsubscribe = null;
+
+/**
+ * Suscripción en tiempo real a Firestore.
+ * Detecta cambios desde otras pestañas o dispositivos y actualiza la UI.
+ */
+function _subscribeToFirestoreChanges() {
+    if (_firestoreUnsubscribe) return;
+    if (!currentUser) return;
+    const docRef = db.collection('users').doc(currentUser.uid);
+    let firstSnapshot = true;
+    _firestoreUnsubscribe = docRef.onSnapshot(doc => {
+        if (firstSnapshot) { firstSnapshot = false; return; }
+        if (!doc.exists) return;
+        const data = doc.data();
+        // Ignorar si el cambio lo generó esta pestaña (< 5 s)
+        const serverTs = data.lastUpdated && data.lastUpdated.toMillis ? data.lastUpdated.toMillis() : 0;
+        if (Date.now() - serverTs < 5000) return;
+
+        console.log('🔄 Cambio detectado en Firestore desde otro dispositivo/pestaña');
+        if (data.studyPlan) studyPlan = data.studyPlan;
+        if (data.subjectBank) subjectBank = data.subjectBank;
+        if (data.config) { config = { ...config, ...data.config }; _applyConfigToUI(); }
+        if (data.schedules) schedules = data.schedules;
+        if (data.horariosData && data.horariosData.length > 0) {
+            horariosData = data.horariosData;
+            _restoreHorariosInfoFromRaw();
+        }
+        if (data.mallaMarks) mallaMarks = data.mallaMarks;
+        if (typeof loadGradesFromFirestore === 'function') loadGradesFromFirestore(data);
+        updateUI();
+    }, err => console.warn('Error en onSnapshot:', err));
+}
+
+/**
+ * Re-aplica horariosInfo desde horariosData crudo al subjectBank y studyPlan.
+ */
+function _restoreHorariosInfoFromRaw() {
+    if (!horariosData || !horariosData.length) return;
+    horariosData.forEach(horarioMateria => {
+        subjectBank.forEach(s => {
+            if (typeof normalizeString === 'function' &&
+                normalizeString(s.name) === normalizeString(horarioMateria.nombre)) {
+                s.horariosInfo = horarioMateria.grupos;
+                if (!s.code) s.code = horarioMateria.codigo;
+            }
+        });
+        Object.values(studyPlan).forEach(sem => {
+            (sem.subjects || []).forEach(s => {
+                if (typeof normalizeString === 'function' &&
+                    normalizeString(s.name) === normalizeString(horarioMateria.nombre)) {
+                    s.horariosInfo = horarioMateria.grupos;
+                    if (!s.code) s.code = horarioMateria.codigo;
+                }
+            });
+        });
+    });
 }
 
 async function saveToFirestore() {
@@ -1474,6 +1567,7 @@ async function saveToFirestore() {
             mallaMarks,
             mallaPrereqs: (typeof mallaPrereqs !== 'undefined') ? mallaPrereqs : {},
             gradesData: (typeof gradesData !== 'undefined') ? gradesData : {},
+            horariosData: (typeof horariosData !== 'undefined' && horariosData.length > 0) ? horariosData : [],
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         console.log('✅ Datos guardados en Firestore');

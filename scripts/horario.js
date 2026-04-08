@@ -954,6 +954,21 @@ document.addEventListener('DOMContentLoaded', () => {
     loadPeriodConfig();
     renderSchedules();
 
+    // Restaurar horariosData desde localStorage si Firestore aún no lo trajo
+    // (el hook de Firestore lo sobreescribirá después si tiene datos más recientes)
+    if ((!horariosData || horariosData.length === 0)) {
+        try {
+            const saved = localStorage.getItem('academicHorariosData');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                if (parsed && parsed.length > 0) {
+                    horariosData = parsed;
+                    console.log(`✅ horariosData restaurado desde localStorage (${horariosData.length} materias)`);
+                }
+            }
+        } catch (e) { console.warn('No se pudo restaurar horariosData desde localStorage', e); }
+    }
+
     const horariosFile = document.getElementById('horariosFile');
     if (horariosFile) {
         horariosFile.addEventListener('change', function (event) {
@@ -968,8 +983,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (match) content = match[1];
                     }
                     horariosData = JSON.parse(content);
+                    // Persistir en localStorage como respaldo local
+                    try {
+                        localStorage.setItem('academicHorariosData', JSON.stringify(horariosData));
+                    } catch (storageErr) {
+                        console.warn('⚠️ horariosData demasiado grande para localStorage, solo se guardará en Firestore.');
+                    }
                     updateSubjectBankFromHorarios();
+                    // Forzar guardado en Firestore para que persista entre sesiones
+                    if (typeof saveToFirestore === 'function') saveToFirestore();
                     alert(`✅ ${horariosData.length} materias cargadas correctamente`);
+                    // Limpiar el input para permitir volver a cargar el mismo archivo
+                    event.target.value = '';
                 } catch (error) {
                     alert('❌ Error al cargar el archivo: ' + error.message);
                 }
