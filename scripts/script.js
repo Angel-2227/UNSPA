@@ -1776,19 +1776,18 @@ function setupMallaPdfInput() {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
-            formData.append('resource_type', 'raw');
-            formData.append('access_mode', 'public');
-            // Usar el UID del usuario como public_id fijo → siempre sobreescribe
-            formData.append('public_id', `mallas/${currentUser.uid}`);
-            formData.append('overwrite', 'true');
+            // Nota: presets unsigned no permiten overwrite ni access_mode.
+            // El public_id lo genera Cloudinary; la URL se guarda en Firestore.
 
             const res = await fetch(
                 `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/raw/upload`,
                 { method: 'POST', body: formData }
             );
 
-            if (!res.ok) throw new Error('Error al subir a Cloudinary');
-
+            if (!res.ok) {
+    const errData = await res.json();
+    throw new Error(errData?.error?.message || 'Error al subir a Cloudinary');
+}
             const data = await res.json();
             const pdfURL = data.secure_url;
 
