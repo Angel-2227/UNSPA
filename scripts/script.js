@@ -1048,6 +1048,9 @@ function showView(viewName, clickedEl) {
     else if (viewName === 'contenido') {
         initContenidoView();
     }
+    else if (viewName === 'tasks') {
+        if (typeof initTasksView === 'function') initTasksView();
+    }
 }
 
 function scrollToSemester(semesterNum) {
@@ -1475,6 +1478,9 @@ async function loadUserDataFromFirestore() {
             if (typeof loadGradesFromFirestore === 'function') {
                 loadGradesFromFirestore(data);
             }
+            if (typeof tkLoadFromFirestore === 'function') {
+                tkLoadFromFirestore(data);
+            }
             console.log('✅ Datos cargados desde Firestore');
         } else {
             console.log('⚠️ Primera vez del usuario, intentando migrar desde localStorage...');
@@ -1567,6 +1573,7 @@ async function saveToFirestore() {
             mallaMarks,
             mallaPrereqs: (typeof mallaPrereqs !== 'undefined') ? mallaPrereqs : {},
             gradesData: (typeof gradesData !== 'undefined') ? gradesData : {},
+            acadTasks: (typeof tkTasks !== 'undefined') ? tkTasks : [],
             horariosData: (typeof horariosData !== 'undefined' && horariosData.length > 0) ? horariosData : [],
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });

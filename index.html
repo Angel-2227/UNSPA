@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Planificación Académica</title>
     <link rel="stylesheet" href="estilos/estilos.css">
+    <link rel="stylesheet" href="estilos/tasks.css">
+    <link rel="stylesheet" href="scripts/tasks.css">
     <!-- Favicons -->
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
@@ -159,6 +161,9 @@
                     </div>
                     <div class="nav-item" onclick="showView('grades', this)">
                         📝 Notas
+                    </div>
+                    <div class="nav-item" onclick="showView('tasks', this)">
+                        ✅ Tareas
                     </div>
 
                     <div class="nav-item" onclick="showView('config', this)">
@@ -557,6 +562,19 @@
                     <div id="gradesViewContainer"></div>
                 </div>
                 <div id="contenidoView" class="view-content" style="display: none;"></div>
+                <div id="tasksView" class="view-content" style="display: none;">
+                    <div class="header-bar">
+                        <div class="header-controls">
+                            <div>
+                                <h2 style="margin-bottom: 4px;">Mis Tareas</h2>
+                                <p class="text-secondary" style="font-size:0.85rem;">
+                                    Organiza tus entregas · Prioridades · Auto-limpieza a los 30 días
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="tasksRoot"></div>
+                </div>
             </main>
         </div>
 
@@ -638,6 +656,7 @@
     <script src="scripts/chat.js"></script>
     <script src="scripts/grades.js"></script>
     <script src="scripts/contenido_programatico.js"></script>
+    <script src="scripts/tasks.js"></script>
     <script src="scripts/horario.js"></script>
 
     <!-- AGREGAR AL FINAL DEL <body>, ANTES DE CERRAR </body> -->
