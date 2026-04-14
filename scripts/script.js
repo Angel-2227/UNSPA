@@ -271,9 +271,36 @@ function updateStats() {
     document.getElementById('pendingCredits').textContent = pendingCredits;
     document.getElementById('progressPercentage').textContent = progressPercentage + '%';
 
+    // Actualizar tarjeta de tareas en el resumen
+    _updateTasksStatCard();
+
     // Sincronizar promedio acumulado con el overview y el sidebar
     if (typeof refreshOverallAvg === 'function') {
         refreshOverallAvg();
+    }
+}
+
+function _updateTasksStatCard() {
+    const card = document.getElementById('tasksStatCard');
+    if (!card) return;
+    const tasks = (typeof tkTasks !== 'undefined') ? tkTasks : [];
+    const pending = tasks.filter(t => !t.done);
+    const urgent = pending.filter(t => t.priority === 1);
+    const today = new Date().toISOString().slice(0, 10);
+    const dueToday = pending.filter(t => t.due === today);
+    const overdue = pending.filter(t => t.due && t.due < today);
+
+    const numEl = card.querySelector('.stat-number');
+    const labelEl = card.querySelector('.stat-label');
+    const subEl = card.querySelector('.tasks-stat-sub');
+
+    if (numEl) numEl.textContent = pending.length;
+    if (subEl) {
+        let parts = [];
+        if (urgent.length) parts.push(`<span style="color:var(--unal-red)">🔥 ${urgent.length} urgente${urgent.length > 1 ? 's' : ''}</span>`);
+        if (overdue.length) parts.push(`<span style="color:#e65100">⚠️ ${overdue.length} vencida${overdue.length > 1 ? 's' : ''}</span>`);
+        if (dueToday.length) parts.push(`<span style="color:var(--unal-green)">📅 ${dueToday.length} hoy</span>`);
+        subEl.innerHTML = parts.length ? parts.join(' · ') : '<span style="color:var(--text-secondary)">Sin pendientes urgentes</span>';
     }
 }
 
@@ -403,21 +430,15 @@ function createSubjectCard(subject, semesterNum, index) {
                     </div>
                     <div class="info-item">
                         <label>Código:</label>
-                        <input type="text" class="form-control" value="${subject.code || ''}"
-                               onchange="updateSubjectField(${semesterNum}, ${index}, 'code', this.value)"
-                               placeholder="Código">
+                        <span class="subject-field-text">${subject.code || '<em style="color:var(--text-secondary)">—</em>'}</span>
                     </div>
                     <div class="info-item">
                         <label>Profesor:</label>
-                        <input type="text" class="form-control" value="${subject.professor || ''}"
-                               onchange="updateSubjectField(${semesterNum}, ${index}, 'professor', this.value)"
-                               placeholder="Profesor">
+                        <span class="subject-field-text">${subject.professor || '<em style="color:var(--text-secondary)">—</em>'}</span>
                     </div>
                     <div class="info-item">
                         <label>Grupo:</label>
-                        <input type="text" class="form-control" value="${subject.group || ''}"
-                               onchange="updateSubjectField(${semesterNum}, ${index}, 'group', this.value)"
-                               placeholder="Grupo">
+                        <span class="subject-field-text">${subject.group || '<em style="color:var(--text-secondary)">—</em>'}</span>
                     </div>
                 </div>
                 <div class="subject-card-actions">
@@ -989,6 +1010,7 @@ function closeTypologyModal() {
 // ============================================
 
 function showView(viewName, clickedEl) {
+    if (typeof closeFabIfOpen === 'function') closeFabIfOpen();
     document.querySelectorAll('.view-content').forEach(view => {
         view.style.display = 'none';
     });
@@ -1403,20 +1425,18 @@ function logout() {
 
 function updateUserInfo() {
     if (!currentUser) return;
-    const headerControls = document.querySelector('.header-controls');
-    if (headerControls && !document.getElementById('userInfo')) {
-        const userInfoDiv = document.createElement('div');
-        userInfoDiv.id = 'userInfo';
-        userInfoDiv.style.cssText = 'display: flex; align-items: center; gap: 12px;';
-        userInfoDiv.innerHTML = `
-            <img src="${currentUser.photoURL}" alt="User" style="width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--unal-green);">
-            <div style="text-align: left;">
-                <div style="font-weight: 600; font-size: 0.9rem;">${currentUser.displayName}</div>
-                <button onclick="logout()" style="font-size: 0.75rem; color: var(--unal-red); background: none; border: none; cursor: pointer; padding: 0;">
-                    Cerrar sesión
-                </button>
+    // Inyectar info de usuario en el FAB del resumen
+    const fabUserInfo = document.getElementById('fabUserInfo');
+    if (fabUserInfo) {
+        fabUserInfo.innerHTML = `
+            <div class="fab-user-row">
+                <img src="${currentUser.photoURL || ''}" alt="User" class="fab-user-avatar"
+                     onerror="this.style.display='none'">
+                <div class="fab-user-details">
+                    <span class="fab-user-name">${currentUser.displayName || currentUser.email || 'Usuario'}</span>
+                    <button onclick="logout()" class="fab-user-logout">Cerrar sesión</button>
+                </div>
             </div>`;
-        headerControls.appendChild(userInfoDiv);
     }
 }
 
@@ -1516,11 +1536,7 @@ function _subscribeToFirestoreChanges() {
         if (firstSnapshot) { firstSnapshot = false; return; }
         if (!doc.exists) return;
         const data = doc.data();
-        // Ignorar si el cambio lo generó esta pestaña (< 5 s)
-        const serverTs = data.lastUpdated && data.lastUpdated.toMillis ? data.lastUpdated.toMillis() : 0;
-        if (Date.now() - serverTs < 5000) return;
-
-        console.log('🔄 Cambio detectado en Firestore desde otro dispositivo/pestaña');
+        console.log('🔄 Cambio en Firestore detectado');
         if (data.studyPlan) studyPlan = data.studyPlan;
         if (data.subjectBank) subjectBank = data.subjectBank;
         if (data.config) { config = { ...config, ...data.config }; _applyConfigToUI(); }

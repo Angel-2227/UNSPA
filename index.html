@@ -7,7 +7,6 @@
     <title>Sistema de Planificación Académica</title>
     <link rel="stylesheet" href="estilos/estilos.css">
     <link rel="stylesheet" href="estilos/tasks.css">
-    <link rel="stylesheet" href="scripts/tasks.css">
     <!-- Favicons -->
     <link rel="icon" type="image/png" sizes="32x32" href="img/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="img/favicon-16x16.png">
@@ -204,38 +203,56 @@
             <main class="main-content">
                 <!-- Overview View -->
                 <div id="overviewView" class="view-content">
-                    <div class="header-bar">
-                        <div class="header-controls">
-                            <div>
-                                <h2 style="margin-bottom: 8px;">Plan de Estudios</h2>
-                                <p class="text-secondary" id="programName"></p>
-                            </div>
-                            <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                                <input type="file" id="csvFile" style="display: none" accept=".csv">
-                                <button class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
-                                    📁 Cargar CSV
+                    <div class="header-bar overview-header-bar">
+                        <input type="file" id="csvFile" style="display: none" accept=".csv">
+                        <div class="overview-title-block">
+                            <h2>Plan de Estudios</h2>
+                            <p class="text-secondary" id="programName"></p>
+                        </div>
+                        <!-- FAB de acciones -->
+                        <div class="overview-fab-wrapper" id="overviewFabWrapper">
+                            <button class="overview-fab-btn" id="overviewFabBtn" onclick="toggleOverviewFab()" aria-label="Acciones" title="Acciones">
+                                <span class="fab-icon fab-icon-open">⚙️</span>
+                                <span class="fab-icon fab-icon-close" style="display:none">✕</span>
+                            </button>
+                            <div class="overview-fab-menu" id="overviewFabMenu">
+                                <button class="fab-menu-item" onclick="document.getElementById('csvFile').click(); toggleOverviewFab()">
+                                    <span class="fab-item-icon">📁</span>
+                                    <span class="fab-item-label">Cargar CSV</span>
                                 </button>
-                                <!-- <button class="btn btn-success" onclick="saveData()">💾 Guardar</button>-->
-
-                                <button class="btn btn-warning" onclick="exportData()">📥 Exportar</button>
-                                <button class="btn btn-secondary" onclick="toggleTheme()">🌓</button>
-                                <button class="btn btn-success" onclick="addNewSemester()">➕ Nuevo Semestre</button>
-
-                                <!-- En la sección de botones del header, añade: -->
-                                <button class="btn btn-primary" onclick="showCurrentScheduleModal()"
-                                    id="viewScheduleBtn" style="display: none;">
-                                    📅 Ver Mi Horario
+                                <button class="fab-menu-item" onclick="exportData(); toggleOverviewFab()">
+                                    <span class="fab-item-icon">📥</span>
+                                    <span class="fab-item-label">Exportar</span>
                                 </button>
-                                <button class="btn btn-warning" onclick="toggleMoveMode()" id="moveBtn">🔄 Mover
-                                    Materias</button>
-
-                                <a href="https://cronograma-26-1.pages.dev/" class="btn btn-success">Consulta
-                                    Cronograma</a>
-
-
+                                <button class="fab-menu-item" onclick="toggleTheme(); toggleOverviewFab()">
+                                    <span class="fab-item-icon">🌓</span>
+                                    <span class="fab-item-label">Cambiar tema</span>
+                                </button>
+                                <button class="fab-menu-item" onclick="addNewSemester(); toggleOverviewFab()">
+                                    <span class="fab-item-icon">➕</span>
+                                    <span class="fab-item-label">Nuevo Semestre</span>
+                                </button>
+                                <button class="fab-menu-item" id="moveBtn" onclick="toggleMoveMode()">
+                                    <span class="fab-item-icon">🔄</span>
+                                    <span class="fab-item-label">Mover Materias</span>
+                                </button>
+                                <a href="https://cronograma-26-1.pages.dev/" class="fab-menu-item" target="_blank" onclick="toggleOverviewFab()">
+                                    <span class="fab-item-icon">📅</span>
+                                    <span class="fab-item-label">Consulta Cronograma</span>
+                                </a>
+                                <div class="fab-menu-divider"></div>
+                                <div class="fab-menu-user" id="fabUserInfo">
+                                    <!-- Se llena dinámicamente con updateUserInfo() -->
+                                    <div class="fab-user-placeholder">Cargando...</div>
+                                </div>
                             </div>
                         </div>
                     </div>
+                    <!-- Botón Ver Mi Horario (oculto por defecto, se activa dinámicamente) -->
+                    <button class="btn btn-primary" onclick="showCurrentScheduleModal()"
+                        id="viewScheduleBtn" style="display: none; margin-bottom: 12px;">
+                        📅 Ver Mi Horario
+                    </button>
 
                     <div class="stats-summary">
                         <div class="stat-card">
@@ -263,6 +280,11 @@
                                 style="color: var(--unal-green); font-size: 1rem; color: var(--text-secondary);">N/A
                             </div>
                             <div class="stat-label">Promedio</div>
+                        </div>
+                        <div class="stat-card" id="tasksStatCard" onclick="showView('tasks', document.querySelector('[onclick*=tasks]'))" style="cursor:pointer;" title="Ver Tareas">
+                            <div class="stat-number" style="color: var(--unal-green);">0</div>
+                            <div class="stat-label">Tareas Pendientes</div>
+                            <div class="tasks-stat-sub" style="font-size:0.72rem;margin-top:4px;line-height:1.4;min-height:18px;"></div>
                         </div>
                     </div>
 
@@ -653,6 +675,7 @@
 
     <script src="scripts/malla_curricular.js"></script>
     <script src="scripts/script.js"></script>
+    <script src="scripts/fab.js"></script>
     <script src="scripts/chat.js"></script>
     <script src="scripts/grades.js"></script>
     <script src="scripts/contenido_programatico.js"></script>

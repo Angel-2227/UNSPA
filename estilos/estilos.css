@@ -237,6 +237,23 @@ body {
   margin-bottom: 4px;
 }
 
+@media (max-width: 768px) {
+  .stat-card {
+    padding: 10px 8px;
+    border-radius: 8px;
+  }
+  .stat-number {
+    font-size: 1.3rem;
+    margin-bottom: 2px;
+  }
+  .stat-label {
+    font-size: 0.72rem;
+  }
+  .tasks-stat-sub {
+    font-size: 0.65rem;
+  }
+}
+
 .stat-number.completed {
   color: var(--unal-green);
 }
@@ -256,6 +273,13 @@ body {
 .stat-label {
   color: var(--text-secondary);
   font-size: 0.9rem;
+}
+
+.tasks-stat-sub {
+  font-size: 0.72rem;
+  margin-top: 4px;
+  line-height: 1.4;
+  min-height: 18px;
 }
 
 
@@ -1834,6 +1858,14 @@ body {
   padding: 6px 8px;
 }
 
+.subject-field-text {
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  padding: 4px 0;
+  display: inline-block;
+  line-height: 1.4;
+}
+
 .subject-card-actions {
   display: flex;
   gap: 6px;
@@ -3243,4 +3275,190 @@ body {
 @keyframes fadeInDown {
   from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================
+   OVERVIEW FAB — Botón de acciones flotante
+   ============================================ */
+
+.overview-header-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 16px;
+  flex-wrap: nowrap;
+}
+
+.overview-title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.overview-title-block h2 {
+  margin-bottom: 4px;
+}
+
+.overview-fab-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  z-index: 1001;
+}
+
+/* El botón principal del FAB */
+.overview-fab-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--unal-green);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 12px rgba(46,125,50,0.4);
+  transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+  z-index: 1002;
+  position: relative;
+}
+
+.overview-fab-btn:hover {
+  background: #1b5e20;
+  transform: scale(1.08);
+  box-shadow: 0 5px 18px rgba(46,125,50,0.5);
+}
+
+.overview-fab-btn.is-open {
+  background: #555;
+  transform: rotate(45deg);
+}
+
+/* Menú desplegable */
+.overview-fab-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  z-index: 1000;
+  overflow: hidden;
+  animation: fabMenuIn 0.18s ease;
+}
+
+.overview-fab-menu.is-open {
+  display: block;
+}
+
+@keyframes fabMenuIn {
+  from { opacity: 0; transform: translateY(-8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+/* Ítem del menú */
+.fab-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 11px 18px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-decoration: none;
+  transition: background 0.15s;
+  text-align: left;
+}
+
+.fab-menu-item:hover {
+  background: var(--bg-secondary);
+}
+
+.fab-item-icon {
+  font-size: 1.1rem;
+  width: 22px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.fab-item-label {
+  flex: 1;
+}
+
+/* Separador */
+.fab-menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 0;
+}
+
+/* Sección de usuario */
+.fab-menu-user {
+  padding: 12px 18px;
+}
+
+.fab-user-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.fab-user-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 2px solid var(--unal-green);
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.fab-user-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fab-user-name {
+  font-weight: 600;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+  color: var(--text-primary);
+}
+
+.fab-user-logout {
+  font-size: 0.75rem;
+  color: var(--unal-red);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+.fab-user-logout:hover {
+  text-decoration: underline;
+}
+
+/* Overlay para cerrar al hacer clic fuera */
+.fab-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.fab-overlay.is-open {
+  display: block;
 }

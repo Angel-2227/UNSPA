@@ -27,6 +27,8 @@ const TK_PRIORITIES = {
 // ── Persistencia local ────────────────────────
 function tkSaveLocal() {
   localStorage.setItem(TK_STORAGE_KEY, JSON.stringify(tkTasks));
+  // Actualizar tarjeta de tareas en el resumen general
+  if (typeof _updateTasksStatCard === 'function') _updateTasksStatCard();
 }
 
 function tkLoadLocal() {
