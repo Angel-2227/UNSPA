@@ -1880,12 +1880,24 @@ async function renderMallaPage(pageNum) {
     if (!canvas || !overlay) return;
 
     const page = await mallaPdfDoc.getPage(pageNum);
-    const viewport = page.getViewport({ scale: mallaScale });
 
+    // Usar devicePixelRatio para pantallas Retina / HiDPI — el PDF siempre se ve nítido
+    const dpr = window.devicePixelRatio || 1;
+    const viewport = page.getViewport({ scale: mallaScale * dpr });
+
+    // El canvas real tiene resolución física alta
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     overlay.width = viewport.width;
     overlay.height = viewport.height;
+
+    // El tamaño CSS (visible) sigue siendo el lógico sin escalar por dpr
+    const logicalW = Math.round(viewport.width / dpr);
+    const logicalH = Math.round(viewport.height / dpr);
+    canvas.style.width = logicalW + 'px';
+    canvas.style.height = logicalH + 'px';
+    overlay.style.width = logicalW + 'px';
+    overlay.style.height = logicalH + 'px';
 
     const ctx = canvas.getContext('2d');
     await page.render({ canvasContext: ctx, viewport }).promise;

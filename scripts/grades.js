@@ -186,13 +186,18 @@ function gid() { return '_' + Math.random().toString(36).slice(2, 9); }
 
 // ── Cálculos ──────────────────────────────────
 
-function calcSubjectAvg(entry) {
+// displayOnly=true: divide entre pesos ingresados (para mostrar "tu promedio parcial")
+// displayOnly=false: divide entre 100 (aporte real al semestre, incluye cortes pendientes como 0)
+function calcSubjectAvg(entry, displayOnly = true) {
     if (!entry || entry.type === 'pass_fail') return null;
     const filled = (entry.components || []).filter(c => c.grade !== null && c.grade !== '');
     if (!filled.length) return null;
-    const wSum = filled.reduce((s, c) => s + +c.weight, 0);
-    if (!wSum) return null;
-    return filled.reduce((s, c) => s + +c.grade * +c.weight, 0) / wSum;
+    const numerator = filled.reduce((s, c) => s + +c.grade * +c.weight, 0);
+    if (displayOnly) {
+        const wSum = filled.reduce((s, c) => s + +c.weight, 0);
+        return wSum ? numerator / wSum : null;
+    }
+    return numerator / 100;
 }
 
 function calcSemAvg(semNum) {
@@ -201,7 +206,8 @@ function calcSemAvg(semNum) {
     let wSum = 0, cSum = 0;
     sem.subjects.forEach(sub => {
         const e = (gradesData[semNum] || {})[gradeKey(sub.name)];
-        const avg = calcSubjectAvg(e);
+        // Usar aporte real (÷100) para que los cortes sin nota cuenten como 0
+        const avg = calcSubjectAvg(e, false);
         if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
     });
     return cSum ? wSum / cSum : null;
@@ -213,7 +219,7 @@ function calcOverallAvg() {
         if (studyPlan[sem].status !== 'completed') return;
         studyPlan[sem].subjects.forEach(sub => {
             const e = (gradesData[sem] || {})[gradeKey(sub.name)];
-            const avg = calcSubjectAvg(e);
+            const avg = calcSubjectAvg(e, false); // aporte real ÷100
             if (avg !== null) { wSum += avg * sub.credits; cSum += sub.credits; }
         });
     });
@@ -425,7 +431,7 @@ function gnBuildGradedCard(semNum, sub, entry) {
                 <div class="gn-avg-big ${gradeClass(avg)}" id="gn-avg-${sub.id}">
                     ${avg !== null ? avg.toFixed(2) : '—'}
                 </div>
-                <div class="gn-avg-label">${avg !== null ? gradeEmoji(avg) + ' promedio' : 'sin notas'}</div>
+                <div class="gn-avg-label" id="gn-avg-label-${sub.id}">${avg !== null ? gradeEmoji(avg) + (comps.some(c => c.grade === null || c.grade === '') ? ' parcial' : ' promedio') : 'sin notas'}</div>
                 <span class="gn-expand-icon" id="gn-exp-${sub.id}">▼</span>
             </div>
         </div>
@@ -496,7 +502,11 @@ function attachAllListeners() {
     );
 
     root.querySelectorAll('.gn-card-toggle').forEach(t =>
-        t.addEventListener('click', () => toggleCard(t.dataset.subid))
+        t.addEventListener('click', e => {
+            // No cerrar si el clic viene de un input, select, button o textarea hijo
+            if (e.target.closest('input, select, button, textarea')) return;
+            toggleCard(t.dataset.subid);
+        })
     );
 
     root.querySelectorAll('.gn-pf-select').forEach(sel =>
@@ -610,12 +620,16 @@ function refreshCardSummary(sem, gradekey, subId) {
     const entry = gradesData[sem] && gradesData[sem][gradekey];
     if (!entry) return;
     const comps = entry.components || [];
-    const avg = calcSubjectAvg(entry);
+    const avg = calcSubjectAvg(entry, true); // display: divide entre pesos ingresados
+    const hasPending = comps.some(c => c.grade === null || c.grade === '');
     const totalW = comps.reduce((s, c) => s + +c.weight, 0);
     const warnW = Math.abs(totalW - 100) > 0.5;
 
     const avgEl = document.getElementById(`gn-avg-${subId}`);
     if (avgEl) { avgEl.className = `gn-avg-big ${gradeClass(avg)}`; avgEl.textContent = avg !== null ? avg.toFixed(2) : '—'; }
+
+    const labelEl = document.getElementById(`gn-avg-label-${subId}`);
+    if (labelEl) labelEl.textContent = avg !== null ? gradeEmoji(avg) + (hasPending ? ' parcial' : ' promedio') : 'sin notas';
 
     const twEl = document.getElementById(`gn-tw-${subId}`);
     if (twEl) { twEl.className = `gn-totals-weight ${warnW ? 'gn-warn' : 'gn-ok'}`; twEl.textContent = `${totalW.toFixed(0)}%${warnW ? ' ⚠️' : ' ✓'}`; }
