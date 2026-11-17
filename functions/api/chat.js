@@ -1,85 +1,45 @@
-// ============================================
-// CLOUDFLARE WORKER — Proxy seguro para Groq
-// Con soporte para notas académicas
-// ============================================
+// Cloudflare Pages Function: POST /api/chat
+// Variables en Cloudflare: GROQ_API_KEY (secret), GROQ_MODEL, FIREBASE_API_KEY
+const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
 
-export default {
-  async fetch(request, env) {
+export async function onRequestPost({ request, env }) {
+  try {
+    // 1) Solo usuarios autenticados con Firebase pueden gastar tu cuota de Groq
+    const idToken = (request.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    if (!idToken || !env.FIREBASE_API_KEY) return json({ error: 'No autorizado' }, 401);
+    const v = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${env.FIREBASE_API_KEY}`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ idToken })
+    });
+    if (!v.ok) return json({ error: 'No autorizado' }, 401);
 
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
-        }
-      });
-    }
+    // 2) Validar entrada
+    const { messages, context } = await request.json();
+    if (!Array.isArray(messages) || !messages.length) return json({ error: 'Solicitud inválida' }, 400);
+    const history = messages.slice(-20).map(m => ({
+      role: m.role === 'user' ? 'user' : 'assistant',
+      content: String(m.content || '').slice(0, 4000)
+    }));
 
-    if (request.method !== 'POST') {
-      return new Response('Method not allowed', { status: 405 });
-    }
-
-    try {
-      const body = await request.json();
-      const { messages, context } = body;
-
-      if (!messages || !Array.isArray(messages)) {
-        return new Response('Invalid request', { status: 400 });
-      }
-
-      const systemPrompt = buildSystemPrompt(context);
-
-      const groqMessages = [
-        { role: 'system', content: systemPrompt },
-        ...messages.map(msg => ({
-          role: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.content
-        }))
-      ];
-
-      const groqResponse = await fetch(
-        'https://api.groq.com/openai/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${env.GROQ_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'llama-3.3-70b-versatile',
-            messages: groqMessages,
-            temperature: 0.7,
-            max_tokens: 1024,
-          })
-        }
-      );
-
-      if (!groqResponse.ok) {
-        const err = await groqResponse.text();
-        console.error('Groq error:', err);
-        return new Response(JSON.stringify({ error: 'Error al contactar Groq' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-        });
-      }
-
-      const groqData = await groqResponse.json();
-      const text = groqData?.choices?.[0]?.message?.content || 'No pude generar una respuesta.';
-
-      return new Response(JSON.stringify({ response: text }), {
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-
-    } catch (error) {
-      console.error('Worker error:', error);
-      return new Response(JSON.stringify({ error: 'Error interno del servidor' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
-      });
-    }
+    // 3) Groq
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` },
+      body: JSON.stringify({
+        model: env.GROQ_MODEL || 'openai/gpt-oss-120b',
+        messages: [{ role: 'system', content: buildSystemPrompt(context) }, ...history],
+        temperature: 0.5,
+        max_completion_tokens: 2000,
+        reasoning_effort: 'low'
+      })
+    });
+    if (!r.ok) { console.error('Groq error:', r.status, await r.text()); return json({ error: 'Error al contactar Groq' }, 502); }
+    const d = await r.json();
+    return json({ response: d?.choices?.[0]?.message?.content || 'No pude generar una respuesta.' });
+  } catch (e) {
+    console.error(e);
+    return json({ error: 'Error interno' }, 500);
   }
-};
+}
 
 // ---- Construir system prompt con contexto académico + notas ----
 function buildSystemPrompt(context) {
@@ -102,7 +62,9 @@ Responde siempre en español, de forma concisa y útil.`;
     schedules = [],
     currentPeriod = '',
     mallaMarks = {},
-    grades = null
+    grades = null,
+    contenidoProgramatico = null,
+    _ui_hint = ''
   } = context;
 
   // ---- Semestres ----
@@ -122,7 +84,7 @@ Responde siempre en español, de forma concisa y útil.`;
     subjectsWithHorarios.forEach(s => {
       horariosInfo += `\n  ${s.name} [${s.code || 'sin código'}]:\n`;
       s.horariosInfo.forEach(g => {
-        const horarios = g.horarios.map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ');
+        const horarios = (g.horarios || []).map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ');
         horariosInfo += `    • Grupo ${g.numero} — ${g.profesor} — ${horarios}\n`;
       });
     });
@@ -135,6 +97,18 @@ Responde siempre en español, de forma concisa y útil.`;
       schedulesInfo += `  - ${sch.name} (Periodo: ${sch.period}, ${Object.keys(sch.subjects).length} materias)\n`;
     });
   }
+
+  // Topes de tamaño para no pasarse del límite de tokens de Groq
+  horariosInfo = horariosInfo.slice(0, 7000);
+
+  let cpInfo = '';
+  if (Array.isArray(contenidoProgramatico) && contenidoProgramatico.length) {
+    cpInfo = '\n\nCONTENIDO PROGRAMÁTICO DE LAS ASIGNATURAS:\n' + contenidoProgramatico.map(c =>
+      `- ${c.name}${c.code ? ` [${c.code}]` : ''} (${c.credits || '?'}cr${c.semester && c.semester !== 'N/A' ? `, sem. ${c.semester}` : ''}): ${c.description || ''} ${c.contentSummary || ''}`.slice(0, 420)
+    ).join('\n');
+    cpInfo = cpInfo.slice(0, 9000);
+  }
+  const uiHint = String(_ui_hint || '').slice(0, 400);
 
   const completedInMalla = Object.values(mallaMarks).filter(m => m && m.state === 'completed').length;
   const currentInMalla = Object.values(mallaMarks).filter(m => m && m.state === 'current').length;
@@ -222,7 +196,7 @@ PROGRESO GENERAL:
 PLAN DE ESTUDIOS POR SEMESTRES:${semestersInfo}
 ${horariosInfo}
 ${schedulesInfo}
-${gradesInfo}
+${gradesInfo}${cpInfo}
 
 ═══════════════════════════════════════
 INSTRUCCIONES GENERALES:
@@ -231,5 +205,6 @@ INSTRUCCIONES GENERALES:
 - Si pregunta cuánto puede bajar y seguir aprobando, calcula el peor caso
 - Si el promedio está en riesgo (< 3.0 en alguna materia), mencionalo proactivamente
 - Si no tienes suficiente información, dilo claramente
-═══════════════════════════════════════`;
+- Si preguntan por el contenido de una materia, usa CONTENIDO PROGRAMÁTICO
+${uiHint ? `- ${uiHint}\n` : ''}═══════════════════════════════════════`;
 }
