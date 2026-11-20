@@ -1,0 +1,135 @@
+/* ============================================================
+   RESPONSIVE + REFINAMIENTO VISUAL (mismos colores y tipografías)
+   Se carga al final: sobrescribe lo necesario del CSS original.
+   ============================================================ */
+
+/* ── Base: nada debe desbordar la pantalla ── */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, canvas, svg, video { max-width: 100%; }
+.app-container, .main-content { min-width: 0; }
+.main-content { width: 100%; }
+.main-content > * { min-width: 0; }
+
+/* ── Rejillas que antes forzaban un mínimo mayor que la pantalla ── */
+.semesters-grid { grid-template-columns: repeat(auto-fit, minmax(min(450px, 100%), 1fr)); }
+.semesters-grid > * { min-width: 0; }
+.stats-summary { grid-template-columns: repeat(auto-fit, minmax(min(118px, 100%), 1fr)); }
+.typologies-grid { grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
+.cp-cards-grid { grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr)); }
+.typo-subjects-grid { grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); }
+
+/* ── Semestres: encabezado y tarjetas que se adaptan ── */
+.semester-header { flex-wrap: wrap; gap: 10px 12px; }
+.semester-header > div:first-child { min-width: 0; flex: 1 1 200px; }
+.semester-controls { flex-wrap: wrap; justify-content: flex-end; }
+.semester-body { overflow-x: visible; }
+.semester-content.expanded { overflow: visible; }
+.subject-card-header { flex-wrap: wrap; }
+.subject-card-header h4 { flex: 1 1 150px; min-width: 0; overflow-wrap: break-word; }
+.subject-card-info, .info-item { min-width: 0; }
+.semesters-grid { align-items: start; }
+.semester-card.is-open { grid-column: 1 / -1; }
+.subjects-cards-mobile { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(270px, 100%), 1fr)); gap: 12px; }
+.subject-field-text { overflow-wrap: anywhere; font-size: .88rem; }
+.subject-card-actions .btn { min-width: 0; }
+.header-controls > * { min-width: 0; }
+
+/* ── Refinamiento (desktop y móvil) ── */
+.header-bar, .stat-card, .semester-card, .schedule-card, .gn-sem-block, .typology-card, .cp-card, .subject-item { border-radius: 14px; }
+.stat-card, .semester-card, .schedule-card, .header-bar { box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.04); }
+.nav-item { margin: 2px 12px; padding: 11px 14px; border-left: none; border-radius: 10px; }
+.nav-item:hover { background: var(--bg-secondary); }
+.nav-item.active { background: rgba(46,125,50,.12); color: var(--unal-green); font-weight: 700; }
+.sidebar { width: 300px; } .main-content { margin-left: 300px; }
+
+/* ── Malla: selector de vista, zoom y vista en lista ── */
+.mg-viewbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.mg-seg { display: inline-flex; border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-primary); }
+.mg-seg button { border: none; background: none; padding: 8px 14px; cursor: pointer; font-size: .82rem; font-weight: 600; color: var(--text-secondary); }
+.mg-seg button.active { background: var(--unal-green); color: #fff; }
+.mg-zoom { display: inline-flex; align-items: center; gap: 6px; }
+.mg-zoom button { border: 1px solid var(--border-color); background: var(--bg-primary); color: var(--text-primary); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-weight: 700; font-size: .8rem; }
+.mg-zoom span { min-width: 44px; text-align: center; font-size: .8rem; font-weight: 700; color: var(--text-secondary); }
+.mgc-scroll-container { height: calc(100dvh - 300px); min-height: 340px; }
+.mgl-sem { margin-bottom: 14px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border-color); background: var(--bg-primary); }
+.mgl-head { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 10px 14px; color: #fff; font-weight: 700; font-size: .85rem; cursor: pointer; }
+.mgl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr)); gap: 10px; padding: 12px; }
+.mgl-card { min-width: 0; background: var(--tc-bg); border: 2px solid var(--tc-border); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 8px; }
+.mgl-card--completed { border-color: #2e7d32; background: color-mix(in srgb, var(--tc-bg) 85%, #2e7d32 15%); }
+.mgl-card--current { border-color: #ffa000; background: color-mix(in srgb, var(--tc-bg) 85%, #ffa000 15%); }
+[data-theme="dark"] .mgl-card { background: color-mix(in srgb, var(--bg-secondary) 60%, var(--tc-border) 40%); }
+.mgl-card-name { font-weight: 700; font-size: .86rem; line-height: 1.3; color: var(--text-primary); overflow-wrap: anywhere; }
+.mgl-card-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mgl-type { min-width: 0; text-align: right; overflow-wrap: anywhere; font-size: .66rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: .03em; }
+.mgl-pre { font-size: .74rem; color: #c2185b; overflow-wrap: anywhere; }
+.malla-legend { gap: 8px 14px; }
+
+/* ── Cabecera y navegación inferior (solo móvil/tablet) ── */
+.m-topbar, .m-bottom-nav, .m-more-sheet, .m-more-overlay { display: none; }
+.mobile-toggle { display: none !important; }
+.install-btn { position: fixed; bottom: 24px; left: 24px; background: linear-gradient(135deg, #2e7d32, #1b5e20); color: #fff; border: none; padding: 12px 20px; border-radius: 28px; font-weight: 700; cursor: pointer; z-index: 9000; box-shadow: 0 6px 20px rgba(0,0,0,.35); }
+
+@media (max-width: 1024px) {
+  .sidebar, .sidebar-overlay { display: none !important; }
+  .main-content { margin-left: 0; padding: 14px 14px calc(84px + env(safe-area-inset-bottom)); }
+  .semesters-grid { grid-template-columns: 1fr; }
+  .stats-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  .m-topbar { display: flex; position: sticky; top: 0; z-index: 150; align-items: center; justify-content: space-between; gap: 10px;
+    padding: calc(8px + env(safe-area-inset-top)) 14px 8px; background: color-mix(in srgb, var(--bg-primary) 92%, transparent); backdrop-filter: blur(8px); border-bottom: 1px solid var(--border-color); }
+  .m-topbar-title { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1rem; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .m-topbar-logo { background: linear-gradient(135deg, var(--unal-green), var(--unal-dark-green)); color: #fff; padding: 3px 9px; border-radius: 8px; font-size: .78rem; letter-spacing: .04em; }
+  .m-topbar-btn { border: 1px solid var(--border-color); background: var(--bg-secondary); border-radius: 10px; width: 38px; height: 38px; font-size: 1.05rem; cursor: pointer; }
+
+  .m-bottom-nav { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 900;
+    background: var(--bg-primary); border-top: 1px solid var(--border-color); padding-bottom: env(safe-area-inset-bottom); box-shadow: 0 -4px 16px rgba(0,0,0,.08); }
+  .m-bottom-nav button { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 8px 2px 7px; border: none; background: none; color: var(--text-secondary); cursor: pointer; position: relative; min-width: 0; }
+  .m-bottom-nav button.active { color: var(--unal-green); font-weight: 700; }
+  .m-bottom-nav button.active::before { content: ''; position: absolute; top: 0; left: 28%; right: 28%; height: 3px; border-radius: 0 0 3px 3px; background: var(--unal-green); }
+  .m-ico { font-size: 1.25rem; line-height: 1; } .m-lbl { font-size: .66rem; }
+
+  .m-more-overlay { display: block; position: fixed; inset: 0; z-index: 940; background: rgba(0,0,0,.45); }
+  .m-more-sheet { display: block; position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); z-index: 950; background: var(--bg-primary); border-radius: 18px 18px 0 0; padding: 10px 14px 16px; box-shadow: 0 -8px 30px rgba(0,0,0,.25); max-height: 70dvh; overflow-y: auto; }
+  .m-more-handle { width: 40px; height: 4px; border-radius: 4px; background: var(--border-color); margin: 0 auto 12px; }
+  .m-more-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .m-more-grid button, .m-more-foot button { display: flex; align-items: center; gap: 10px; padding: 14px; border: 1px solid var(--border-color); border-radius: 12px; background: var(--bg-secondary); color: var(--text-primary); font-size: .9rem; font-weight: 600; cursor: pointer; text-align: left; }
+  .m-more-grid button span { font-size: 1.3rem; }
+  .m-more-grid button.active { border-color: var(--unal-green); color: var(--unal-green); background: rgba(46,125,50,.1); }
+  .m-more-foot { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+
+  /* flotantes por encima de la barra inferior */
+  #chatToggleBtn { bottom: calc(74px + env(safe-area-inset-bottom)); right: 14px; width: 50px; height: 50px; font-size: 1.3rem; }
+  #chatPanel { right: 10px; bottom: calc(134px + env(safe-area-inset-bottom)); width: calc(100vw - 20px); height: min(540px, calc(100dvh - 220px)); max-height: none; }
+  .install-btn { bottom: calc(74px + env(safe-area-inset-bottom)); left: 14px; padding: 10px 16px; font-size: .85rem; }
+  .tk-toast { bottom: calc(90px + env(safe-area-inset-bottom)) !important; }
+  .mgc-scroll-container { height: calc(100dvh - 330px); }
+}
+
+/* ── Teléfonos ── */
+@media (max-width: 600px) {
+  .header-bar { padding: 14px; margin-bottom: 14px; }
+  .header-bar h2 { font-size: 1.2rem; }
+  .stats-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat-card { padding: 14px 10px; } .stat-number { font-size: 1.45rem; }
+  .semester-header { padding: 12px 14px; }
+  .semester-controls { width: 100%; justify-content: space-between; }
+  .semester-controls select { flex: 1 1 auto; min-width: 0; }
+  .semester-body { padding: 12px; }
+  .subject-card-info { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .subject-card-actions .btn { flex: 1 1 30%; justify-content: center; }
+  .malla-toolbar-group { border-right: none; padding-right: 0; width: 100%; }
+  .form-row { grid-template-columns: 1fr; }
+  .cr-toolbar-actions .btn { flex: 1 1 auto; justify-content: center; }
+  .schedule-card > div:first-child { flex-wrap: wrap; gap: 10px; }
+  .gn-sub-name { max-width: 100%; }
+  .typologies-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 380px) {
+  .main-content { padding-left: 10px; padding-right: 10px; }
+  .stat-number { font-size: 1.25rem; } .m-lbl { font-size: .6rem; }
+}
+@media (pointer: coarse) { .btn-sm { padding: 8px 11px; } .btn { min-height: 36px; } }
+
+/* El chat queda por debajo de los modales */
+#chatToggleBtn { z-index: 850; } #chatPanel { z-index: 849; }
+.spg-header { font-size: .7rem; letter-spacing: 0; padding: 8px 2px; }
