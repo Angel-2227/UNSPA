@@ -17,7 +17,7 @@ export const typesOf = (config, extra = []) => [...new Set([...TYPES, ...Object.
 
 // Formato de CSV del SIA que ya usabas. Si reimportas, se conservan los ids, código, profesor, grupo
 // y estado de cada semestre de las materias que ya existían (así no se rompen horarios ni prerrequisitos).
-export function parseCSV(rows, prev = {}) {
+export function parseCSV(rows, prev = {}, defaultStatus = 'completed') {
   const old = {};
   Object.values(prev).forEach(s => (s.subjects || []).forEach(x => { if (!old[norm(x.name)]) old[norm(x.name)] = x; }));
   const plan = {}, types = {};
@@ -28,7 +28,7 @@ export function parseCSV(rows, prev = {}) {
   for (const r of rows) {
     if (r[1] && r[1].includes('Periodo académico')) {
       const m = r[1].match(/Periodo académico (\d+)/);
-      if (m) { cur = +m[1]; plan[cur] = { subjects: [], status: prev[cur]?.status || 'completed' }; }
+      if (m) { cur = +m[1]; plan[cur] = { subjects: [], status: prev[cur]?.status || defaultStatus }; }
     } else if (cur > 0 && r[1] && r[2] && r[3] && !r[1].includes('ASIGNATURAS INSCRITAS') && !r[1].includes('Total Créditos')) {
       const credits = parseInt(r[3]) || parseInt(r[2]) || 0;
       if (credits > 0 && r[1].trim()) {

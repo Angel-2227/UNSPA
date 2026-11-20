@@ -12,7 +12,8 @@ import Tasks from './components/Tasks.jsx';
 import Settings from './components/Settings.jsx';
 import Cronogramas from './components/Cronogramas.jsx';
 import { overallAvg, ensureGrades } from './lib/grades';
-import { planCredits } from './lib/plan';
+import { CareerSwitch } from './components/Homolog.jsx';
+import { careerData, careerUpdate, mergedData, mergedUpdate, effStatus, makeDbl, summary } from './lib/double';
 
 function Login() {
   const [busy, setBusy] = useState(false);
@@ -40,21 +41,31 @@ const NAV = [['overview', '📊', 'Resumen General', 'Resumen'], ['subjects', '�
 const BOTTOM = ['overview', 'grades', 'schedule', 'tasks'];
 
 // Toda la interfaz, recibe los datos por props (así se puede probar sin Firebase)
-export function Main({ user, data, update, discard, logout }) {
+export function Main({ user, data: root, update: rootUpdate, discard, logout }) {
   const [view, setView] = useState('overview');
   const [side, setSide] = useState(false), [more, setMore] = useState(false);
   const [focus, setFocus] = useState(null);
-  const g = useMemo(() => ensureGrades(data.studyPlan, data.gradesData || {}, data.subjectBank || []), [data]);
+  const [career, setCareer] = useState('main');
+  const act = root.doble ? career : 'main';
 
+  // Cada pantalla recibe los datos de UNA carrera (la activa); Horarios, Tareas y Cronogramas ven las dos juntas
+  const eff = useMemo(() => effStatus(root), [root.studyPlan, root.doble, root.homologaciones]); // eslint-disable-line
+  const data = useMemo(() => careerData(root, act), [root, act]);
+  const update = useMemo(() => careerUpdate(rootUpdate, act), [rootUpdate, act]);
+  const shared = useMemo(() => mergedData(root), [root]);
+  const sharedUpdate = useMemo(() => mergedUpdate(rootUpdate), [rootUpdate]);
+  const dbl = makeDbl(root, rootUpdate, act, eff, setCareer);
+
+  const g = useMemo(() => ensureGrades(data.studyPlan, data.gradesData || {}, data.subjectBank || []), [data]);
   const plan = data.studyPlan;
-  let done = 0, cur = 0;
-  Object.values(plan).forEach(s => { const c = planCredits(s); if (s.status === 'completed') done += c; if (s.status === 'current') cur += c; });
-  const total = data.config.totalCredits || 1, pct = Math.round((done / total) * 100);
+  const sm = summary(root, act, eff);
+  const done = sm.done, cur = sm.cur, total = sm.req || 1, pct = sm.pct;
   const avg = overallAvg(plan, g);
   const toggleTheme = () => { const t = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'; document.documentElement.dataset.theme = t; localStorage.setItem('theme', t); };
   const go = k => { setView(k); setSide(false); setMore(false); window.scrollTo(0, 0); };
   const active = Object.keys(plan).filter(n => plan[n].subjects?.length && plan[n].status !== 'pending').sort((a, b) => a - b);
   const cur_ = NAV.find(n => n[0] === view);
+  const perCareer = ['overview', 'subjects', 'malla', 'grades', 'config'].includes(view);
 
   return (
     <>
@@ -70,7 +81,7 @@ export function Main({ user, data, update, discard, logout }) {
             <div style={{ fontSize: '.85rem' }}>
               <div style={{ marginBottom: 8 }}><strong>Progreso:</strong> {pct}%</div>
               <div style={{ marginBottom: 8 }}><strong>Completados:</strong> {done}</div>
-              <div style={{ marginBottom: 8 }}><strong>Pendientes:</strong> {Math.max(0, total - done - cur)}</div>
+              <div style={{ marginBottom: 8 }}><strong>Pendientes:</strong> {sm.pending}</div>
               <div style={{ marginBottom: 8 }}><strong>Promedio:</strong> {avg !== null ? avg.toFixed(2) : 'N/A'}</div>
             </div>
             <div className="progress-bar"><div className="progress-fill" style={{ width: pct + '%' }} /></div>
@@ -81,14 +92,15 @@ export function Main({ user, data, update, discard, logout }) {
           </div>
         </aside>
         <main className="main-content">
-          {view === 'overview' && <Overview data={data} update={update} user={user} focus={focus} goTasks={() => go('tasks')} goCronos={() => go('cronos')} toggleTheme={toggleTheme} logout={logout} />}
-          {view === 'subjects' && <Bank data={data} update={update} />}
-          {view === 'schedule' && <Schedule data={data} update={update} />}
-          {view === 'cronos' && <Cronogramas data={data} update={update} goSchedule={() => go('schedule')} />}
-          {view === 'malla' && <Malla data={data} update={update} user={user} />}
-          {view === 'grades' && <Grades data={data} update={update} />}
-          {view === 'tasks' && <Tasks data={data} update={update} />}
-          {view === 'config' && <Settings data={data} update={update} user={user} discard={discard} />}
+          {dbl.enabled && perCareer && <CareerSwitch dbl={dbl} />}
+          {view === 'overview' && <Overview key={act} data={data} update={update} user={user} focus={focus} goTasks={() => go('tasks')} goCronos={() => go('cronos')} toggleTheme={toggleTheme} logout={logout} dbl={dbl} viewData={shared} />}
+          {view === 'subjects' && <Bank key={act} data={data} update={update} />}
+          {view === 'schedule' && <Schedule data={shared} update={sharedUpdate} />}
+          {view === 'cronos' && <Cronogramas data={shared} update={sharedUpdate} goSchedule={() => go('schedule')} />}
+          {view === 'malla' && <Malla key={act} data={data} update={update} user={user} dbl={dbl} />}
+          {view === 'grades' && <Grades key={act} data={data} update={update} />}
+          {view === 'tasks' && <Tasks data={shared} update={sharedUpdate} />}
+          {view === 'config' && <Settings key={act} data={data} update={update} user={user} discard={discard} dbl={dbl} />}
         </main>
       </div>
 
@@ -103,7 +115,7 @@ export function Main({ user, data, update, discard, logout }) {
         {BOTTOM.map(k => { const n = NAV.find(x => x[0] === k); return <button key={k} className={view === k ? 'active' : ''} onClick={() => go(k)}><span className="m-ico">{n[1]}</span><span className="m-lbl">{n[3]}</span></button>; })}
         <button className={more || !BOTTOM.includes(view) ? 'active' : ''} onClick={() => setMore(!more)}><span className="m-ico">☰</span><span className="m-lbl">Más</span></button>
       </nav>
-      <Chat data={data} />
+      <Chat data={root} />
     </>
   );
 }

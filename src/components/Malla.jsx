@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Modal from './Modal';
 import CpModal from './CpModal';
 import { findCp } from '../lib/cp';
+import { HomologPanel } from './Homolog';
 
 const COLORS = {
   'DISCIPLINAR OBLIGATORIA': ['#e3f2fd', '#1976d2'], 'DISCIPLINAR OPTATIVA': ['#e8f5e9', '#388e3c'],
@@ -11,7 +12,7 @@ const COLORS = {
 const CW = 176, CH = 82, GAP = 32, CG = 10, HH = 48, PAD = 16;
 const HEAD = { completed: '#2e7d32', current: '#f9a825', pending: '#90a4ae' };
 
-function Generated({ data, update }) {
+function Generated({ data, update, dbl }) {
   const { studyPlan: plan, contenidoProgramatico: cp = [], mallaPrereqs: pre = {} } = data;
   const [info, setInfo] = useState(null), [target, setTarget] = useState(null);
   const [mode, setMode] = useState(() => (window.innerWidth < 900 ? 'list' : 'map')), [zoom, setZoom] = useState(1), [shut, setShut] = useState({});
@@ -41,6 +42,7 @@ function Generated({ data, update }) {
         <button className="btn btn-secondary btn-sm" onClick={() => { setTarget(info); setInfo(null); }}>🔗 + Agregar prereq</button>
         {(pre[info] || []).length > 0 && <button className="btn btn-danger btn-sm" onClick={() => { removeAll(info); setInfo(null); }}>🗑 Quitar prereqs</button>}
       </div>
+      {sub && <HomologPanel dbl={dbl} subject={sub} />}
     </div>);
 
   const fit = () => setZoom(Math.min(1.2, Math.max(.3, ((scroller.current?.clientWidth || W) - 4) / W)));
@@ -64,9 +66,10 @@ function Generated({ data, update }) {
               {!closed && <div className="mgl-grid">{sem.subjects.map(sb => {
                 const [bg, bd] = COLORS[sb.type] || COLORS['DISCIPLINAR OBLIGATORIA'];
                 return (
-                  <div key={sb.id} className={'mgl-card' + stCls(sem.status)} onClick={() => click(sb.id)} style={{ '--tc-bg': bg, '--tc-border': bd, outline: target === sb.id ? '3px dashed #e91e63' : undefined }}>
-                    <div className="mgl-card-name">{sem.status === 'completed' ? '✓ ' : sem.status === 'current' ? '▶ ' : ''}{sb.name}</div>
+                  <div key={sb.id} className={'mgl-card' + stCls(dbl.eff.get(sb.id) || sem.status)} onClick={() => click(sb.id)} style={{ '--tc-bg': bg, '--tc-border': bd, outline: target === sb.id ? '3px dashed #e91e63' : undefined }}>
+                    <div className="mgl-card-name">{(dbl.eff.get(sb.id) || sem.status) === 'completed' ? '✓ ' : (dbl.eff.get(sb.id) || sem.status) === 'current' ? '▶ ' : ''}{sb.name}</div>
                     <div className="mgl-card-foot"><span className="mgc-cr-badge">{sb.credits} cr</span><span className="mgl-type">{sb.type}</span></div>
+                    {(() => { const lk = dbl.linkOf(sb.id); return lk && <div className="mgl-hm">🔁 {lk.partner.subject.name} · {dbl.names[lk.partner.career]}</div>; })()}
                     {(pre[sb.id] || []).length > 0 && <div className="mgl-pre">📌 {(pre[sb.id] || []).map(nameOf).join(', ')}</div>}
                   </div>);
               })}</div>}
@@ -87,12 +90,12 @@ function Generated({ data, update }) {
             <span>Semestre {n}</span><span style={{ opacity: .9 }}>{plan[n].subjects.reduce((s, x) => s + x.credits, 0)} cr</span>
           </div>))}
         {Object.entries(pos).map(([id, { l, t, sem, s }]) => {
-          const [bg, bd] = COLORS[s.type] || COLORS['DISCIPLINAR OBLIGATORIA'], st = plan[sem].status;
+          const [bg, bd] = COLORS[s.type] || COLORS['DISCIPLINAR OBLIGATORIA'], st = dbl.eff.get(id) || plan[sem].status, lk = dbl.linkOf(id);
           return (
             <div key={id} className={'mgc-card' + (st === 'completed' ? ' mgc-card--completed' : st === 'current' ? ' mgc-card--current' : '')} onClick={() => click(id)}
               title={`${s.name} · ${s.type} · ${s.credits} créditos`} style={{ left: l, top: t, width: CW, height: CH, '--tc-bg': bg, '--tc-border': bd, outline: target === id ? '3px dashed #e91e63' : undefined }}>
               <div className="mgc-card-name">{st === 'completed' ? '✓ ' : st === 'current' ? '▶ ' : ''}{s.name.length > 44 ? s.name.slice(0, 42) + '…' : s.name}</div>
-              <div className="mgc-card-footer"><span className="mgc-cr-badge">{s.credits} cr</span>{(pre[id] || []).length > 0 && <span className="mgc-prereq-badge">📌{pre[id].length}</span>}<span className="mgc-type-abbr">{s.type.split(' ').map(w => w[0]).join('')}</span></div>
+              <div className="mgc-card-footer"><span className="mgc-cr-badge">{s.credits} cr</span>{(pre[id] || []).length > 0 && <span className="mgc-prereq-badge">📌{pre[id].length}</span>}{lk && <span className="mgc-prereq-badge mgc-hm-badge" title={lk.partner.subject.name}>🔁</span>}<span className="mgc-type-abbr">{s.type.split(' ').map(w => w[0]).join('')}</span></div>
             </div>);
         })}
       </div></div></div>
@@ -162,11 +165,11 @@ function PdfViewer({ data, update, user }) {
   );
 }
 
-export default function Malla({ data, update, user }) {
+export default function Malla({ data, update, user, dbl }) {
   const [tab, setTab] = useState('gen');
   const plan = data.studyPlan;
   let d = 0, c = 0, t = 0;
-  Object.values(plan).forEach(s => s.subjects.forEach(() => { t++; if (s.status === 'completed') d++; else if (s.status === 'current') c++; }));
+  Object.values(plan).forEach(s => s.subjects.forEach(x => { t++; const st = dbl.eff.get(x.id) || s.status; if (st === 'completed') d++; else if (st === 'current') c++; }));
   const types = [...new Set(Object.values(plan).flatMap(s => s.subjects.map(x => x.type)))];
   return (
     <>
@@ -191,7 +194,7 @@ export default function Malla({ data, update, user }) {
             <button className="btn btn-sm btn-danger" onClick={() => confirm('¿Borrar todos los prerrequisitos?') && update({ mallaPrereqs: {} })}>🗑 Borrar prereqs</button>
           </div>
         </div>
-        <Generated data={data} update={update} />
+        <Generated data={data} update={update} dbl={dbl} />
       </> : <PdfViewer data={data} update={update} user={user} />}
     </>
   );

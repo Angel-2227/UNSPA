@@ -4,9 +4,10 @@ import { db } from '../firebase';
 import Modal from './Modal';
 import { TYPES, typeClass, STATUS, typesOf } from '../lib/plan';
 
-export default function Settings({ data, update, user, discard }) {
+export default function Settings({ data, update, user, discard, dbl }) {
   const { studyPlan: plan, subjectBank: bank = [], config } = data;
-  const [f, setF] = useState({ programName: config.programName || '', university: config.university || '', totalCredits: config.totalCredits || 0 });
+  const [f, setF] = useState({ programName: config.programName || '', university: config.university || '', totalCredits: config.totalCredits || 0, freeElectiveCredits: config.freeElectiveCredits || 0 });
+  const [name2, setName2] = useState('');
   const [typ, setTyp] = useState(null);
   const types = typesOf(config, Object.values(plan).flatMap(s => s.subjects.map(x => x.type)));
 
@@ -15,14 +16,14 @@ export default function Settings({ data, update, user, discard }) {
     Object.values(plan).forEach(s => s.subjects.forEach(x => {
       const e = st[x.type]; if (!e) return;
       e.credits += x.credits; e.count++;
-      if (s.status === 'completed') { e.doneCredits += x.credits; e.doneCount++; }
+      if ((dbl.eff.get(x.id) || s.status) === 'completed') { e.doneCredits += x.credits; e.doneCount++; }
     }));
     return st;
   }, [plan, types.join()]); // eslint-disable-line
 
   const rows = t => {
     const r = [];
-    Object.entries(plan).forEach(([n, s]) => s.subjects.forEach(x => x.type === t && r.push({ ...x, semester: n, status: s.status })));
+    Object.entries(plan).forEach(([n, s]) => s.subjects.forEach(x => x.type === t && r.push({ ...x, semester: n, status: dbl.eff.get(x.id) || s.status })));
     bank.forEach(b => b.type === t && !Object.values(plan).some(s => s.subjects.some(x => x.name === b.name)) && r.push({ ...b, semester: 'No asignado', status: 'available' }));
     return r;
   };
@@ -48,8 +49,10 @@ export default function Settings({ data, update, user, discard }) {
           <div className="form-group"><label className="form-label">Total de Créditos Requeridos</label><input type="number" className="form-control" value={f.totalCredits} onChange={e => setF({ ...f, totalCredits: e.target.value })} /></div>
           <div className="form-group"><label className="form-label">Universidad</label><input className="form-control" placeholder="Tu Universidad" value={f.university} onChange={e => setF({ ...f, university: e.target.value })} /></div>
         </div>
+        <div className="form-group"><label className="form-label">Créditos de libre elección exigidos</label><input type="number" className="form-control" style={{ maxWidth: 220 }} value={f.freeElectiveCredits} onChange={e => setF({ ...f, freeElectiveCredits: e.target.value })} />
+          <p style={{ fontSize: '.76rem', color: 'var(--text-secondary)', marginTop: 4 }}>Se usa en el avance de la doble titulación (ej: 30). Si lo dejas en 0, se suman las materias de libre elección del plan.</p></div>
         <div className="form-group" style={{ marginTop: 24 }}>
-          <button className="btn btn-success" onClick={() => { update({ config: { ...config, ...f, totalCredits: parseInt(f.totalCredits) || 0 } }); alert('✅ Configuración guardada correctamente'); }}>💾 Guardar Configuración</button>
+          <button className="btn btn-success" onClick={() => { update({ config: { ...config, ...f, totalCredits: parseInt(f.totalCredits) || 0, freeElectiveCredits: parseInt(f.freeElectiveCredits) || 0 } }); alert('✅ Configuración guardada correctamente'); }}>💾 Guardar Configuración</button>
           <button className="btn btn-danger" style={{ marginLeft: 12 }} onClick={reset}>🗑️ Reiniciar Sistema</button>
         </div>
       </div>
@@ -73,6 +76,21 @@ export default function Settings({ data, update, user, discard }) {
               </div>
             </div>);
         })}</div>
+      </div>
+
+      <div style={{ background: 'var(--bg-primary)', padding: 24, borderRadius: 12, boxShadow: 'var(--shadow-light)', border: '1px solid var(--border-color)', marginTop: 24 }}>
+        <h3 style={{ marginBottom: 8, color: 'var(--unal-green)' }}>🎓 Doble titulación</h3>
+        {!dbl.enabled ? <>
+          <p style={{ fontSize: '.88rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 12 }}>Agrega una segunda carrera con su propio plan, malla y notas. Podrás homologar materias entre las dos (por ejemplo, la libre elección de una con materias de la otra) y verlas como vistas en ambas.</p>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <input className="form-control" style={{ maxWidth: 320 }} placeholder="Nombre de la segunda carrera (ej: Administración de Empresas)" value={name2} onChange={e => setName2(e.target.value)} />
+            <button className="btn btn-success" onClick={() => name2.trim() ? (dbl.activate(name2.trim()), dbl.setCareer('second'), alert('✅ Segunda carrera creada. Ahora estás viendo esa carrera: carga su plan desde Resumen → menú ⚙️ → Cargar CSV.')) : alert('Escribe el nombre de la carrera.')}>➕ Activar</button>
+          </div>
+        </> : <>
+          <p style={{ fontSize: '.88rem', marginBottom: 12 }}>Segunda carrera: <strong>{dbl.names.second}</strong> · {dbl.links.length} homologación{dbl.links.length !== 1 ? 'es' : ''}.</p>
+          <p style={{ fontSize: '.8rem', color: 'var(--text-secondary)', marginBottom: 12 }}>Cambia de carrera con el selector de la parte superior. Cada carrera tiene su propia configuración (nombre, créditos, libre elección).</p>
+          <button className="btn btn-danger" onClick={() => confirm(`¿Quitar la segunda carrera "${dbl.names.second}"? Se borran su plan, notas y homologaciones. Tu carrera principal no se toca.`) && (dbl.setCareer('main'), dbl.deactivate())}>🗑️ Quitar segunda carrera</button>
+        </>}
       </div>
 
       {typ && <Modal id="typologySubjectsModal" title={typ} onClose={() => setTyp(null)}>

@@ -5,7 +5,7 @@ import { db } from './firebase';
 const EMPTY = {
   studyPlan: {}, subjectBank: [], config: { programName: '', university: '', totalCredits: 0, creditsByType: {} },
   gradesData: {}, schedules: [], currentPeriodConfig: { period: '', startDate: '', endDate: '' },
-  horariosData: [], mallaPrereqs: {}, mallaMarks: {}, contenidoProgramatico: [], acadTasks: []
+  horariosData: [], mallaPrereqs: {}, mallaMarks: {}, contenidoProgramatico: [], acadTasks: [], homologaciones: []
 };
 
 // Mismo documento users/{uid} de siempre, con los mismos nombres de campos.
@@ -15,6 +15,7 @@ const EMPTY = {
 export function useUserData(user) {
   const [data, setData] = useState(null);
   const dirty = useRef({});
+  const ref = useRef(null); // copia síncrona de los datos (permite actualizar con función sin leer estados viejos)
   const timer = useRef();
 
   useEffect(() => {
@@ -22,12 +23,10 @@ export function useUserData(user) {
     return onSnapshot(ref, snap => {
       if (snap.metadata.hasPendingWrites) return; // eco de nuestra propia escritura
       const remote = snap.exists() ? snap.data() : {};
-      setData(prev => {
-        const merged = { ...EMPTY, ...remote };
-        if (prev) Object.keys(dirty.current).forEach(k => { merged[k] = prev[k]; }); // no pisar cambios locales sin enviar
-        return merged;
-      });
-    }, err => { console.error('onSnapshot:', err); setData(d => d || { ...EMPTY }); });
+      const prev = ref.current, merged = { ...EMPTY, ...remote };
+      if (prev) Object.keys(dirty.current).forEach(k => { merged[k] = prev[k]; }); // no pisar cambios locales sin enviar
+      ref.current = merged; setData(merged);
+    }, err => { console.error('onSnapshot:', err); if (!ref.current) { ref.current = { ...EMPTY }; setData(ref.current); } });
   }, [user.uid]);
 
   const flush = useCallback(async () => {
@@ -47,8 +46,10 @@ export function useUserData(user) {
     }
   }, [user.uid]);
 
-  const update = useCallback(patch => {
-    setData(d => ({ ...d, ...patch }));
+  // update({campo: valor}) o update(datosActuales => ({campo: valor}))
+  const update = useCallback(patchOrFn => {
+    const patch = typeof patchOrFn === 'function' ? patchOrFn(ref.current) : patchOrFn;
+    ref.current = { ...ref.current, ...patch }; setData(ref.current);
     Object.assign(dirty.current, patch);
     clearTimeout(timer.current);
     timer.current = setTimeout(flush, 800);

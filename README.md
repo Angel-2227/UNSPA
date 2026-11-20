@@ -26,3 +26,8 @@ como la página independiente. Desde un semestre, **"Usar en mi planificador"** 
 
 ## Responsive
 Menú inferior en celular/tablet (con "Más"), vista Lista/Mapa con zoom en la malla, rejillas que nunca superan el ancho de la pantalla.
+
+## Doble titulación
+Configuración → "Doble titulación" → activar (nombre de la segunda carrera). Aparece un selector de carrera arriba; cada carrera tiene su plan, malla, banco, notas y configuración
+(`doble` en Firestore). Las homologaciones (`homologaciones`: [{main, second}]) enlazan la misma materia en las dos carreras: si se ve en una, queda vista en la otra (créditos, no nota).
+Horarios, Tareas y Cronogramas ven las materias de las dos carreras. Carga el plan de la segunda carrera con Resumen → ⚙️ → Cargar CSV (empieza en "Pendiente").

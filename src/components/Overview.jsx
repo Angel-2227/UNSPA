@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import Papa from 'papaparse';
 import Modal from './Modal';
 import SubjectModal from './SubjectModal';
+import { HomologModal, DoubleCard } from './Homolog';
 import { ScheduleViewer } from './Schedule';
 import { parseCSV, exportCSV, uid, typeClass, STATUS, planCredits, todayStr, norm } from '../lib/plan';
 import { overallAvg, ensureGrades, gColor, moveGrade, renameGrade } from '../lib/grades';
 
 const blankSem = { subjects: [], status: 'pending' };
 
-export default function Overview({ data, update, user, focus, goTasks, goCronos, toggleTheme, logout }) {
+export default function Overview({ data, update, user, focus, goTasks, goCronos, toggleTheme, logout, dbl, viewData }) {
   const { studyPlan: plan, config, subjectBank: bank = [], schedules = [], acadTasks: tasks = [] } = data;
   const [open, setOpen] = useState(null);           // acordeón: un semestre abierto a la vez
   const [addTo, setAddTo] = useState(null);         // modal "agregar materia al semestre"
@@ -18,11 +19,13 @@ export default function Overview({ data, update, user, focus, goTasks, goCronos,
   const [moveMode, setMoveMode] = useState(false);
   const [moving, setMoving] = useState(null);       // { from, idx }
   const [q, setQ] = useState('');
+  const [homol, setHomol] = useState(null);
 
   const nums = Object.keys(plan).sort((a, b) => a - b);
   const g = useMemo(() => ensureGrades(plan, data.gradesData || {}, bank), [plan, data.gradesData, bank]);
   let done = 0, cur = 0;
-  nums.forEach(n => { if (plan[n].status === 'completed') done += planCredits(plan[n]); if (plan[n].status === 'current') cur += planCredits(plan[n]); });
+  // Estado efectivo por materia: cuenta lo homologado con la otra carrera
+  nums.forEach(n => plan[n].subjects.forEach(x => { const st = dbl.eff.get(x.id) || plan[n].status; if (st === 'completed') done += +x.credits || 0; else if (st === 'current') cur += +x.credits || 0; }));
   const total = config.totalCredits || 1;
   const avg = overallAvg(plan, g);
 
@@ -80,7 +83,7 @@ export default function Overview({ data, update, user, focus, goTasks, goCronos,
     const f = e.target.files[0]; e.target.value = '';
     if (!f) return;
     Papa.parse(f, { header: false, complete: ({ data: rows }) => {
-      const { plan: np, total: t, types } = parseCSV(rows, plan);
+      const { plan: np, total: t, types } = parseCSV(rows, plan, dbl.active === 'second' ? 'pending' : 'completed');
       if (!Object.keys(np).length) return alert('No se encontraron semestres en el CSV.');
       if (nums.length && !confirm('Esto reemplaza tu plan actual (conserva las notas y los datos de las materias que ya existían). ¿Continuar?')) return;
       const names = new Set(bank.map(s => norm(s.name))), nb = [...bank];
@@ -156,6 +159,8 @@ export default function Overview({ data, update, user, focus, goTasks, goCronos,
         </div>
       </div>
 
+      {dbl.enabled && <DoubleCard dbl={dbl} />}
+
       <div className={'semesters-grid' + (moveMode ? ' move-mode' : '')}>
         {moveMode && <div className="move-instructions" style={{ gridColumn: '1 / -1' }}>📋 Modo Mover Materias: Haz clic en 🔄 de una materia para seleccionarla, luego haz clic en el encabezado del semestre destino.</div>}
         {!nums.length && (
@@ -196,8 +201,10 @@ export default function Overview({ data, update, user, focus, goTasks, goCronos,
                               <div className="info-item"><label>Profesor:</label><span className="subject-field-text">{sub.professor || none}</span></div>
                               <div className="info-item"><label>Grupo:</label><span className="subject-field-text">{sub.group || none}</span></div>
                             </div>
+                            {(() => { const lk = dbl.linkOf(sub.id); return lk && <div className="hm-chip">🔁 {lk.partner.subject.name} · {dbl.names[lk.partner.career]} (Sem. {lk.partner.sem}){dbl.eff.get(sub.id) === 'completed' && ' ✓ vista'}</div>; })()}
                             <div className="subject-card-actions">
                               <button className="btn btn-primary btn-sm" onClick={() => setEditing({ sem: n, subject: sub })}>✏️ Editar</button>
+                              {dbl.enabled && <button className="btn btn-secondary btn-sm" onClick={() => setHomol(sub)}>🔁 Homologar</button>}
                               <button className="btn btn-danger btn-sm" onClick={() => removeSubject(n, i)}>🗑️ Eliminar</button>
                               <button className="btn btn-secondary btn-sm" onClick={() => startMove(n, i)}>🔄 Mover</button>
                             </div>
@@ -225,7 +232,8 @@ export default function Overview({ data, update, user, focus, goTasks, goCronos,
           </Modal>);
       })()}
       {editing && <SubjectModal subject={editing.subject} config={config} onClose={() => setEditing(null)} onSave={s => saveSubject(editing.subject, s)} />}
-      {viewSch && lastSchedule && <ScheduleViewer data={data} schedule={lastSchedule} onClose={() => setViewSch(false)} />}
+      {homol && <HomologModal dbl={dbl} subject={homol} onClose={() => setHomol(null)} />}
+      {viewSch && lastSchedule && <ScheduleViewer data={viewData || data} schedule={lastSchedule} onClose={() => setViewSch(false)} />}
     </>
   );
 }

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from './Modal';
 import { norm, mapPlan, uid } from '../lib/plan';
+import { semLabel } from '../lib/double';
 import { DAY_BY_INDEX, applyHorarios, groupsFor, findSubject, buildBlocks, layout, conflicts, hasConflict, shortProf, startMin, canonDay } from '../lib/schedule';
 
 const useNow = () => {
@@ -114,7 +115,7 @@ function Builder({ data, update, init, onClose }) {
           <div>
             <strong>{s.name}</strong>
             <div style={{ fontSize: '.82rem', color: 'var(--text-secondary)', marginTop: 2, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-              <span className={'sem-badge ' + (isOther ? 'other-sem' : 'current-sem')}>{isOther ? `Sem. ${s.semester}` : `Sem. ${s.semester} • Cursando`}</span>
+              <span className={'sem-badge ' + (isOther ? 'other-sem' : 'current-sem')}>{isOther ? semLabel(data, s.semester) : `${semLabel(data, s.semester)} • Cursando`}</span>
               <span>{s.credits} créditos</span>{s.code && <span style={{ opacity: .7 }}>{s.code}</span>}
             </div>
           </div>
@@ -173,7 +174,7 @@ function Builder({ data, update, init, onClose }) {
       {sync && <div id="syncConfirmModal" className="modal" style={{ display: 'flex', zIndex: 1200 }} onMouseDown={e => e.target === e.currentTarget && setSync(null)}>
         <div className="modal-content" style={{ maxWidth: 460, padding: 28, margin: 'auto' }}>
           <div style={{ marginBottom: 18 }}><h3 style={{ margin: '0 0 8px' }}>Agregar materia de otro semestre</h3>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', margin: 0 }}>Estás agregando <strong>{sync.s.name}</strong> (Sem. {sync.s.semester}) al horario actual.<br />Esto <strong>marcará ese semestre como "Cursando"</strong> en tu malla.</p></div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '.9rem', margin: 0 }}>Estás agregando <strong>{sync.s.name}</strong> ({semLabel(data, sync.s.semester)}) al horario actual.<br />Esto <strong>marcará ese semestre como "Cursando"</strong> en tu malla.</p></div>
           <div style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 12, fontSize: '.85rem', marginBottom: 20, color: 'var(--text-secondary)' }}>
             📌 Grupo {sync.s.groups[sync.i].numero} · {sync.s.groups[sync.i].profesor}<br />{(sync.s.groups[sync.i].horarios || []).map(h => `${h.dia} ${h.inicio}-${h.fin}`).join(', ')}</div>
           <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>

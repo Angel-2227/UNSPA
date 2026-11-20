@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { todayStr } from '../lib/plan';
+import { semLabel } from '../lib/double';
 
 const PRIO = { 1: { label: 'Urgente', icon: '🔥' }, 2: { label: 'Alta', icon: '⚡' }, 3: { label: 'Media', icon: '📘' }, 4: { label: 'Baja', icon: '🌿' } };
 const TTL = 30 * 24 * 60 * 60 * 1000; // las completadas se borran a los 30 días
@@ -15,7 +16,7 @@ function fmtDue(s) {
   return { label: new Date(s + 'T12:00:00').toLocaleDateString('es-CO', { day: 'numeric', month: 'short' }), cls: '' };
 }
 
-function TaskModal({ task, subjects, onSave, onClose }) {
+function TaskModal({ task, subjects, onSave, onClose, label }) {
   const [f, setF] = useState({ title: '', description: '', subjectId: '', priority: 2, due: '', ...(task || {}) });
   const [err, setErr] = useState(false), ref = useRef();
   useEffect(() => { const t = setTimeout(() => ref.current?.focus(), 300); const k = e => e.key === 'Escape' && onClose(); addEventListener('keydown', k); return () => { clearTimeout(t); removeEventListener('keydown', k); }; }, [onClose]);
@@ -29,7 +30,7 @@ function TaskModal({ task, subjects, onSave, onClose }) {
           <input ref={ref} className="tk-input" style={err ? { borderColor: '#ef5350' } : null} placeholder="ej: Parcial 2 capítulos 4-7" maxLength={120} autoComplete="off" value={f.title} onChange={e => { set('title', e.target.value); setErr(false); }} /></div>
         <div className="tk-form-group"><label className="tk-label">Materia</label>
           <select className="tk-select" value={f.subjectId || ''} onChange={e => set('subjectId', e.target.value)}>
-            <option value="">— Sin materia específica —</option>{subjects.map(s => <option key={s.id} value={s.id}>{s.name} (Sem. {s.semester})</option>)}</select></div>
+            <option value="">— Sin materia específica —</option>{subjects.map(s => <option key={s.id} value={s.id}>{s.name} ({label(s.semester)})</option>)}</select></div>
         <div className="tk-form-group"><label className="tk-label">Prioridad</label>
           <div className="tk-priority-grid">{[1, 2, 3, 4].map(p => <div key={p} className={'tk-prio-option' + (f.priority === p ? ' selected-prio' : '')} data-value={p} onClick={() => set('priority', p)}><span className="tk-prio-icon">{PRIO[p].icon}</span><span className="tk-prio-label">{PRIO[p].label}</span></div>)}</div></div>
         <div className="tk-form-group"><label className="tk-label">Fecha límite (opcional)</label>
@@ -144,7 +145,7 @@ export default function Tasks({ data, update }) {
             return (
               <div key={key} className="tk-subject-group">
                 <div className="tk-subject-header" onClick={() => setGroups({ ...groups, [key]: !isOpen })}>
-                  <div className="tk-subject-title">📚 {subject.name}{subject.semester && <span className="tk-subject-sem">Sem. {subject.semester}</span>}</div>
+                  <div className="tk-subject-title">📚 {subject.name}{subject.semester && <span className="tk-subject-sem">{semLabel(data, subject.semester)}</span>}</div>
                   <div className="tk-subject-meta"><span className={'tk-task-count' + (ts.some(t => t.priority === 1) ? ' has-urgent' : '')}>{ts.length} tarea{ts.length !== 1 ? 's' : ''}</span><span className={'tk-subject-chevron' + (isOpen ? ' open' : '')}>▶</span></div>
                 </div>
                 <div className={'tk-task-list' + (isOpen ? ' open' : '')}>{ts.map(t => <Card key={t.id} t={t} />)}</div>
@@ -157,7 +158,7 @@ export default function Tasks({ data, update }) {
         <div className={'tk-done-list' + (showDone ? ' open' : '')}>{doneTasks.map(t => <Card key={t.id} t={t} isDone />)}</div>
       </div>}
 
-      {modal && <TaskModal task={modal.task} subjects={subjects} onSave={onSave} onClose={() => setModal(null)} />}
+      {modal && <TaskModal label={k => semLabel(data, k)} task={modal.task} subjects={subjects} onSave={onSave} onClose={() => setModal(null)} />}
       <div className={'tk-toast' + (toast ? ' show' : '')}>{toast}</div>
     </>
   );

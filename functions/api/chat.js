@@ -64,6 +64,7 @@ Responde siempre en español, de forma concisa y útil.`;
     mallaMarks = {},
     grades = null,
     contenidoProgramatico = null,
+    doble = null,
     _ui_hint = ''
   } = context;
 
@@ -107,6 +108,13 @@ Responde siempre en español, de forma concisa y útil.`;
       `- ${c.name}${c.code ? ` [${c.code}]` : ''} (${c.credits || '?'}cr${c.semester && c.semester !== 'N/A' ? `, sem. ${c.semester}` : ''}): ${c.description || ''} ${c.contentSummary || ''}`.slice(0, 420)
     ).join('\n');
     cpInfo = cpInfo.slice(0, 9000);
+  }
+  let dobleInfo = '';
+  if (doble && Array.isArray(doble.semesters)) {
+    dobleInfo = `\n\nDOBLE TITULACIÓN — SEGUNDA CARRERA: ${doble.programName} (${doble.completedCredits}/${doble.totalCredits} créditos vistos, ${doble.currentCredits} cursando, ${doble.pendingCredits} pendientes; libre elección ${doble.libreEleccion?.cursados ?? 0}/${doble.libreEleccion?.exigidos ?? '?'}). Carrera principal: ${doble.principal?.completedCredits ?? 0} créditos vistos, libre elección ${doble.principal?.libreEleccion?.cursados ?? 0}/${doble.principal?.libreEleccion?.exigidos ?? '?'}.\n` +
+      doble.semesters.map(s => `Semestre ${s.number} (${s.status}): ` + s.subjects.map(x => `${x.name} [${x.credits}cr, ${x.type}${x.estado ? ', ' + x.estado : ''}]`).join('; ')).join('\n') +
+      '\nHOMOLOGACIONES (misma materia cuenta en ambas carreras; solo créditos, no nota): ' + ((doble.homologaciones || []).map(h => `${h.principal} ↔ ${h.segunda}`).join('; ') || 'ninguna');
+    dobleInfo = dobleInfo.slice(0, 7000);
   }
   const uiHint = String(_ui_hint || '').slice(0, 400);
 
@@ -196,7 +204,7 @@ PROGRESO GENERAL:
 PLAN DE ESTUDIOS POR SEMESTRES:${semestersInfo}
 ${horariosInfo}
 ${schedulesInfo}
-${gradesInfo}${cpInfo}
+${gradesInfo}${cpInfo}${dobleInfo}
 
 ═══════════════════════════════════════
 INSTRUCCIONES GENERALES:

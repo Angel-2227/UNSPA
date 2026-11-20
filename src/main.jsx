@@ -5,6 +5,7 @@ import './styles.css';
 import './tasks.css';
 import './extra.css';
 import './cronogramas.css';
+import './double.css';
 import './responsive.css';
 
 document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');

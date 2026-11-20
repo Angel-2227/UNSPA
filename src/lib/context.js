@@ -1,5 +1,6 @@
 import { ensureGrades, subjectAvg, semAvg, overallAvg, entryOf } from './grades';
 import { groupsFor } from './schedule';
+import { careerData, effStatus, indexSubjects, validLinks, careerName, summary } from './double';
 const r3 = v => (v === null ? null : +v.toFixed(3));
 
 // Contexto que recibe el asistente (mismo formato que usaba el Worker)
@@ -28,7 +29,19 @@ export function buildContext(d) {
   const planable = new Set();
   Object.values(plan).forEach(s => { if (s.status !== 'completed') s.subjects.forEach(x => planable.add(x.name)); });
   const subjectBank = bank.map(s => ({ name: s.name, credits: s.credits, type: s.type, code: s.code || '', horariosInfo: planable.has(s.name) ? groupsFor(d, s) : [] }));
+  // Doble titulación (si existe): segunda carrera con sus estados efectivos y las homologaciones
+  let doble = null;
+  if (d.doble) {
+    const eff = effStatus(d), idx = indexSubjects(d), c2 = careerData(d, 'second'), sm = summary(d, 'second', eff), sm1 = summary(d, 'main', eff);
+    doble = {
+      programName: careerName(d, 'second'), totalCredits: sm.req, completedCredits: sm.done, currentCredits: sm.cur, pendingCredits: sm.pending, libreEleccion: { exigidos: sm.leReq, cursados: sm.leDone },
+      principal: { completedCredits: sm1.done, currentCredits: sm1.cur, libreEleccion: { exigidos: sm1.leReq, cursados: sm1.leDone } },
+      semesters: Object.keys(c2.studyPlan).sort((a, b) => a - b).map(n => ({ number: n, status: c2.studyPlan[n].status, subjects: c2.studyPlan[n].subjects.map(s => ({ name: s.name, credits: s.credits, type: s.type, estado: eff.get(s.id) })) })),
+      homologaciones: validLinks(d, idx).map(l => ({ principal: idx.get(l.main).subject.name, segunda: idx.get(l.second).subject.name }))
+    };
+  }
   return {
+    doble,
     programName: d.config?.programName || 'No especificado', university: d.config?.university || 'No especificada', totalCredits: d.config?.totalCredits || 0,
     completedCredits: done, currentCredits: cur, pendingCredits: Math.max(0, total - done - cur),
     progressPercentage: Math.round((done / total) * 100), currentPeriod: d.currentPeriodConfig?.period || '',
