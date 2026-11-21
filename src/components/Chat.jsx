@@ -32,12 +32,13 @@ export default function Chat({ data, msgs, setMsgs }) {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ messages: next.filter(m => !m.error).slice(-20), context: buildContext(data) })
       });
+      if (r.status === 429) { const j = await r.json().catch(() => ({})); const e = new Error('rate_limit'); e.wait = j.retryAfter; throw e; }
       if (!r.ok) throw new Error(r.status);
       const j = await r.json();
       setMsgs([...next, { role: 'assistant', content: j.response || 'No pude obtener una respuesta.' }]);
     } catch (e) {
       console.error(e);
-      setMsgs([...next, { role: 'assistant', error: true, content: 'No pude conectarme. Intenta de nuevo en unos segundos.' }]);
+      setMsgs([...next, { role: 'assistant', error: true, content: e.message === 'rate_limit' ? `Llegué al límite de uso del modelo por ahora. Espera ${e.wait ? Math.ceil(+e.wait) + ' s' : 'un minuto'} e intenta de nuevo.` : 'No pude conectarme. Intenta de nuevo en unos segundos.' }]);
     } finally { setBusy(false); }
   }
 
