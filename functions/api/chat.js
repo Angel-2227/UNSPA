@@ -1,5 +1,9 @@
 // Cloudflare Pages Function: POST /api/chat
 // Variables en Cloudflare: GROQ_API_KEY (secret), GROQ_MODEL, FIREBASE_API_KEY
+// Presupuesto: ~8000 TPM en Groq gratis. Entrada (~4-5k tokens) + salida (MAX_OUT) debe quedar por debajo.
+const MAX_OUT = 1500;
+const HISTORY_CHARS = 5000;   // historial
+const SYSTEM_CHARS = 12000;   // system prompt total (~4000 tokens)
 const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, headers: { 'Content-Type': 'application/json' } });
 
 export async function onRequestPost({ request, env }) {
@@ -15,24 +19,41 @@ export async function onRequestPost({ request, env }) {
     // 2) Validar entrada
     const { messages, context } = await request.json();
     if (!Array.isArray(messages) || !messages.length) return json({ error: 'Solicitud inválida' }, 400);
-    const history = messages.slice(-20).map(m => ({
+    // Historial acotado: Groq (tier gratis) limita ~8000 tokens/min por petición (entrada + salida pedida)
+    let history = messages.slice(-8).map(m => ({
       role: m.role === 'user' ? 'user' : 'assistant',
-      content: String(m.content || '').slice(0, 4000)
+      content: String(m.content || '').slice(0, 1500)
     }));
+    while (history.length > 1 && history.reduce((n, m) => n + m.content.length, 0) > HISTORY_CHARS) history.shift();
+    const question = [...history].reverse().find(m => m.role === 'user')?.content || '';
 
     // 3) Groq
-    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const callGroq = (system, hist) => fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` },
       body: JSON.stringify({
         model: env.GROQ_MODEL || 'openai/gpt-oss-120b',
-        messages: [{ role: 'system', content: buildSystemPrompt(context) }, ...history],
+        messages: [{ role: 'system', content: system }, ...hist],
         temperature: 0.5,
-        max_completion_tokens: 2000,
+        max_completion_tokens: MAX_OUT,
         reasoning_effort: 'low'
       })
     });
-    if (!r.ok) { console.error('Groq error:', r.status, await r.text()); return json({ error: 'Error al contactar Groq' }, 502); }
+    let r = await callGroq(buildSystemPrompt(context, question), history);
+    // Si aun así es demasiado grande (413), reintenta una vez con contexto mínimo
+    if (r.status === 413) {
+      console.error('Groq 413, reintentando con contexto mínimo:', await r.text());
+      r = await callGroq(buildSystemPrompt(context, question, true), history.slice(-2));
+    }
+    if (!r.ok) {
+      const raw = await r.text();
+      console.error('Groq error:', r.status, raw);
+      if (r.status === 413 || r.status === 429) {
+        let msg = ''; try { msg = JSON.parse(raw)?.error?.message || ''; } catch {}
+        return json({ error: 'rate_limit', detail: msg.slice(0, 300), retryAfter: r.headers.get('retry-after') }, 429);
+      }
+      return json({ error: 'Error al contactar Groq' }, 502);
+    }
     const d = await r.json();
     return json({ response: d?.choices?.[0]?.message?.content || 'No pude generar una respuesta.' });
   } catch (e) {
@@ -42,7 +63,7 @@ export async function onRequestPost({ request, env }) {
 }
 
 // ---- Construir system prompt con contexto académico + notas ----
-function buildSystemPrompt(context) {
+function buildSystemPrompt(context, question = '', minimal = false) {
   if (!context) {
     return `Eres un asistente académico amigable para el Sistema de Planificación Académica (SPA).
 Ayuda a los estudiantes con preguntas sobre su carrera, materias y notas.
@@ -67,6 +88,13 @@ Responde siempre en español, de forma concisa y útil.`;
     doble = null,
     _ui_hint = ''
   } = context;
+
+  // Solo se incluye lo que la pregunta necesita (así un "." no manda 9000 caracteres de horarios)
+  const q = question.toLowerCase();
+  const wantHorarios = !minimal && /horario|grupo|profe|clase|cupo|tope|cruce|hora|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado/.test(q);
+  const wantCp = !minimal && /contenido|program[aá]tic|tema|syllabus|temario|de qu[eé] trata|qu[eé] se ve|aprender|descripci/.test(q);
+  const wantDoble = !minimal && /doble|homolog|segunda carrera|titulaci|libre elecci/.test(q);
+  const wantGrades = !minimal || /nota|promedio/.test(q);
 
   // ---- Semestres ----
   let semestersInfo = '';
@@ -100,31 +128,34 @@ Responde siempre en español, de forma concisa y útil.`;
   }
 
   // Topes de tamaño para no pasarse del límite de tokens de Groq
-  horariosInfo = horariosInfo.slice(0, 7000);
+  horariosInfo = wantHorarios ? horariosInfo.slice(0, 4500) : '';
+  if (!wantHorarios) schedulesInfo = schedulesInfo.slice(0, 600);
+  if (minimal) { schedulesInfo = ''; }
 
   let cpInfo = '';
-  if (Array.isArray(contenidoProgramatico) && contenidoProgramatico.length) {
+  if (wantCp && Array.isArray(contenidoProgramatico) && contenidoProgramatico.length) {
     cpInfo = '\n\nCONTENIDO PROGRAMÁTICO DE LAS ASIGNATURAS:\n' + contenidoProgramatico.map(c =>
       `- ${c.name}${c.code ? ` [${c.code}]` : ''} (${c.credits || '?'}cr${c.semester && c.semester !== 'N/A' ? `, sem. ${c.semester}` : ''}): ${c.description || ''} ${c.contentSummary || ''}`.slice(0, 420)
     ).join('\n');
-    cpInfo = cpInfo.slice(0, 9000);
+    cpInfo = cpInfo.slice(0, 4000);
   }
   let dobleInfo = '';
-  if (doble && Array.isArray(doble.semesters)) {
+  if (wantDoble && doble && Array.isArray(doble.semesters)) {
     dobleInfo = `\n\nDOBLE TITULACIÓN — SEGUNDA CARRERA: ${doble.programName} (${doble.completedCredits}/${doble.totalCredits} créditos vistos, ${doble.currentCredits} cursando, ${doble.pendingCredits} pendientes; libre elección ${doble.libreEleccion?.cursados ?? 0}/${doble.libreEleccion?.exigidos ?? '?'}). Carrera principal: ${doble.principal?.completedCredits ?? 0} créditos vistos, libre elección ${doble.principal?.libreEleccion?.cursados ?? 0}/${doble.principal?.libreEleccion?.exigidos ?? '?'}.\n` +
       doble.semesters.map(s => `Semestre ${s.number} (${s.status}): ` + s.subjects.map(x => `${x.name} [${x.credits}cr, ${x.type}${x.estado ? ', ' + x.estado : ''}]`).join('; ')).join('\n') +
       '\nHOMOLOGACIONES (misma materia cuenta en ambas carreras; solo créditos, no nota): ' + ((doble.homologaciones || []).map(h => `${h.principal} ↔ ${h.segunda}`).join('; ') || 'ninguna');
-    dobleInfo = dobleInfo.slice(0, 7000);
+    dobleInfo = dobleInfo.slice(0, 3500);
   }
   const uiHint = String(_ui_hint || '').slice(0, 400);
+
 
   const completedInMalla = Object.values(mallaMarks).filter(m => m && m.state === 'completed').length;
   const currentInMalla = Object.values(mallaMarks).filter(m => m && m.state === 'current').length;
 
   // ---- NOTAS ----
   let gradesInfo = '';
-  if (grades) {
-    gradesInfo = '\n\n═══════════════════════════════════════\nNOTAS ACADÉMICAS DEL ESTUDIANTE\n═══════════════════════════════════════\n';
+  if (grades && wantGrades) {
+    gradesInfo = '\n\n---\nNOTAS ACADÉMICAS DEL ESTUDIANTE\n---\n';
 
     if (grades.overallAverage !== null) {
       gradesInfo += `\nPROMEDIO ACUMULADO PONDERADO: ${grades.overallAverage.toFixed(2)} / 5.00`;
@@ -181,14 +212,21 @@ INSTRUCCIONES PARA CÁLCULOS DE NOTAS:
 - Promedio ponderado por créditos: Suma(promedio_materia × créditos) / Total_créditos`;
   }
 
+  // Presupuesto global: lo esencial primero; horarios / contenido / doble entran solo si caben
+  semestersInfo = fit(semestersInfo, 3000);
+  gradesInfo = fit(gradesInfo, 4000);
+  let room = SYSTEM_CHARS - 1800 - semestersInfo.length - gradesInfo.length - schedulesInfo.length;
+  const take = t => { const o = t.slice(0, Math.max(0, room)); room -= o.length; return o; };
+  horariosInfo = take(horariosInfo); cpInfo = take(cpInfo); dobleInfo = take(dobleInfo);
+
   return `Eres un asistente académico personal inteligente y amigable para el Sistema de Planificación Académica (SPA).
 Tienes acceso completo a la información académica y de notas del estudiante. Úsala para dar respuestas precisas y personalizadas.
 Responde SIEMPRE en español, de forma clara y concisa. Usa emojis ocasionalmente para hacer la conversación más amena.
 Cuando hagas cálculos de notas, muestra el procedimiento paso a paso para que el estudiante entienda.
 
-═══════════════════════════════════════
+---
 INFORMACIÓN ACADÉMICA DEL ESTUDIANTE
-═══════════════════════════════════════
+---
 
 PROGRAMA: ${programName} — ${university}
 PERIODO ACTUAL: ${currentPeriod || 'No especificado'}
@@ -206,7 +244,7 @@ ${horariosInfo}
 ${schedulesInfo}
 ${gradesInfo}${cpInfo}${dobleInfo}
 
-═══════════════════════════════════════
+---
 INSTRUCCIONES GENERALES:
 - Si pregunta por notas, usa los datos de NOTAS ACADÉMICAS para responder con precisión
 - Si pregunta qué necesita sacarse, haz el cálculo mostrando la fórmula
@@ -214,5 +252,7 @@ INSTRUCCIONES GENERALES:
 - Si el promedio está en riesgo (< 3.0 en alguna materia), mencionalo proactivamente
 - Si no tienes suficiente información, dilo claramente
 - Si preguntan por el contenido de una materia, usa CONTENIDO PROGRAMÁTICO
-${uiHint ? `- ${uiHint}\n` : ''}═══════════════════════════════════════`;
+${uiHint ? `- ${uiHint}\n` : ''}---`;
 }
+// Recorta un bloque de texto a n caracteres (con aviso) para respetar el presupuesto de tokens
+function fit(t, n) { return t.length > n ? t.slice(0, n) + '\n  [...recortado por tamaño]' : t; }
