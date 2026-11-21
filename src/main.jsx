@@ -8,6 +8,7 @@ import './cronogramas.css';
 import './double.css';
 import './responsive.css';
 import './design.css'; // capa final de diseño: layout, iconos, componentes (mantiene tipografía y paleta)
+import './rooms.css'; // salón/edificio y aviso de próxima clase
 
 document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light');
 createRoot(document.getElementById('root')).render(<App />);

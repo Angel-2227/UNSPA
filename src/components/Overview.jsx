@@ -8,6 +8,8 @@ import Modal from './Modal';
 import SubjectModal from './SubjectModal';
 import { HomologModal, DoubleCard } from './Homolog';
 import { ScheduleViewer } from './Schedule';
+import { NextClassCard } from './NextClass';
+import { activeSchedule } from '../lib/rooms';
 import { Ring, PageHeader, Menu, Empty, toast } from '../ui.jsx';
 import { parseCSV, exportCSV, uid, typeClass, STATUS, planCredits, todayStr, norm } from '../lib/plan';
 import { overallAvg, ensureGrades, gColor, moveGrade, renameGrade } from '../lib/grades';
@@ -114,6 +116,8 @@ export default function Overview({ data, update, dbl, viewData, goTasks, goGrade
           { icon: Download, label: 'Exportar plan (CSV)', onClick: () => exportCSV(plan, config), hidden: !nums.length }
         ]} />
       </PageHeader>
+
+      {activeSchedule(schedules) && <NextClassCard data={viewData || data} schedule={activeSchedule(schedules)} onOpen={() => setViewSch(true)} />}
 
       {/* ── Avance ── */}
       <section className="hero card">
@@ -259,7 +263,7 @@ export default function Overview({ data, update, dbl, viewData, goTasks, goGrade
 
       {editing && <SubjectModal subject={editing.subject} config={config} onClose={() => setEditing(null)} onSave={s => saveSubject(editing.subject, s)} />}
       {homol && <HomologModal dbl={dbl} subject={homol} onClose={() => setHomol(null)} />}
-      {viewSch && lastSchedule && <ScheduleViewer data={viewData || data} schedule={lastSchedule} onClose={() => setViewSch(false)} />}
+      {viewSch && lastSchedule && <ScheduleViewer data={viewData || data} update={update} schedule={lastSchedule} onClose={() => setViewSch(false)} />}
     </>
   );
 }

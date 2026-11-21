@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Upload, Plus, Pencil, Archive, ArchiveRestore, Eye, Trash2, FolderOpen, Folder, CalendarDays, Search, User, ChevronDown, ChevronRight, TriangleAlert, Check, Save, Clock, Library, Pin, CalendarRange, Settings2 } from 'lucide-react';
+import { Upload, Plus, Pencil, Archive, ArchiveRestore, Eye, Trash2, FolderOpen, Folder, CalendarDays, Search, User, ChevronDown, ChevronRight, TriangleAlert, Check, Save, Clock, Library, Pin, CalendarRange, Settings2, MapPin } from 'lucide-react';
 import { PageHeader, Menu, Empty, toast } from '../ui.jsx';
 import Modal from './Modal';
 import { norm, mapPlan, uid } from '../lib/plan';
 import { semLabel } from '../lib/double';
-import { DAY_BY_INDEX, applyHorarios, groupsFor, findSubject, buildBlocks, layout, conflicts, hasConflict, shortProf, startMin, canonDay } from '../lib/schedule';
+import { DAY_BY_INDEX, applyHorarios, groupsFor, findSubject, buildBlocks, layout, conflicts, hasConflict, shortProf, startMin, canonDay, roomKey, roomText } from '../lib/schedule';
 
 const useNow = () => {
   const [now, setNow] = useState(new Date());
@@ -15,15 +15,21 @@ const nowText = now => `${DAY_BY_INDEX[now.getDay()]}, ${now.toLocaleDateString(
 const isNowIn = (b, now) => canonDay(DAY_BY_INDEX[now.getDay()]) === b.dia && now.getHours() * 60 + now.getMinutes() >= startMin(b.inicio) && now.getHours() * 60 + now.getMinutes() < startMin(b.fin);
 
 // ── Visor del horario guardado: solo los días con clase y solo las horas donde hay clase ──
-export function ScheduleViewer({ data, schedule, onClose }) {
-  const now = useNow();
-  const blocks = useMemo(() => buildBlocks(data, schedule.subjects), [data, schedule]);
+export function ScheduleViewer({ data, schedule, onClose, update }) {
+  const now = useNow(), [editRooms, setEditRooms] = useState(false);
+  const blocks = useMemo(() => buildBlocks(data, schedule.subjects, schedule.rooms), [data, schedule]);
+  const missing = blocks.filter(b => !roomText(b)).length;
   const { days, hours } = layout(blocks);
   const today = canonDay(DAY_BY_INDEX[now.getDay()]);
   const base = hours[0];
   return (
     <Modal id="currentScheduleModal" title={schedule.name} subtitle={nowText(now)} onClose={onClose} wide={1200}>
       <div id="currentScheduleContent">
+        {update && blocks.length > 0 && (
+          <div className="rooms-bar">
+            <button className="btn btn-secondary btn-sm" onClick={() => setEditRooms(true)}><MapPin />Editar salones</button>
+            {missing > 0 && <span className="muted">{missing} clase{missing !== 1 ? 's' : ''} sin salón</span>}
+          </div>)}
         <div className="schedule-grid-wrapper">
           <div className="schedule-grid-viewer" style={{ gridTemplateColumns: `56px repeat(${days.length}, minmax(90px, 1fr))`, minWidth: 56 + days.length * 90 }}>
             <div className="schedule-cell-viewer header scv-corner" style={{ gridRow: 1, gridColumn: 1 }} />
@@ -40,11 +46,57 @@ export function ScheduleViewer({ data, schedule, onClose }) {
                 style={{ gridRow: `${b.sH - base + 2} / span ${b.eH - b.sH}`, gridColumn: days.indexOf(b.dia) + 2, '--class-color': b.color }}>
                 <div className="class-block-name">{b.subject.name}</div>
                 <div className="class-block-info">G{b.grupo.numero} · {b.inicio}–{b.fin}</div>
+                {roomText(b) && <div className="class-block-room">{roomText(b)}</div>}
                 <div className="class-block-prof">{shortProf(b.grupo.profesor)}</div>
               </div>))}
           </div>
         </div>
         {!blocks.length && <p style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Este horario no tiene clases con horario disponible (¿cargaste el archivo de horarios?).</p>}
+      </div>
+      {editRooms && <RoomsModal data={data} schedule={schedule} blocks={blocks} update={update} onClose={() => setEditRooms(false)} />}
+    </Modal>
+  );
+}
+
+// ── Editor de salón y edificio por clase (una fila por materia y día) ──
+function RoomsModal({ data, schedule, blocks, update, onClose }) {
+  const rows = useMemo(() => { // una entrada por materia + día
+    const seen = new Map();
+    blocks.forEach(b => { const k = roomKey(b.id, b.dia); if (!seen.has(k)) seen.set(k, { k, b, hours: [] }); seen.get(k).hours.push(`${b.inicio}–${b.fin}`); });
+    return [...seen.values()];
+  }, [blocks]);
+  const [vals, setVals] = useState(() => Object.fromEntries(rows.map(r => [r.k, { edificio: r.b.edificio || '', salon: r.b.salon || '' }])));
+  const bySubject = useMemo(() => rows.reduce((a, r) => { (a[r.b.id] ||= []).push(r); return a; }, {}), [rows]);
+  const known = useMemo(() => [...new Set((data.schedules || []).flatMap(s => Object.values(s.rooms || {}).map(r => r.edificio)).concat(Object.values(vals).map(v => v.edificio)).filter(Boolean))], [data.schedules, vals]);
+  const set = (k, f, v) => setVals(x => ({ ...x, [k]: { ...x[k], [f]: v } }));
+  const copyAll = list => setVals(x => Object.fromEntries(Object.entries(x).map(([k, v]) => [k, list.some(r => r.k === k) ? { ...x[list[0].k] } : v])));
+
+  function save() {
+    const rooms = {};
+    Object.entries(vals).forEach(([k, v]) => { const e = v.edificio.trim(), s = v.salon.trim(); if (e || s) rooms[k] = { edificio: e, salon: s }; });
+    update(prev => ({ schedules: (prev.schedules || []).map(x => (x.id === schedule.id ? { ...x, rooms } : x)) }));
+    toast('Salones guardados');
+    onClose();
+  }
+
+  return (
+    <Modal id="roomsModal" z={1200} title="Salón y edificio" subtitle={schedule.name} onClose={onClose}>
+      <datalist id="edificios-conocidos">{known.map(e => <option key={e} value={e} />)}</datalist>
+      {Object.values(bySubject).map(list => (
+        <div key={list[0].b.id} className="rooms-subject">
+          <h4><span>{list[0].b.subject.name}</span>
+            {list.length > 1 && <button className="btn btn-secondary btn-sm" onClick={() => copyAll(list)}>Mismo salón todos los días</button>}
+          </h4>
+          {list.map(r => (
+            <div key={r.k} className="rooms-row">
+              <div className="rooms-day">{r.b.dia}<small>{r.hours.join(', ')}</small></div>
+              <input className="form-control" list="edificios-conocidos" placeholder="Edificio (ej: 404)" value={vals[r.k].edificio} onChange={e => set(r.k, 'edificio', e.target.value)} />
+              <input className="form-control" placeholder="Salón (ej: 212)" value={vals[r.k].salon} onChange={e => set(r.k, 'salon', e.target.value)} />
+            </div>))}
+        </div>))}
+      <div className="form-actions">
+        <button className="btn btn-primary" onClick={save}><Save />Guardar salones</button>
+        <button className="btn btn-secondary" onClick={onClose}>Cancelar</button>
       </div>
     </Modal>
   );
@@ -273,7 +325,7 @@ export default function Schedule({ data, update, goCronos }) {
       </>}
 
       {builder && <Builder data={data} update={update} init={builder} onClose={() => setBuilder(null)} />}
-      {view && <ScheduleViewer data={data} schedule={view} onClose={() => setView(null)} />}
+      {view && <ScheduleViewer data={data} update={update} schedule={schedules.find(x => x.id === view.id) || view} onClose={() => setView(null)} />}
     </>
   );
 }

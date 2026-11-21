@@ -26,8 +26,22 @@ export function findSubject(data, id) {
   return (data.subjectBank || []).find(x => x.id === id) || null;
 }
 
-// { subjectId: groupIdx } → bloques de clase listos para dibujar
-export function buildBlocks(data, selection) {
+// ── Salón / edificio ──
+// Se guardan dentro del horario: schedule.rooms = { 'idMateria|DÍA': { edificio, salon } }.
+// Si el archivo de horarios ya trae salon/aula/edificio en cada franja, se usa como valor por defecto.
+export const roomKey = (id, dia) => `${id}|${dia}`;
+export function roomOf(rooms, id, dia, h) {
+  const r = (rooms && rooms[roomKey(id, dia)]) || {}, t = v => (v === undefined || v === null ? '' : String(v).trim());
+  return { edificio: t(r.edificio) || t(h?.edificio), salon: t(r.salon) || t(h?.salon) || t(h?.aula) };
+}
+// "Edif. 404 · Salón 212" (si ya escribiste "Edificio 404" o "Aula A", lo respeta tal cual)
+export const roomText = ({ edificio, salon } = {}) => [
+  edificio && (/^\d/.test(edificio) ? `Edif. ${edificio}` : edificio),
+  salon && (/^\d/.test(salon) ? `Salón ${salon}` : salon)
+].filter(Boolean).join(' · ');
+
+// { subjectId: groupIdx } → bloques de clase listos para dibujar (rooms: schedule.rooms, opcional)
+export function buildBlocks(data, selection, rooms) {
   const blocks = [];
   Object.entries(selection || {}).forEach(([id, idx], i) => {
     const subject = findSubject(data, id);
@@ -36,7 +50,7 @@ export function buildBlocks(data, selection) {
     (grupo.horarios || []).forEach(h => {
       const dia = canonDay(h.dia);
       if (!dia) return;
-      blocks.push({ id, subject, grupo, dia, inicio: h.inicio, fin: h.fin, sH: startHour(h.inicio), eH: Math.max(endHour(h.fin), startHour(h.inicio) + 1), color: COLORS[i % COLORS.length] });
+      blocks.push({ id, subject, grupo, dia, inicio: h.inicio, fin: h.fin, ...roomOf(rooms, id, dia, h), sH: startHour(h.inicio), eH: Math.max(endHour(h.fin), startHour(h.inicio) + 1), color: COLORS[i % COLORS.length] });
     });
   });
   return blocks;

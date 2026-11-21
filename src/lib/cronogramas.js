@@ -36,6 +36,8 @@ const ALIAS = {
   dia: ['dia'],
   horaInicio: ['hora inicio', 'horainicio', 'inicio', 'hora_inicio', 'hora de inicio'],
   horaFinal: ['hora final', 'horafinal', 'fin', 'hora_final', 'hora fin', 'hora de finalizacion'],
+  salon: ['salon', 'aula', 'salon aula', 'aula salon', 'salon/aula', 'aula/salon', 'sala'],
+  edificio: ['edificio', 'bloque', 'edif', 'sede edificio'],
   docente: ['docente', 'profesor', 'docentes', 'profesores', 'docente(s)', 'profesor(es)', 'docente asignado']
 };
 const nt = v => (v === undefined || v === null ? '' : String(v).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/\s+/g, ' '));
@@ -55,7 +57,7 @@ export function filasAMaterias(rows) {
   const { fila, mapa } = det, get = (r, c) => (mapa[c] !== undefined ? String(r[mapa[c]] ?? '').trim() : '');
   const out = []; let m = null, g = null, last = null;
   for (let i = fila + 1; i < rows.length; i++) {
-    const r = rows[i], codigo = get(r, 'codigo'), nombre = get(r, 'asignatura'), gt = get(r, 'grupo'), dia = get(r, 'dia'), doc = get(r, 'docente');
+    const r = rows[i], codigo = get(r, 'codigo'), nombre = get(r, 'asignatura'), gt = get(r, 'grupo'), dia = get(r, 'dia'), doc = get(r, 'docente'), salon = get(r, 'salon'), edif = get(r, 'edificio');
     let hi = get(r, 'horaInicio'), hf = get(r, 'horaFinal');
     if (!codigo && !nombre && !gt && !dia) continue;
     const id = codigo || nombre;
@@ -65,7 +67,7 @@ export function filasAMaterias(rows) {
     if (dia) {
       if (!g) { g = { numero: m.grupos.length + 1, horarios: [], profesor: doc }; m.grupos.push(g); }
       if ((!hi || !hf) && last) { hi = hi || last.inicio; hf = hf || last.fin; }
-      const h = { dia, inicio: hi, fin: hf }; g.horarios.push(h); last = h;
+      const h = { dia, inicio: hi, fin: hf, ...(salon && { salon }), ...(edif && { edificio: edif }) }; g.horarios.push(h); last = h;
     }
     if (doc && g && !g.profesor) g.profesor = doc;
   }

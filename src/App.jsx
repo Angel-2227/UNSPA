@@ -14,6 +14,7 @@ import Horarios from './components/Horarios.jsx';
 import Malla from './components/Malla.jsx';
 import Tasks from './components/Tasks.jsx';
 import Settings from './components/Settings.jsx';
+import { ClassAlerts } from './components/NextClass.jsx';
 import { overallAvg, ensureGrades } from './lib/grades';
 import { CareerSwitch } from './components/Homolog.jsx';
 import { careerData, careerUpdate, mergedData, mergedUpdate, effStatus, makeDbl, summary } from './lib/double';
@@ -211,6 +212,7 @@ export function Main({ user, data: root, update: rootUpdate, discard, logout }) 
           <span className="tab-ico"><MoreHorizontal /></span><span className="tab-lbl">Más</span>
         </button>
       </nav>
+      <ClassAlerts data={shared} />
       <Toaster />
     </div>
   );

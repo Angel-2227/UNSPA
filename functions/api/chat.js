@@ -86,6 +86,8 @@ Responde siempre en español, de forma concisa y útil.`;
     grades = null,
     contenidoProgramatico = null,
     doble = null,
+    agenda = [],
+    ahora = '',
     _ui_hint = ''
   } = context;
 
@@ -94,6 +96,7 @@ Responde siempre en español, de forma concisa y útil.`;
   const wantHorarios = !minimal && /horario|grupo|profe|clase|cupo|tope|cruce|hora|lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado/.test(q);
   const wantCp = !minimal && /contenido|program[aá]tic|tema|syllabus|temario|de qu[eé] trata|qu[eé] se ve|aprender|descripci/.test(q);
   const wantDoble = !minimal && /doble|homolog|segunda carrera|titulaci|libre elecci/.test(q);
+  const wantAgenda = /sal[oó]n|aula|edificio|d[oó]nde|donde|clase|hoy|ma[ñn]ana|pr[oó]xim|ahora|horario|lugar|bloque/.test(q);
   const wantGrades = !minimal || /nota|promedio/.test(q);
 
   // ---- Semestres ----
@@ -212,10 +215,17 @@ INSTRUCCIONES PARA CÁLCULOS DE NOTAS:
 - Promedio ponderado por créditos: Suma(promedio_materia × créditos) / Total_créditos`;
   }
 
+  // Horario vigente con salón y edificio (pequeño: solo las clases del horario guardado)
+  let agendaInfo = '';
+  if (wantAgenda && Array.isArray(agenda) && agenda.length) {
+    agendaInfo = `\n\nMI HORARIO ACTUAL (con edificio y salón). Fecha y hora actual: ${String(ahora).slice(0, 80)}\n` + agenda.map(x => '  - ' + String(x).slice(0, 160)).join('\n');
+    agendaInfo = fit(agendaInfo, 2200);
+  }
+
   // Presupuesto global: lo esencial primero; horarios / contenido / doble entran solo si caben
   semestersInfo = fit(semestersInfo, 3000);
   gradesInfo = fit(gradesInfo, 4000);
-  let room = SYSTEM_CHARS - 1800 - semestersInfo.length - gradesInfo.length - schedulesInfo.length;
+  let room = SYSTEM_CHARS - 1800 - semestersInfo.length - gradesInfo.length - schedulesInfo.length - agendaInfo.length;
   const take = t => { const o = t.slice(0, Math.max(0, room)); room -= o.length; return o; };
   horariosInfo = take(horariosInfo); cpInfo = take(cpInfo); dobleInfo = take(dobleInfo);
 
@@ -241,7 +251,7 @@ PROGRESO GENERAL:
 
 PLAN DE ESTUDIOS POR SEMESTRES:${semestersInfo}
 ${horariosInfo}
-${schedulesInfo}
+${schedulesInfo}${agendaInfo}
 ${gradesInfo}${cpInfo}${dobleInfo}
 
 ---
@@ -252,6 +262,7 @@ INSTRUCCIONES GENERALES:
 - Si el promedio está en riesgo (< 3.0 en alguna materia), mencionalo proactivamente
 - Si no tienes suficiente información, dilo claramente
 - Si preguntan por el contenido de una materia, usa CONTENIDO PROGRAMÁTICO
+- Si preguntan dónde tienen clase (salón/edificio), usa MI HORARIO ACTUAL y la fecha y hora actual; si dice 'salón sin definir', indícales que lo agreguen en Horarios → Ver → Editar salones
 ${uiHint ? `- ${uiHint}\n` : ''}---`;
 }
 // Recorta un bloque de texto a n caracteres (con aviso) para respetar el presupuesto de tokens

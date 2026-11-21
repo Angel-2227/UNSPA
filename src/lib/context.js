@@ -1,6 +1,6 @@
 import { ensureGrades, subjectAvg, semAvg, overallAvg, entryOf } from './grades';
-import { groupsFor } from './schedule';
-import { careerData, effStatus, indexSubjects, validLinks, careerName, summary } from './double';
+import { groupsFor, buildBlocks, DAYS, startMin, roomText } from './schedule';
+import { mergedData, careerData, effStatus, indexSubjects, validLinks, careerName, summary } from './double';
 const r3 = v => (v === null ? null : +v.toFixed(3));
 
 // Contexto que recibe el asistente (mismo formato que usaba el Worker)
@@ -40,7 +40,14 @@ export function buildContext(d) {
       homologaciones: validLinks(d, idx).map(l => ({ principal: idx.get(l.main).subject.name, segunda: idx.get(l.second).subject.name }))
     };
   }
+  // Horario vigente con salón y edificio (para "¿dónde tengo clase hoy?")
+  const sch = [...(d.schedules || [])].reverse().find(x => !x.archived);
+  const agenda = sch ? buildBlocks(mergedData(d), sch.subjects, sch.rooms)
+    .sort((a, b) => DAYS.indexOf(a.dia) - DAYS.indexOf(b.dia) || startMin(a.inicio) - startMin(b.inicio))
+    .map(b => `${b.dia} ${b.inicio}-${b.fin} ${b.subject.name}${b.grupo.numero ? ` (G${b.grupo.numero})` : ''} — ${roomText(b) || 'salón sin definir'}`) : [];
+  const ahora = new Date().toLocaleString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   return {
+    agenda, ahora,
     doble,
     programName: d.config?.programName || 'No especificado', university: d.config?.university || 'No especificada', totalCredits: d.config?.totalCredits || 0,
     completedCredits: done, currentCredits: cur, pendingCredits: Math.max(0, total - done - cur),
