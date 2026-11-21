@@ -212,7 +212,7 @@ export function Main({ user, data: root, update: rootUpdate, discard, logout }) 
           <span className="tab-ico"><MoreHorizontal /></span><span className="tab-lbl">Más</span>
         </button>
       </nav>
-      <ClassAlerts data={shared} />
+      <ClassAlerts data={shared} update={rootUpdate} />
       <Toaster />
     </div>
   );

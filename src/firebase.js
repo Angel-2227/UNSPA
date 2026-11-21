@@ -3,7 +3,7 @@ import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Config pública de Firebase (la seguridad real está en las reglas de Firestore)
-const app = initializeApp({
+export const app = initializeApp({
   apiKey: 'AIzaSyDGfWj0TKSKPqQmtmVvAjaRwcSRP8ThHVQ',
   authDomain: 'unalspa.firebaseapp.com',
   projectId: 'unalspa',
