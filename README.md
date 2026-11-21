@@ -16,6 +16,12 @@ Build: framework Vite · comando `npm run build` · salida `dist`.
 ## Local
 `npm install` · `npm run dev` (interfaz) · chat: copia `.dev.vars.example` a `.dev.vars` y `npm run pages:dev`.
 
+## Diseño (v3)
+Capa de diseño en `src/design.css` (misma tipografía Segoe UI y misma paleta verde). Iconos con `lucide-react` (sin emojis).
+Navegación: menú lateral agrupado en escritorio; barra inferior (Inicio, Horarios, Asistente, Tareas, Más) en celular.
+El **Asistente IA** es una pantalla propia (la conversación se conserva al cambiar de sección). **Cronogramas** vive dentro de Horarios (pestañas).
+Componentes compartidos en `src/ui.jsx` (toasts, cabecera de página, menú ⋮, control segmentado, anillo de progreso).
+
 ## Módulos
 Resumen (+ FAB, mover materias, tarjeta de tareas) · Banco de materias (+ programa CSV) · Planificador de horarios
 (carpetas por semestre, archivar, conflictos, visor con HOY/AHORA) · Malla (generada + PDF) · Notas · Tareas · Configuración · Chat IA.
